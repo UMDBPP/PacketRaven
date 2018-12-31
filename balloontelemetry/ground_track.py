@@ -18,8 +18,11 @@ class GroundTrack:
         self.callsign = callsign
         self.packets = []
 
-    def add_packet(self, raw_packet: str):
-        self.packets.append(aprs_packet.APRSPacket(raw_packet))
+    def add_packet(self, packet: aprs_packet.APRSPacket):
+        if packet.callsign is self.callsign:
+            self.packets.append(packet)
+        else:
+            print(f'Packet callsign {packet.callsign} does not match ground track callsign {self.callsign}.')
 
     def ascent_rate(self) -> float:
         """
@@ -70,3 +73,17 @@ class GroundTrack:
         most_recent_packet = self.packets[-1]
 
         return most_recent_packet.distance_to_point(longitude, latitude)
+
+
+if __name__ == '__main__':
+    aprs_packet_1 = aprs_packet.APRSPacket(
+        "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,KM4LKM:!/:h=W;%E1O   /A=000095|!!|  /W3EAX,16,8,22'C,http://www.umd.edu")
+    aprs_packet_2 = aprs_packet.APRSPacket(
+        "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,KM4LKM:!/:GwN:cNCO   /A=000564|!-|  /W3EAX,75,8,5'C,http://www.umd.edu")
+
+    ground_track = GroundTrack('W3EAX-8')
+    ground_track.add_packet(aprs_packet_1)
+    ground_track.add_packet(aprs_packet_2)
+
+    print(f'Ascent rate: {ground_track.ascent_rate()}')
+    print(f'Ground speed: {ground_track.ground_speed()}')

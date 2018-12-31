@@ -58,12 +58,12 @@ class APRSPacket:
 
 
 if __name__ == '__main__':
-    aprs_packet_1 = APRSPacket(
+    packet_1 = APRSPacket(
         "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,KM4LKM:!/:h=W;%E1O   /A=000095|!!|  /W3EAX,16,8,22'C,http://www.umd.edu")
-    aprs_packet_2 = APRSPacket(
+    packet_2 = APRSPacket(
         "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,KM4LKM:!/:GwN:cNCO   /A=000564|!-|  /W3EAX,75,8,5'C,http://www.umd.edu")
-    aprs_packet_delta = aprs_packet_2 - aprs_packet_1
+    packet_delta = packet_2 - packet_1
 
-    print(aprs_packet_1)
-    print(aprs_packet_2)
-    print(aprs_packet_delta)
+    print(packet_1)
+    print(packet_2)
+    print(packet_delta)
