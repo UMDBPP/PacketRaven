@@ -17,6 +17,7 @@ if __name__ == '__main__':
 
     # TODO add main code here. Workflow:
     #  1) APRS packet comes in over serial
-    #  2) parse raw packet from serial
-    #  3) add to respective ground track
-    #  4) display and log packet
+    #  2) parse raw packet string from serial
+    #  3) instantiate new APRSPacket object from raw packet string
+    #  4) add new packet to its respective ground track (by callsign)
+    #  5) display and log packet
