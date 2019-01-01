@@ -4,7 +4,7 @@ Ground track class for packet operations.
 __authors__ = ['Quinn Kupec', 'Zachary Burnett']
 """
 
-from data_structures import aprs_packet
+from balloontelemetry.data_structures import aprs_packet
 
 
 class GroundTrack:
@@ -20,6 +20,7 @@ class GroundTrack:
 
     def add_packet(self, packet: aprs_packet.APRSPacket):
         if packet.callsign is self.callsign:
+            # TODO check if packet is a duplicate
             self.packets.append(packet)
         else:
             print(f'Packet callsign {packet.callsign} does not match ground track callsign {self.callsign}.')

@@ -48,10 +48,10 @@ class APRSPacket:
 
     def __sub__(self, other) -> APRSPacketDelta:
         seconds = (self.datetime - other.datetime).total_seconds()
-        horizontal = self.distance_to_point(other.longitude, other.latitude)
-        vertical = self.altitude - other.altitude
+        horizontal_distance = self.distance_to_point(other.longitude, other.latitude)
+        vertical_distance = self.altitude - other.altitude
 
-        return APRSPacketDelta(seconds, horizontal, vertical)
+        return APRSPacketDelta(seconds, horizontal_distance, vertical_distance)
 
     def __str__(self) -> str:
         return f'APRS packet: {self.callsign} {self.datetime} ({self.longitude}, {self.latitude}, {self.altitude}) "{self.comment}"'
