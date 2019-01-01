@@ -37,7 +37,7 @@ class APRSPacketDelta:
             raise ValueError('Packets have the same timestamp.')
 
     def __str__(self) -> str:
-        return f'APRS packet delta: {self.seconds} seconds, {self.horizontal_distance} meters overground, {self.vertical_distance} meters vertically'
+        return f'APRS packet delta: {self.seconds} seconds, {self.horizontal_distance:6.2f} meters overground, {self.vertical_distance:6.2f} meters vertically'
 
 
 class APRSPacket:
@@ -76,6 +76,19 @@ class APRSPacket:
         self.heading = parsed_packet['course'] if 'course' in parsed_packet else None
         self.ground_speed = parsed_packet['speed'] if 'speed' in parsed_packet else None
 
+    def coordinates(self, z: bool = False) -> tuple:
+        """
+        Return coordinates.
+
+        :param z: Whether to include altitude as third entry in tuple.
+        :return: tuple of coordinates (lon, lat[, alt])
+        """
+
+        if z:
+            return self.longitude, self.latitude, self.altitude()
+        else:
+            return self.longitude, self.latitude
+
     def distance_to_point(self, longitude, latitude) -> float:
         # TODO implement WGS84 distance
         return haversine((self.latitude, self.longitude), (latitude, longitude), unit='m')
@@ -88,7 +101,7 @@ class APRSPacket:
         return APRSPacketDelta(seconds, horizontal_distance, vertical_distance)
 
     def __str__(self) -> str:
-        return f'APRS packet: {self.callsign} {self.packet_datetime} ({self.longitude}, {self.latitude}, {self.altitude}) "{self.comment}"'
+        return f'APRS packet: {self.callsign} {self.packet_datetime} ({self.longitude:3.4f}, {self.latitude:3.4f}, {self.altitude:6.2f}) "{self.comment}"'
 
 
 if __name__ == '__main__':

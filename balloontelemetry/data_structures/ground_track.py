@@ -42,10 +42,7 @@ class GroundTrack:
         :return: tuple of coordinates (lon, lat[, alt])
         """
 
-        if z:
-            return (self.packets[-1].longitude, self.packets[-1].latitude, self.altitude())
-        else:
-            return (self.packets[-1].longitude, self.packets[-1].latitude)
+        return self.packets[-1].coordinates(z)
 
     def ascent_rate(self) -> float:
         """
