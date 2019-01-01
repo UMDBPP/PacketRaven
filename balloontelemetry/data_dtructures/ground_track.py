@@ -18,30 +18,11 @@ class GroundTrack:
         self.callsign = callsign
         self.packets = []
 
-<<<<<<< HEAD:balloontelemetry/data_dtructures/ground_track.py
-<<<<<<< HEAD:balloontelemetry/data_dtructures/ground_track.py
-    def add_packet(self, raw_packet: str):
-        """
-        Adds new packet to packets list
-
-        :param raw_packet:
-        :return:
-        """
-        self.packets.append(aprs_packet.APRSPacket(raw_packet))
-=======
-=======
->>>>>>> f862471567cffe4163a54ee76ccb37a95f882e29:balloontelemetry/ground_track.py
     def add_packet(self, packet: aprs_packet.APRSPacket):
         if packet.callsign is self.callsign:
             self.packets.append(packet)
         else:
             print(f'Packet callsign {packet.callsign} does not match ground track callsign {self.callsign}.')
-<<<<<<< HEAD:balloontelemetry/data_dtructures/ground_track.py
->>>>>>> f862471567cffe4163a54ee76ccb37a95f882e29:balloontelemetry/ground_track.py
-
-        # TODO add checker for duplicate packets
-=======
->>>>>>> f862471567cffe4163a54ee76ccb37a95f882e29:balloontelemetry/ground_track.py
 
     def ascent_rate(self) -> float:
         """
@@ -93,6 +74,9 @@ class GroundTrack:
         most_recent_packet = self.packets[-1]
 
         return most_recent_packet.distance_to_point(longitude, latitude)
+
+    def __str__(self) -> str:
+        return f'APRS ground track {self.callsign}'
 
 
 if __name__ == '__main__':

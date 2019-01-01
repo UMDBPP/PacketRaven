@@ -16,7 +16,7 @@ class APRSPacketDelta:
         self.horizontal_distance = horizontal_distance
         self.vertical_distance = vertical_distance
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'APRS packet delta: {self.seconds} seconds, {self.horizontal_distance} meters overground, {self.vertical_distance} meters vertically'
 
 
@@ -42,18 +42,18 @@ class APRSPacket:
         self.heading = parsed_packet['course'] if 'course' in parsed_packet else None
         self.ground_speed = parsed_packet['speed'] if 'speed' in parsed_packet else None
 
-    def distance_to_point(self, longitude, latitude):
+    def distance_to_point(self, longitude, latitude) -> float:
         # TODO implement WGS84 distance
         return haversine((self.latitude, self.longitude), (latitude, longitude), unit='m')
 
-    def __sub__(self, other):
+    def __sub__(self, other) -> APRSPacketDelta:
         seconds = (self.datetime - other.datetime).total_seconds()
         horizontal = self.distance_to_point(other.longitude, other.latitude)
         vertical = self.altitude - other.altitude
 
         return APRSPacketDelta(seconds, horizontal, vertical)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'APRS packet: {self.callsign} {self.datetime} ({self.longitude}, {self.latitude}, {self.altitude}) "{self.comment}"'
 
 
