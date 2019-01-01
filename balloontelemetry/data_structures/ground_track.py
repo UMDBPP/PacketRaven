@@ -52,7 +52,8 @@ class GroundTrack:
         """
 
         if len(self.packets) >= 2:
-            return (self.packets[-1] - self.packets[-2]).ascent_rate()
+            # TODO implement filtering
+            return (self.packets[-1] - self.packets[-2]).ascent_rate
         else:
             raise ValueError('Not enough packets to process request.')
 
@@ -64,7 +65,8 @@ class GroundTrack:
         """
 
         if len(self.packets) >= 2:
-            return (self.packets[-1] - self.packets[-2]).ground_speed()
+            # TODO implement filtering
+            return (self.packets[-1] - self.packets[-2]).ground_speed
         else:
             raise ValueError('Not enough packets to process request.')
 

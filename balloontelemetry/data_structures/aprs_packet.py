@@ -12,32 +12,17 @@ from haversine import haversine
 
 class APRSPacketDelta:
     def __init__(self, seconds: float, horizontal_distance: float, vertical_distance: float):
-        self.seconds = seconds
-        self.horizontal_distance = horizontal_distance
-        self.vertical_distance = vertical_distance
-
-    def ascent_rate(self):
-        # TODO implement filtering
-        if self.seconds > 0:
-            if self.vertical_distance > 0:
-                return self.vertical_distance / self.seconds
-            else:
-                return 0
-        else:
+        if not seconds > 0:
             raise ValueError('Packets have the same timestamp.')
-
-    def ground_speed(self):
-        # TODO implement filtering
-        if self.seconds > 0:
-            if self.horizontal_distance > 0:
-                return self.horizontal_distance / self.seconds
-            else:
-                return 0
         else:
-            raise ValueError('Packets have the same timestamp.')
+            self.seconds = seconds
+            self.vertical_distance = vertical_distance
+            self.horizontal_distance = horizontal_distance
+            self.ascent_rate = self.vertical_distance / self.seconds
+            self.ground_speed = self.horizontal_distance / self.seconds
 
     def __str__(self) -> str:
-        return f'APRS packet delta: {self.seconds} seconds, {self.horizontal_distance:6.2f} meters overground, {self.vertical_distance:6.2f} meters vertically'
+        return f'APRS packet delta: {self.seconds} seconds, {self.vertical_distance:6.2f} meters vertically, {self.horizontal_distance:6.2f} meters overground'
 
 
 class APRSPacket:
