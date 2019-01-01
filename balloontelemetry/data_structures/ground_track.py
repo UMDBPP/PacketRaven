@@ -19,11 +19,33 @@ class GroundTrack:
         self.packets = []
 
     def add_packet(self, packet: aprs_packet.APRSPacket):
-        if packet.callsign is self.callsign:
+        if packet.callsign == self.callsign:
             # TODO check if packet is a duplicate
             self.packets.append(packet)
         else:
             print(f'Packet callsign {packet.callsign} does not match ground track callsign {self.callsign}.')
+
+    def altitude(self) -> float:
+        """
+        Return altitude of most recent packet.
+
+        :return: altitude in meters
+        """
+
+        return self.packets[-1].altitude
+
+    def coordinates(self, z: bool = False) -> tuple:
+        """
+        Return coordinates of most recent packet.
+
+        :param z: Whether to include altitude as third entry in tuple.
+        :return: tuple of coordinates (lon, lat[, alt])
+        """
+
+        if z:
+            return (self.packets[-1].longitude, self.packets[-1].latitude, self.altitude())
+        else:
+            return (self.packets[-1].longitude, self.packets[-1].latitude)
 
     def ascent_rate(self) -> float:
         """
@@ -32,9 +54,10 @@ class GroundTrack:
         :return: ascent rate in meters per second
         """
 
-        # TODO implement filtering
-        delta = self.packets[-1] - self.packets[-2]
-        return delta.vertical_distance / delta.seconds
+        if len(self.packets) >= 2:
+            return (self.packets[-1] - self.packets[-2]).ascent_rate()
+        else:
+            raise ValueError('Not enough packets to process request.')
 
     def ground_speed(self) -> float:
         """
@@ -43,9 +66,10 @@ class GroundTrack:
         :return: ground speed in meters per second
         """
 
-        # TODO implement filtering
-        delta = self.packets[-1] - self.packets[-2]
-        return delta.horizontal_distance / delta.seconds
+        if len(self.packets) >= 2:
+            return (self.packets[-1] - self.packets[-2]).ground_speed()
+        else:
+            raise ValueError('Not enough packets to process request.')
 
     def seconds_to_impact(self) -> float:
         """
@@ -57,11 +81,9 @@ class GroundTrack:
         current_ascent_rate = self.ascent_rate()
 
         if current_ascent_rate < 0:
-            most_recent_packet = self.packets[-1]
-
             # TODO implement landing location as the intersection of the predicted descent track with a local DEM
             # TODO implement a time to impact calc based off of standard atmo
-            return most_recent_packet.altitude / current_ascent_rate
+            return self.packets[-1].altitude / current_ascent_rate
         else:
             return -1
 
@@ -72,23 +94,29 @@ class GroundTrack:
         :return: distance to point in meters
         """
 
-        most_recent_packet = self.packets[-1]
-
-        return most_recent_packet.distance_to_point(longitude, latitude)
+        if len(self.packets) >= 1:
+            return self.packets[-1].distance_to_point(longitude, latitude)
+        else:
+            raise ValueError('Not enough packets to process request.')
 
     def __str__(self) -> str:
         return f'APRS ground track {self.callsign}'
 
 
 if __name__ == '__main__':
-    aprs_packet_1 = aprs_packet.APRSPacket(
-        "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,KM4LKM:!/:h=W;%E1O   /A=000095|!!|  /W3EAX,16,8,22'C,http://www.umd.edu")
-    aprs_packet_2 = aprs_packet.APRSPacket(
-        "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,KM4LKM:!/:GwN:cNCO   /A=000564|!-|  /W3EAX,75,8,5'C,http://www.umd.edu")
+    import datetime
+
+    packet_1 = aprs_packet.APRSPacket(
+        "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
+        packet_datetime=datetime.datetime(2018, 11, 11, 10, 20, 13))
+    packet_2 = aprs_packet.APRSPacket(
+        "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
+        packet_datetime=datetime.datetime(2018, 11, 11, 10, 21, 24))
 
     ground_track = GroundTrack('W3EAX-8')
-    ground_track.add_packet(aprs_packet_1)
-    ground_track.add_packet(aprs_packet_2)
+    ground_track.add_packet(packet_1)
+    ground_track.add_packet(packet_2)
 
-    print(f'Ascent rate: {ground_track.ascent_rate()}')
-    print(f'Ground speed: {ground_track.ground_speed()}')
+    print(f'Altitude: {ground_track.altitude()} m')
+    print(f'Ascent rate: {ground_track.ascent_rate()} m/s')
+    print(f'Ground speed: {ground_track.ground_speed()} m/s')
