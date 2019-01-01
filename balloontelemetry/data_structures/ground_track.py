@@ -47,7 +47,7 @@ class GroundTrack:
         delta = self.packets[-1] - self.packets[-2]
         return delta.horizontal_distance / delta.seconds
 
-    def seconds_to_impact(self, num_packets: int = 3) -> float:
+    def seconds_to_impact(self) -> float:
         """
         Calculate seconds to reach the ground.
 
@@ -57,7 +57,7 @@ class GroundTrack:
         current_ascent_rate = self.ascent_rate()
 
         if current_ascent_rate < 0:
-            most_recent_packet = self.packets[-1]  # why -1?
+            most_recent_packet = self.packets[-1]
 
             # TODO implement landing location as the intersection of the predicted descent track with a local DEM
             # TODO implement a time to impact calc based off of standard atmo
