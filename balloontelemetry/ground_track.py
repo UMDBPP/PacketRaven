@@ -74,6 +74,9 @@ class GroundTrack:
 
         return most_recent_packet.distance_to_point(longitude, latitude)
 
+    def __str__(self) -> str:
+        return f'APRS ground track {self.callsign}'
+
 
 if __name__ == '__main__':
     aprs_packet_1 = aprs_packet.APRSPacket(
