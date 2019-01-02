@@ -10,7 +10,7 @@ import aprslib
 from haversine import haversine
 
 
-class APRSPacketDelta:
+class PacketDelta:
     def __init__(self, seconds: float, horizontal_distance: float, vertical_distance: float):
         if not seconds > 0:
             raise ValueError('Packets have the same timestamp.')
@@ -25,7 +25,7 @@ class APRSPacketDelta:
         return f'APRS packet delta: {self.seconds} seconds, {self.vertical_distance:6.2f} meters vertically, {self.horizontal_distance:6.2f} meters overground'
 
 
-class APRSPacket:
+class APRS:
     def __init__(self, raw_packet: str, packet_datetime: datetime.datetime = None):
         """
         Construct APRS packet object from raw packet and given datetime.
@@ -78,24 +78,22 @@ class APRSPacket:
         # TODO implement WGS84 distance
         return haversine((self.latitude, self.longitude), (latitude, longitude), unit='m')
 
-    def __sub__(self, other) -> APRSPacketDelta:
+    def __sub__(self, other) -> PacketDelta:
         seconds = (self.packet_datetime - other.packet_datetime).total_seconds()
         horizontal_distance = self.distance_to_point(other.longitude, other.latitude)
         vertical_distance = self.altitude - other.altitude
 
-        return APRSPacketDelta(seconds, horizontal_distance, vertical_distance)
+        return PacketDelta(seconds, horizontal_distance, vertical_distance)
 
     def __str__(self) -> str:
         return f'APRS packet: {self.callsign} {self.packet_datetime} ({self.longitude:3.4f}, {self.latitude:3.4f}, {self.altitude:6.2f}) "{self.comment}"'
 
 
 if __name__ == '__main__':
-    import datetime
-
-    packet_1 = APRSPacket(
+    packet_1 = APRS(
         "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
         packet_datetime='2018-11-11T10:20:13')
-    packet_2 = APRSPacket(
+    packet_2 = APRS(
         "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
         packet_datetime='2018-11-11T10:21:24')
     packet_delta = packet_2 - packet_1

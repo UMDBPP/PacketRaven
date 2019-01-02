@@ -19,7 +19,7 @@ class GroundTrack:
         self.callsign = callsign
         self.packets = data_structures.DoublyLinkedList()
 
-    def add_packet(self, packet: packets.APRSPacket):
+    def add_packet(self, packet: packets.APRS):
         if packet.callsign == self.callsign:
             # TODO check if packet is a duplicate
             self.packets.append(packet)
@@ -104,10 +104,10 @@ class GroundTrack:
 
 
 if __name__ == '__main__':
-    packet_1 = packets.APRSPacket(
+    packet_1 = packets.APRS(
         "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
         packet_datetime='2018-11-11T10:20:13')
-    packet_2 = packets.APRSPacket(
+    packet_2 = packets.APRS(
         "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
         packet_datetime='2018-11-11T10:21:24')
 

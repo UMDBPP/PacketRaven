@@ -1,5 +1,7 @@
 """
 from http://ls.pwd.io/2014/08/singly-and-doubly-linked-lists-in-python/
+
+__authors__ = ['Zachary Burnett']
 """
 
 
