@@ -4,7 +4,8 @@ Ground track class for packet operations.
 __authors__ = ['Quinn Kupec', 'Zachary Burnett']
 """
 
-from balloontelemetry.data_structures import aprs_packet
+from balloontelemetry.ground_track import data_structures
+from balloontelemetry.telemetry import packets
 
 
 class GroundTrack:
@@ -16,9 +17,9 @@ class GroundTrack:
         """
 
         self.callsign = callsign
-        self.packets = []
+        self.packets = data_structures.DoublyLinkedList()
 
-    def add_packet(self, packet: aprs_packet.APRSPacket):
+    def add_packet(self, packet: packets.APRSPacket):
         if packet.callsign == self.callsign:
             # TODO check if packet is a duplicate
             self.packets.append(packet)
@@ -103,12 +104,10 @@ class GroundTrack:
 
 
 if __name__ == '__main__':
-    import datetime
-
-    packet_1 = aprs_packet.APRSPacket(
+    packet_1 = packets.APRSPacket(
         "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
         packet_datetime='2018-11-11T10:20:13')
-    packet_2 = aprs_packet.APRSPacket(
+    packet_2 = packets.APRSPacket(
         "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
         packet_datetime='2018-11-11T10:21:24')
 
