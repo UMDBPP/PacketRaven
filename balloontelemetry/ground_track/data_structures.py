@@ -13,6 +13,9 @@ class DoublyLinkedList:
             self.previous_node = previous_node
             self.next_node = next_node
 
+        def __eq__(self, other):
+            return self.value == other.value
+
     def append(self, value):
         """
         Appends value to end of list.
@@ -32,9 +35,9 @@ class DoublyLinkedList:
 
     def extend(self, other):
         """
-        Appends all values in given list to end of list.
+        Appends all values in given iterable to the end of this list.
 
-        :param other: List whose entries should be appended.
+        :param other: Iterable whose entries should be appended.
         """
 
         for entry in other:
@@ -45,7 +48,7 @@ class DoublyLinkedList:
 
     def insert(self, value, index: int):
         """
-        Inserts value at specified index, incrementing element indices following the specified index by one.
+        Inserts value at specified index, element indices following the specified index are incremented by one.
 
         :param value: Value to insert.
         :param index: Index at which to insert value.
@@ -54,9 +57,14 @@ class DoublyLinkedList:
         node_at_index = self._node_at_index(index)
 
         if node_at_index is not None:
-            new_node = self.Node(value, node_at_index, node_at_index.next_node)
-            node_at_index.next_node = new_node
-            node_at_index.next_node.previous_node = new_node
+            new_node = self.Node(value, node_at_index.previous_node, node_at_index)
+
+            if node_at_index.previous_node is not None:
+                node_at_index.previous_node.next_node = new_node
+            else:
+                self.head = new_node
+
+            node_at_index.previous_node = new_node
         else:
             if index == 0:
                 self.head = self.Node(value, None, None)
@@ -87,7 +95,7 @@ class DoublyLinkedList:
 
             current_node = current_node.next_node
 
-    def index(self, value):
+    def index(self, value) -> int:
         """
         Get index of first node with specified value.
 
@@ -153,7 +161,7 @@ class DoublyLinkedList:
             yield current_node.value
             current_node = current_node.next_node
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(list(self))
 
 
