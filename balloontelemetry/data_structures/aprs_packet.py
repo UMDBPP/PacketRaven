@@ -94,10 +94,10 @@ if __name__ == '__main__':
 
     packet_1 = APRSPacket(
         "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
-        packet_datetime=datetime.datetime(2018, 11, 11, 10, 20, 13))
+        packet_datetime='2018-11-11T10:20:13')
     packet_2 = APRSPacket(
         "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
-        packet_datetime=datetime.datetime(2018, 11, 11, 10, 21, 24))
+        packet_datetime='2018-11-11T10:21:24')
     packet_delta = packet_2 - packet_1
 
     print(f'Packet 1: {packet_1}')

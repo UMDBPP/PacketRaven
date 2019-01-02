@@ -107,10 +107,10 @@ if __name__ == '__main__':
 
     packet_1 = aprs_packet.APRSPacket(
         "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
-        packet_datetime=datetime.datetime(2018, 11, 11, 10, 20, 13))
+        packet_datetime='2018-11-11T10:20:13')
     packet_2 = aprs_packet.APRSPacket(
         "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
-        packet_datetime=datetime.datetime(2018, 11, 11, 10, 21, 24))
+        packet_datetime='2018-11-11T10:21:24')
 
     ground_track = GroundTrack('W3EAX-8')
     ground_track.add_packet(packet_1)
