@@ -39,6 +39,7 @@ class APRS:
         # aprslib converts units to metric
         parsed_packet = aprslib.parse(self.raw)
 
+        # TODO make HABduino add timestamp to packet upon transmission
         if packet_datetime is not None:
             if type(packet_datetime) in [int, float]:
                 self.packet_datetime = datetime.datetime.fromtimestamp(packet_datetime)
@@ -87,6 +88,16 @@ class APRS:
 
     def __str__(self) -> str:
         return f'APRS packet: {self.callsign} {self.packet_datetime} ({self.longitude:3.4f}, {self.latitude:3.4f}, {self.altitude:6.2f}) "{self.comment}"'
+
+    def __eq__(self, other) -> bool:
+        """
+        Whether this packet equals another packet, ignoring datetime (because of possible staggered duplicate packets).
+
+        :param other: Packet to compare to this one.
+        :return: equality
+        """
+
+        return self.callsign == other.callsign and self.longitude == other.longitude and self.latitude == other.latitude and self.altitude == other.altitude and self.comment == other.comment
 
 
 if __name__ == '__main__':

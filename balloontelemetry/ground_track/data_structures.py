@@ -15,7 +15,7 @@ class DoublyLinkedList:
             self.previous_node = previous_node
             self.next_node = next_node
 
-        def __eq__(self, other):
+        def __eq__(self, other) -> bool:
             return self.value == other.value
 
     def append(self, value):
@@ -114,6 +114,25 @@ class DoublyLinkedList:
 
             current_node = current_node.next_node
             index += 1
+
+    def count(self, value):
+        """
+        Get number of nodes containing given value.
+
+        :param value: Value to use.
+        :return: number of nodes with value
+        """
+
+        num_nodes_with_value = 0
+        current_node = self.head
+
+        while current_node is not None:
+            if current_node.value == value:
+                num_nodes_with_value += 1
+
+            current_node = current_node.next_node
+
+        return num_nodes_with_value
 
     def _node_at_index(self, index: int):
         node_at_index = None
