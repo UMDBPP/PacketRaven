@@ -1,7 +1,7 @@
 """
-modified from http://ls.pwd.io/2014/08/singly-and-doubly-linked-lists-in-python/
+Data structures for ground track class.
 
-__authors__ = ['Zachary Burnett']
+__authors__ = ['Zachary Burnett', 'StackOverflow']
 """
 
 
@@ -24,7 +24,7 @@ class DoublyLinkedList:
 
     class Node:
         """
-        Node with three attributes: value, and two links (forward and backward).
+        Node within doubly-linked list with three attributes: value, previous node, and next node.
         """
 
         def __init__(self, value, previous_node, next_node):
