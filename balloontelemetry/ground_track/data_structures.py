@@ -6,10 +6,26 @@ __authors__ = ['Zachary Burnett']
 
 
 class DoublyLinkedList:
+    """
+    A linked list is a series of node objects, each with a link (object reference) to the next node in the series.
+    Thus, the majority of the list is only accessible by starting at the first node (the "head") and following the links forward:
+
+    node_1 (head) -> node_2 -> node_3
+
+    A doubly-linked list is similar to a linked list, except each node contains a link to the previous node as well.
+    Doubly-linked list have a "tail" attribute alongside the "head".
+
+    node_1 (head) <-> node_2 <-> node_3 (tail)
+    """
+
     head = None
     tail = None
 
     class Node:
+        """
+        Node with three attributes: value, and two links (forward and backward).
+        """
+
         def __init__(self, value, previous_node, next_node):
             self.value = value
             self.previous_node = previous_node
@@ -20,7 +36,7 @@ class DoublyLinkedList:
 
     def append(self, value):
         """
-        Appends value to end of list.
+        Append given value as new tail.
 
         :param value: Value to append.
         """
@@ -37,7 +53,7 @@ class DoublyLinkedList:
 
     def extend(self, other):
         """
-        Appends all values in given iterable to the end of this list.
+        Append all values in given iterable to end of list.
 
         :param other: Iterable whose entries should be appended.
         """
@@ -50,7 +66,7 @@ class DoublyLinkedList:
 
     def insert(self, value, index: int):
         """
-        Inserts value at specified index, element indices following the specified index are incremented by one.
+        Insert value at given index.
 
         :param value: Value to insert.
         :param index: Index at which to insert value.
@@ -78,7 +94,7 @@ class DoublyLinkedList:
 
     def remove(self, value):
         """
-        Removes all instances of value from list.
+        Remove all instances of given value.
 
         :param value: Value to remove.
         """
@@ -99,10 +115,10 @@ class DoublyLinkedList:
 
     def index(self, value) -> int:
         """
-        Get index of first node with specified value.
+        First index of given value.
 
-        :param value: Value of node.
-        :return: index of node
+        :param value: Value to find.
+        :return: value index
         """
 
         index = 0
@@ -115,12 +131,12 @@ class DoublyLinkedList:
             current_node = current_node.next_node
             index += 1
 
-    def count(self, value):
+    def count(self, value) -> int:
         """
-        Get number of nodes containing given value.
+        Number of instances of given value.
 
-        :param value: Value to use.
-        :return: number of nodes with value
+        :param value: Value to count.
+        :return: value count
         """
 
         num_nodes_with_value = 0
@@ -135,6 +151,13 @@ class DoublyLinkedList:
         return num_nodes_with_value
 
     def _node_at_index(self, index: int):
+        """
+        Node indexing function.
+
+        :param index: index
+        :return: node at index
+        """
+
         node_at_index = None
 
         if index >= 0:
@@ -163,6 +186,13 @@ class DoublyLinkedList:
         return node_at_index
 
     def __getitem__(self, index: int):
+        """
+        Value indexing function (for [] indexing).
+
+        :param index: index
+        :return: value at index
+        """
+
         return self._node_at_index(index).value
 
     def __len__(self) -> int:
@@ -176,6 +206,12 @@ class DoublyLinkedList:
         return length
 
     def __iter__(self):
+        """
+        Generator function iterating over list values, starting at head.
+
+        :return: next value
+        """
+
         current_node = self.head
 
         while current_node is not None:
