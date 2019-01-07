@@ -1,5 +1,5 @@
 """
-from http://ls.pwd.io/2014/08/singly-and-doubly-linked-lists-in-python/
+modified from http://ls.pwd.io/2014/08/singly-and-doubly-linked-lists-in-python/
 
 __authors__ = ['Zachary Burnett']
 """
@@ -8,18 +8,19 @@ __authors__ = ['Zachary Burnett']
 class DoublyLinkedList:
     """
     A linked list is a series of node objects, each with a link (object reference) to the next node in the series.
-    Thus, the majority of the list is only accessible by starting at the first node (the "head") and following the links forward:
+    The majority of the list is only accessible by starting at the first node ("head") and following the links forward.
 
     node_1 (head) -> node_2 -> node_3
 
-    A doubly-linked list is similar to a linked list, except each node contains a link to the previous node as well.
-    Doubly-linked list have a "tail" attribute alongside the "head".
+    A doubly-linked list is similar to a linked list, except each node also contains a link to the previous node.
+    Doubly-linked lists have an additional "tail" attribute, alongside "head".
 
     node_1 (head) <-> node_2 <-> node_3 (tail)
     """
 
-    head = None
-    tail = None
+    def __init__(self):
+        self.head = None
+        self.tail = None
 
     class Node:
         """
@@ -224,12 +225,29 @@ class DoublyLinkedList:
 
 if __name__ == '__main__':
     doubly_linked_list = DoublyLinkedList()
+
     doubly_linked_list.append(0)
+
+    # should be [0]
+    print(doubly_linked_list)
+
+    # should be True
+    print(doubly_linked_list.head is doubly_linked_list.tail)
+
     doubly_linked_list.extend([5, 4, 6, 0, 3])
+
+    # should be [0, 5, 4, 6, 0, 3]
+    print(doubly_linked_list)
+
+    # should be False
+    print(doubly_linked_list.head is doubly_linked_list.tail)
+
     doubly_linked_list.insert(1, 0)
 
+    # should be [1, 0, 5, 4, 6, 0, 3]
     print(doubly_linked_list)
 
     doubly_linked_list.remove(0)
 
+    # should be [1, 5, 4, 6, 3]
     print(doubly_linked_list)
