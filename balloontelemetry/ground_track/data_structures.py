@@ -188,7 +188,7 @@ class DoublyLinkedList:
 
     def __getitem__(self, index: int):
         """
-        Value indexing function (for [] indexing).
+        Indexing function (for integer indexing of list contents).
 
         :param index: index
         :return: value at index
