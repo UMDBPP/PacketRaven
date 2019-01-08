@@ -17,28 +17,43 @@ def parse_aprs_packet(raw_string: str) -> dict:
     :return: dictionary of APRS fields
     """
 
-    parsed_packet = {}
-
-    return parsed_packet
+    return {}
 
 
-def decode_lonlat(encoded_lonlat: str) -> float:
+def decompress_lon(compressed_lon: str) -> float:
+    """
+    Decode longitude string from base 91 ASCII to float.
+
+    :param compressed_lon: compressed longitude string
+    :return: longitude
+    """
+
     converted_floats = []
-    current_power = len(encoded_lonlat) - 1
+    current_power = len(compressed_lon) - 1
 
-    for character in encoded_lonlat:
+    for character in compressed_lon:
         converted_floats.append(float(ord(character) - 33) * (91 ** current_power))
         current_power -= 1
 
-    return sum(converted_floats)
+    return -180 + (sum(converted_floats) / 190463)
 
 
-def convert_lon(compressed_lon: str) -> float:
-    return -180 + (decode_lonlat(compressed_lon) / 190463)
+def decompress_lat(compressed_lat: str) -> float:
+    """
+    Decode latitude string from base 91 ASCII to float.
 
+    :param compressed_lat: compressed latitude string
+    :return: latitude
+    """
 
-def convert_lat(compressed_lat: str) -> float:
-    return 90 - (decode_lonlat(compressed_lat) / 380926)
+    converted_floats = []
+    current_power = len(compressed_lat) - 1
+
+    for character in compressed_lat:
+        converted_floats.append(float(ord(character) - 33) * (91 ** current_power))
+        current_power -= 1
+
+    return 90 - (sum(converted_floats) / 380926)
 
 
 if __name__ == '__main__':
