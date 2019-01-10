@@ -5,7 +5,7 @@ __authors__ = ['Zachary Burnett', 'Nick Rossomando']
 """
 
 
-def parse_aprs_packet(raw_string: str) -> dict:
+def parse_aprs_packet(raw_aprs: str) -> dict:
     """
     Parse APRS fields from raw packet string.
 
@@ -13,11 +13,28 @@ def parse_aprs_packet(raw_string: str) -> dict:
 
     TODO detect partial packets
 
-    :param raw_string: raw APRS string
+    :param raw_aprs: raw APRS string
     :return: dictionary of APRS fields
     """
 
-    return {}
+    parsed = {'raw': raw_aprs}
+
+    working_string = str(raw_aprs)
+
+    parsed['from'], working_string = working_string.split('>', 1)
+    parsed['to'], working_string = working_string.split(',', 1)
+
+    parsed['path'] = working_string.split(',')
+    parsed['path'][-1], working_string = parsed['path'][-1].split(':', 1)
+    parsed['via'] = parsed['path'][-1]
+
+    parsed['messagecapable'] = working_string[0] in ['!', '/']
+
+    working_string = working_string[2:]
+
+    lonlat, working_string = working_string.split('/A=', 1)
+
+    return parsed
 
 
 def decompress_lon(compressed_lon: str) -> float:

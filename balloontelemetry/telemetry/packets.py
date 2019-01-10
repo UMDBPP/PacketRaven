@@ -117,7 +117,6 @@ class APRS(LocationPacket):
         super().__init__(time, parsed_packet['longitude'], parsed_packet['latitude'],
                          parsed_packet['altitude'])
 
-        self.raw_packet = raw_aprs
         self.parsed_packet = parsed_packet
 
     def __getitem__(self, field: str):
