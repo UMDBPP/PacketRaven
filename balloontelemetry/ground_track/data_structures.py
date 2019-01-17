@@ -18,9 +18,18 @@ class DoublyLinkedList:
     node_1 (head) <-> node_2 <-> node_3 (tail)
     """
 
-    def __init__(self):
+    def __init__(self, sequence=None):
+        """
+        Instantiate new doubly-linked list.
+
+        :param sequence: Iterable sequence to populate list.
+        """
+
         self.head = None
         self.tail = None
+
+        if sequence is not None:
+            self.extend(sequence)
 
     class Node:
         """
@@ -52,14 +61,14 @@ class DoublyLinkedList:
         if self.head is None:
             self.head = self.tail
 
-    def extend(self, other):
+    def extend(self, sequence):
         """
         Append all values in given iterable to end of list.
 
-        :param other: Iterable whose entries should be appended.
+        :param sequence: Iterable sequence with which to extend.
         """
 
-        for entry in other:
+        for entry in sequence:
             if type(entry) is self.Node:
                 entry = entry.value
 
@@ -106,6 +115,8 @@ class DoublyLinkedList:
             if current_node.value == value:
                 if current_node.next_node is not None:
                     current_node.next_node.previous_node = current_node.previous_node
+                else:
+                    self.tail = current_node.previous_node
 
                 if current_node.previous_node is not None:
                     current_node.previous_node.next_node = current_node.next_node
@@ -131,6 +142,8 @@ class DoublyLinkedList:
 
             current_node = current_node.next_node
             index += 1
+        else:
+            raise ValueError(f'{value} is not in list')
 
     def count(self, value) -> int:
         """
@@ -184,6 +197,9 @@ class DoublyLinkedList:
                 current_node = current_node.previous_node
                 index_counter -= 1
 
+        if node_at_index is None:
+            raise IndexError('list index out of range')
+
         return node_at_index
 
     def __getitem__(self, index: int):
@@ -195,16 +211,6 @@ class DoublyLinkedList:
         """
 
         return self._node_at_index(index).value
-
-    def __len__(self) -> int:
-        length = 0
-        current_node = self.head
-
-        while current_node is not None:
-            length += 1
-            current_node = current_node.next_node
-
-        return length
 
     def __iter__(self):
         """
@@ -219,35 +225,23 @@ class DoublyLinkedList:
             yield current_node.value
             current_node = current_node.next_node
 
+    def __len__(self) -> int:
+        length = 0
+        current_node = self.head
+
+        while current_node is not None:
+            length += 1
+            current_node = current_node.next_node
+
+        return length
+
+    def __eq__(self, other) -> bool:
+        if len(self) == len(other):
+            for index in range(len(self)):
+                if self[index] != other[index]:
+                    return False
+            else:
+                return True
+
     def __str__(self) -> str:
         return str(list(self))
-
-
-if __name__ == '__main__':
-    doubly_linked_list = DoublyLinkedList()
-
-    doubly_linked_list.append(0)
-
-    # should be [0]
-    print(doubly_linked_list)
-
-    # should be True
-    print(doubly_linked_list.head is doubly_linked_list.tail)
-
-    doubly_linked_list.extend([5, 4, 6, 0, 3])
-
-    # should be [0, 5, 4, 6, 0, 3]
-    print(doubly_linked_list)
-
-    # should be False
-    print(doubly_linked_list.head is doubly_linked_list.tail)
-
-    doubly_linked_list.insert(1, 0)
-
-    # should be [1, 0, 5, 4, 6, 0, 3]
-    print(doubly_linked_list)
-
-    doubly_linked_list.remove(0)
-
-    # should be [1, 5, 4, 6, 3]
-    print(doubly_linked_list)
