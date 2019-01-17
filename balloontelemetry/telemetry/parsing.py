@@ -4,6 +4,8 @@ Parse a APRS packets from raw strings.
 __authors__ = ['Zachary Burnett', 'Nick Rossomando']
 """
 
+import re
+
 
 def parse_aprs_packet(raw_aprs: str) -> dict:
     """
@@ -24,15 +26,27 @@ def parse_aprs_packet(raw_aprs: str) -> dict:
     parsed['from'], working_string = working_string.split('>', 1)
     parsed['to'], working_string = working_string.split(',', 1)
 
-    parsed['path'] = working_string.split(',')
-    parsed['path'][-1], working_string = parsed['path'][-1].split(':', 1)
+    parsed['path'], working_string = working_string.split(':', 1)
+    parsed['path'] = parsed['path'].split(',')
     parsed['via'] = parsed['path'][-1]
 
     parsed['messagecapable'] = working_string[0] in ['!', '/']
 
     working_string = working_string[2:]
 
-    lonlat, working_string = working_string.split('/A=', 1)
+    # TODO add parsing for uncompressed coordinates
+    lonlat_string = working_string[:8]
+    parsed['latitude'] = decompress_lat(lonlat_string[:4])
+    parsed['longitude'] = decompress_lon(lonlat_string[4:])
+    parsed['symbol'] = working_string[8]
+
+    working_string = working_string[9:]
+
+    # TODO add parsing for more altitude formats
+    # convert altitude from feet to meters
+    parsed['altitude'] = int(re.findall('/A=.{6}', working_string)[0][3:]) * 0.3048
+
+    parsed['comment'] = re.split('/A=.{6}', working_string)[-1]
 
     return parsed
 
