@@ -1,7 +1,7 @@
 """
-Data structures for ground track class.
+Doubly linked list for generic value types.
 
-__authors__ = ['Zachary Burnett', 'StackOverflow']
+__authors__ = ['Zachary Burnett']
 """
 
 

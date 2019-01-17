@@ -1,3 +1,9 @@
+"""
+Unit tests for balloon telemetry package.
+
+__authors__ = ['Zachary Burnett']
+"""
+
 import datetime
 import unittest
 
