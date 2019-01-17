@@ -4,6 +4,7 @@ import unittest
 from balloontelemetry.ground_track import data_structures
 from balloontelemetry.ground_track import ground_track
 from balloontelemetry.telemetry import packets
+from balloontelemetry.telemetry import parsing
 
 
 class TestDoublyLinkedList(unittest.TestCase):
@@ -46,13 +47,13 @@ class TestDoublyLinkedList(unittest.TestCase):
 
 
 class TestPackets(unittest.TestCase):
-    def test_init(self):
+    def test_aprs(self):
         packet = packets.APRS(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
             time='2018-11-11T10:20:13')
 
         self.assertEqual(datetime.datetime(2018, 11, 11, 10, 20, 13), packet.time)
-        self.assertEqual((-77.90921071284187, 39.7003564996876, 8201.8632), packet.coordinates(True))
+        self.assertEqual((-77.90921071284187, 39.7003564996876, 8201.8632), packet.coordinates(z=True))
         self.assertTrue(packet['callsign'] is packet['from'])
         self.assertEqual('W3EAX-8', packet['callsign'])
         self.assertEqual('|!Q|  /W3EAX,262,0,18\'C,http://www.umd.edu', packet['comment'])
@@ -128,6 +129,18 @@ class TestGroundTrack(unittest.TestCase):
 
         self.assertEqual((packet_2 - packet_1).ascent_rate, track.ascent_rate())
         self.assertEqual((packet_2 - packet_1).ground_speed, track.ground_speed())
+
+
+class TestParser(unittest.TestCase):
+    def test_parse_aprs_packet(self):
+        parsed_packet = parsing.parse_aprs_packet(
+            'W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18\'C,http://www.umd.edu')
+
+        self.assertEqual('W3EAX-8', parsed_packet['from'])
+        self.assertEqual(-77.90921071284187, parsed_packet['longitude'])
+        self.assertEqual(39.7003564996876, parsed_packet['latitude'])
+        self.assertEqual(8201.8632, parsed_packet['altitude'])
+        self.assertEqual('|!Q|  /W3EAX,262,0,18\'C,http://www.umd.edu', parsed_packet['comment'])
 
 
 if __name__ == '__main__':
