@@ -1,6 +1,8 @@
+import datetime
 import unittest
 
 from balloontelemetry.ground_track import data_structures
+from balloontelemetry.telemetry import packets
 
 
 class TestDoublyLinkedList(unittest.TestCase):
@@ -40,6 +42,49 @@ class TestDoublyLinkedList(unittest.TestCase):
         self.assertEqual([5, 4, 'foo'], removed_list)
         self.assertEqual(5, removed_list.head.value)
         self.assertEqual('foo', removed_list.tail.value)
+
+
+class TestPackets(unittest.TestCase):
+    def test_init(self):
+        packet = packets.APRS(
+            "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
+            time='2018-11-11T10:20:13')
+
+        self.assertEqual(datetime.datetime(2018, 11, 11, 10, 20, 13), packet.time)
+        self.assertEqual(-77.90921071284187, packet.longitude)
+        self.assertEqual(39.7003564996876, packet.latitude)
+        self.assertEqual(8201.8632, packet.altitude)
+        self.assertTrue(packet['callsign'] is packet['from'])
+        self.assertEqual('W3EAX-8', packet['callsign'])
+        self.assertEqual('|!Q|  /W3EAX,262,0,18\'C,http://www.umd.edu', packet['comment'])
+
+    def test_equality(self):
+        packet_1 = packets.APRS(
+            "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
+            time='2018-11-11T10:20:13')
+        packet_2 = packets.APRS(
+            "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
+            time='2018-11-11T10:21:24')
+        packet_3 = packets.APRS(
+            "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
+            time='2018-11-11T10:21:31')
+
+        self.assertTrue(packet_1 != packet_2)
+        self.assertTrue(packet_1 == packet_3)
+
+    def test_subtraction(self):
+        packet_1 = packets.APRS(
+            "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
+            time='2018-11-11T10:20:13')
+        packet_2 = packets.APRS(
+            "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
+            time='2018-11-11T10:21:24')
+
+        packet_delta = packet_2 - packet_1
+
+        self.assertEqual(71, packet_delta.seconds)
+        self.assertEqual(443.78880000000026, packet_delta.vertical_distance)
+        self.assertEqual(2408.700970494594, packet_delta.horizontal_distance)
 
 
 if __name__ == '__main__':
