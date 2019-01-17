@@ -9,17 +9,18 @@ from balloontelemetry.telemetry import packets
 
 
 class GroundTrack:
-    def __init__(self, callsign: str):
+    def __init__(self, callsign: str, packets=None):
         """
         Instantiate GroundTrack object with initial conditions.
 
         :param callsign: Callsign of ground track.
+        :param packets: Iterable of packets.
         """
 
         self.callsign = callsign
-        self.packets = data_structures.DoublyLinkedList()
+        self.packets = data_structures.DoublyLinkedList(packets)
 
-    def add_packet(self, packet: packets.APRS):
+    def append(self, packet: packets.APRS):
         packet_callsign = packet['callsign']
 
         if packet_callsign == self.callsign:
@@ -101,22 +102,24 @@ class GroundTrack:
         else:
             raise ValueError('Not enough packets to process request.')
 
+    def __getitem__(self, index: int):
+        """
+        Indexing function (for integer indexing of packets).
+
+        :param index: index
+        :return: packet at index
+        """
+
+        return self.packets[index]
+
+    def __iter__(self):
+        return iter(self.packets)
+
+    def __len__(self) -> int:
+        return len(self.packets)
+
+    def __eq__(self, other):
+        return self.callsign == other.callsign and self.packets == other.packets
+
     def __str__(self) -> str:
         return f'APRS ground track {self.callsign}'
-
-
-if __name__ == '__main__':
-    packet_1 = packets.APRS(
-        "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
-        time='2018-11-11T10:20:13')
-    packet_2 = packets.APRS(
-        "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
-        time='2018-11-11T10:21:24')
-
-    ground_track = GroundTrack('W3EAX-8')
-    ground_track.add_packet(packet_1)
-    ground_track.add_packet(packet_2)
-
-    print(f'Altitude: {ground_track.altitude()} m')
-    print(f'Ascent rate: {ground_track.ascent_rate()} m/s')
-    print(f'Ground speed: {ground_track.ground_speed()} m/s')

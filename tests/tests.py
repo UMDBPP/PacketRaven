@@ -2,6 +2,7 @@ import datetime
 import unittest
 
 from balloontelemetry.ground_track import data_structures
+from balloontelemetry.ground_track import ground_track
 from balloontelemetry.telemetry import packets
 
 
@@ -51,9 +52,7 @@ class TestPackets(unittest.TestCase):
             time='2018-11-11T10:20:13')
 
         self.assertEqual(datetime.datetime(2018, 11, 11, 10, 20, 13), packet.time)
-        self.assertEqual(-77.90921071284187, packet.longitude)
-        self.assertEqual(39.7003564996876, packet.latitude)
-        self.assertEqual(8201.8632, packet.altitude)
+        self.assertEqual((-77.90921071284187, 39.7003564996876, 8201.8632), packet.coordinates(True))
         self.assertTrue(packet['callsign'] is packet['from'])
         self.assertEqual('W3EAX-8', packet['callsign'])
         self.assertEqual('|!Q|  /W3EAX,262,0,18\'C,http://www.umd.edu', packet['comment'])
@@ -85,6 +84,50 @@ class TestPackets(unittest.TestCase):
         self.assertEqual(71, packet_delta.seconds)
         self.assertEqual(443.78880000000026, packet_delta.vertical_distance)
         self.assertEqual(2408.700970494594, packet_delta.horizontal_distance)
+
+
+class TestGroundTrack(unittest.TestCase):
+    def test_append(self):
+        packet_1 = packets.APRS(
+            "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
+            time='2018-11-11T10:20:13')
+        packet_2 = packets.APRS(
+            "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
+            time='2018-11-11T10:21:24')
+
+        track = ground_track.GroundTrack('W3EAX-8')
+
+        track.append(packet_1)
+        track.append(packet_2)
+
+        self.assertTrue(track[0] is packet_1)
+        self.assertTrue(track[1] is packet_2)
+
+    def test_rates(self):
+        packet = packets.APRS(
+            "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
+            time='2018-11-11T10:20:13')
+
+        track = ground_track.GroundTrack('W3EAX-8')
+
+        track.append(packet)
+
+        self.assertEqual(packet.altitude, track.altitude())
+        self.assertEqual(packet.coordinates(), track.coordinates())
+        self.assertEqual(packet.altitude, track.altitude())
+
+    def test_values(self):
+        packet_1 = packets.APRS(
+            "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
+            time='2018-11-11T10:20:13')
+        packet_2 = packets.APRS(
+            "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
+            time='2018-11-11T10:21:24')
+
+        track = ground_track.GroundTrack('W3EAX-8', [packet_1, packet_2])
+
+        self.assertEqual((packet_2 - packet_1).ascent_rate, track.ascent_rate())
+        self.assertEqual((packet_2 - packet_1).ground_speed, track.ground_speed())
 
 
 if __name__ == '__main__':
