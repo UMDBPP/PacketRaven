@@ -7,8 +7,9 @@ __authors__ = ['Quinn Kupec', 'Zachary Burnett']
 import datetime
 import math
 
-import aprslib
 import haversine
+
+from balloontelemetry.telemetry.parsing import parse_aprs_packet
 
 
 class LocationPacket:
@@ -96,8 +97,8 @@ class APRS(LocationPacket):
         :param time: Time of packet, either as datetime object, seconds since Unix epoch, or ISO format date string.
         """
 
-        # aprslib converts units to metric
-        parsed_packet = aprslib.parse(raw_aprs)
+        # parse packet, units are metric
+        parsed_packet = parse_aprs_packet(raw_aprs)
 
         # TODO make HABduino add timestamp to packet upon transmission
         if time is not None:

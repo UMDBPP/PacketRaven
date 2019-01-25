@@ -36,8 +36,8 @@ def parse_aprs_packet(raw_aprs: str) -> dict:
 
     # TODO add parsing for uncompressed coordinates
     lonlat_string = working_string[:8]
-    parsed['latitude'] = decompress_lat(lonlat_string[:4])
-    parsed['longitude'] = decompress_lon(lonlat_string[4:])
+    parsed['latitude'] = decompress_aprs_lat(lonlat_string[:4])
+    parsed['longitude'] = decompress_aprs_lon(lonlat_string[4:])
     parsed['symbol'] = working_string[8]
 
     working_string = working_string[9:]
@@ -51,7 +51,7 @@ def parse_aprs_packet(raw_aprs: str) -> dict:
     return parsed
 
 
-def decompress_lon(compressed_lon: str) -> float:
+def decompress_aprs_lon(compressed_lon: str) -> float:
     """
     Decode longitude string from base 91 ASCII to float.
 
@@ -69,7 +69,7 @@ def decompress_lon(compressed_lon: str) -> float:
     return -180 + (sum(converted_floats) / 190463)
 
 
-def decompress_lat(compressed_lat: str) -> float:
+def decompress_aprs_lat(compressed_lat: str) -> float:
     """
     Decode latitude string from base 91 ASCII to float.
 
