@@ -14,42 +14,62 @@ from balloontelemetry.telemetry import parsing
 
 
 class TestDoublyLinkedList(unittest.TestCase):
-    def test_len(self):
-        empty_list = data_structures.DoublyLinkedList()
-        nonempty_list = data_structures.DoublyLinkedList([0, 'foo'])
+    def test_getitem(self):
+        list_1 = data_structures.DoublyLinkedList([0, 5, 4, 'foo', 5, 6])
 
-        self.assertEqual(0, len(empty_list))
-        self.assertEqual(2, len(nonempty_list))
+        self.assertEqual(0, list_1[0])
+        self.assertEqual(0, list_1.head.value)
+        self.assertEqual('foo', list_1[3])
+        self.assertEqual(6, list_1[-1])
+        self.assertEqual(6, list_1.tail.value)
+
+    def test_len(self):
+        list_1 = data_structures.DoublyLinkedList()
+        list_2 = data_structures.DoublyLinkedList([0, 'foo'])
+
+        self.assertEqual(0, len(list_1))
+        self.assertEqual(2, len(list_2))
 
     def test_extend(self):
-        extended_list = data_structures.DoublyLinkedList([0])
-        extended_list.extend(['foo', 5])
+        list_1 = data_structures.DoublyLinkedList([0])
+        list_1.extend(['foo', 5])
 
-        self.assertEqual([0, 'foo', 5], extended_list)
-        self.assertTrue(extended_list.head is not extended_list.tail)
+        self.assertEqual([0, 'foo', 5], list_1)
+        self.assertTrue(list_1.head is not list_1.tail)
 
     def test_append(self):
-        appended_list = data_structures.DoublyLinkedList()
-        appended_list.append(0)
+        list_1 = data_structures.DoublyLinkedList()
+        list_1.append(0)
 
-        self.assertEqual(0, appended_list[0])
-        self.assertEqual(0, appended_list[-1])
-        self.assertTrue(appended_list.head is appended_list.tail)
+        self.assertEqual(0, list_1[0])
+        self.assertEqual(0, list_1[-1])
+        self.assertTrue(list_1.head is list_1.tail)
 
     def test_insert(self):
-        inserted_list = data_structures.DoublyLinkedList([0, 'foo'])
-        inserted_list.insert('bar', 0)
+        list_1 = data_structures.DoublyLinkedList([0, 'foo'])
+        list_1.insert('bar', 0)
 
-        self.assertEqual(['bar', 0, 'foo'], inserted_list)
+        self.assertEqual(['bar', 0, 'foo'], list_1)
 
     def test_remove(self):
-        removed_list = data_structures.DoublyLinkedList([0, 5, 4, 'foo', 0, 0])
+        list_1 = data_structures.DoublyLinkedList(['a', 'a'])
+        list_2 = data_structures.DoublyLinkedList(['a', 'b', 'c'])
+        list_3 = data_structures.DoublyLinkedList([0, 5, 4, 'foo', 0, 0])
 
-        removed_list.remove(0)
+        list_1.remove('a')
+        del list_2[0]
+        del list_2[-1]
+        list_3.remove(0)
 
-        self.assertEqual([5, 4, 'foo'], removed_list)
-        self.assertEqual(5, removed_list.head.value)
-        self.assertEqual('foo', removed_list.tail.value)
+        self.assertEqual(0, len(list_1))
+        self.assertTrue(list_1.head is None)
+        self.assertTrue(list_1.tail is None)
+        self.assertEqual(1, len(list_2))
+        self.assertEqual('b', list_2[0])
+        self.assertEqual('b', list_2[-1])
+        self.assertEqual([5, 4, 'foo'], list_3)
+        self.assertEqual(5, list_3[0])
+        self.assertEqual('foo', list_3[-1])
 
 
 class TestPackets(unittest.TestCase):

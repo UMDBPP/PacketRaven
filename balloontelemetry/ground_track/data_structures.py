@@ -113,15 +113,7 @@ class DoublyLinkedList:
 
         while current_node is not None:
             if current_node.value == value:
-                if current_node.next_node is not None:
-                    current_node.next_node.previous_node = current_node.previous_node
-                else:
-                    self.tail = current_node.previous_node
-
-                if current_node.previous_node is not None:
-                    current_node.previous_node.next_node = current_node.next_node
-                else:
-                    self.head = current_node.next_node
+                self._remove_node(current_node)
 
             current_node = current_node.next_node
 
@@ -202,6 +194,17 @@ class DoublyLinkedList:
 
         return node_at_index
 
+    def _remove_node(self, node):
+        if node.next_node is not None:
+            node.next_node.previous_node = node.previous_node
+        else:
+            self.tail = node.previous_node
+
+        if node.previous_node is not None:
+            node.previous_node.next_node = node.next_node
+        else:
+            self.head = node.next_node
+
     def __getitem__(self, index: int):
         """
         Indexing function (for integer indexing of list contents).
@@ -211,6 +214,9 @@ class DoublyLinkedList:
         """
 
         return self._node_at_index(index).value
+
+    def __delitem__(self, key):
+        self._remove_node(self._node_at_index(key))
 
     def __iter__(self):
         """
@@ -224,6 +230,19 @@ class DoublyLinkedList:
         while current_node is not None:
             yield current_node.value
             current_node = current_node.next_node
+
+    def __reversed__(self):
+        """
+        Generator function iterating over list values in reverse order, starting at tail.
+
+        :return: previous value
+        """
+
+        current_node = self.tail
+
+        while current_node is not None:
+            yield current_node.value
+            current_node = current_node.previous_node
 
     def __len__(self) -> int:
         length = 0

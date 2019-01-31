@@ -115,6 +115,9 @@ class GroundTrack:
     def __iter__(self):
         return iter(self.packets)
 
+    def __reversed__(self):
+        return reversed(self.packets)
+
     def __len__(self) -> int:
         return len(self.packets)
 
