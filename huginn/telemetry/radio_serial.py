@@ -7,10 +7,9 @@ __authors__ = []
 import serial
 
 APRS_PACKET_MINIMUM_LENGTH = 12
-RADIO_BAUD_RATE = 19200
 
 
-def raw_packets_from_serial(port_name: str, baud_rate: int = RADIO_BAUD_RATE, timeout: int = 1) -> list:
+def raw_packets_from_serial(port_name: str, timeout: int = 1) -> list:
     """
     Get potential packet strings from given serial port.
 
@@ -22,7 +21,7 @@ def raw_packets_from_serial(port_name: str, baud_rate: int = RADIO_BAUD_RATE, ti
 
     packet_candidates = []
 
-    with serial.Serial(port_name, baudrate=baud_rate, timeout=timeout) as serial_connection:
+    with serial.Serial(port_name, timeout=timeout) as serial_connection:
         # check if serial connection has data in its input buffer
         if serial_connection.in_waiting > 0:
             serial_output = serial_connection.readlines()
