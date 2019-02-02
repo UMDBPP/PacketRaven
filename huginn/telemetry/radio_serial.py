@@ -10,7 +10,7 @@ APRS_PACKET_MINIMUM_LENGTH = 12
 RADIO_BAUD_RATE = 19200
 
 
-def raw_packets_from_serial(port_name: str, baud_rate: int = RADIO_BAUD_RATE, timeout: int = 1) -> list[str]:
+def raw_packets_from_serial(port_name: str, baud_rate: int = RADIO_BAUD_RATE, timeout: int = 1) -> list:
     """
     Get potential packet strings from given serial port.
 

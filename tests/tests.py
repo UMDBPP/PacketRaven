@@ -169,8 +169,10 @@ class TestParser(unittest.TestCase):
         self.assertEqual('|!Q|  /W3EAX,262,0,18\'C,http://www.umd.edu', parsed_packet['comment'])
 
     def test_partial_packets(self):
-        self.assertRaises(packet_parsing.PartialPacketError, packet_parsing.parse_aprs_packet, 'W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,KM4LKM')
-        self.assertRaises(packet_parsing.PartialPacketError, packet_parsing.parse_aprs_packet, 'W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:')
+        self.assertRaises(packet_parsing.PartialPacketError, packet_parsing.parse_aprs_packet,
+                          'W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,KM4LKM')
+        self.assertRaises(packet_parsing.PartialPacketError, packet_parsing.parse_aprs_packet,
+                          'W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:')
 
 
 if __name__ == '__main__':
