@@ -52,7 +52,7 @@ if __name__ == '__main__':
                 callsign = parsed_packet['callsign']
 
                 if callsign not in ground_tracks:
-                    packet_tracks.APRSTrack(callsign, [parsed_packet])
+                    ground_tracks[callsign] = packet_tracks.APRSTrack(callsign, [parsed_packet])
                 else:
                     ground_tracks[callsign].append(parsed_packet)
 
