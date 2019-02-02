@@ -1,9 +1,9 @@
-Link Telemetry
+Huginn
 
 Copyright (c) 2015-2017 University of Maryland Space Systems Lab
 NearSpace Balloon Payload Program
 
-Link Telemetry is licensed under the terms of the MIT License:
+Huginn is licensed under the terms of the MIT License:
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,13 +22,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
------------------------------------------------------------------------------------------
-
-RapidJSON
-
-Copyright (C) 2015 THL A29 Limited, a Tencent company, and Milo Yip. All rights reserved.
-
-RapidJSON is also licensed under the terms of the MIT license, with the exception
-of some of its dependencies. Please see Link-TLM/deps/rapidjson/license.txt for
-further information.
