@@ -22,7 +22,7 @@ class DoublyLinkedList:
         """
         Instantiate new doubly-linked list.
 
-        :param sequence: Iterable sequence to populate list.
+        :param sequence: iterable sequence to populate list
         """
 
         self.head = None
@@ -44,11 +44,17 @@ class DoublyLinkedList:
         def __eq__(self, other) -> bool:
             return self.value == other.value
 
+        def __str__(self):
+            return str(self.value)
+
+        def __repr__(self):
+            return str(self)
+
     def append(self, value):
         """
         Append given value as new tail.
 
-        :param value: Value to append.
+        :param value: value to append
         """
 
         new_node = self.Node(value, self.tail, None)
@@ -65,7 +71,7 @@ class DoublyLinkedList:
         """
         Append all values in given iterable to end of list.
 
-        :param sequence: Iterable sequence with which to extend.
+        :param sequence: iterable sequence with which to extend
         """
 
         for entry in sequence:
@@ -78,8 +84,8 @@ class DoublyLinkedList:
         """
         Insert value at given index.
 
-        :param value: Value to insert.
-        :param index: Index at which to insert value.
+        :param value: value to insert
+        :param index: index at which to insert value
         """
 
         node_at_index = self._node_at_index(index)
@@ -106,7 +112,7 @@ class DoublyLinkedList:
         """
         Remove all instances of given value.
 
-        :param value: Value to remove.
+        :param value: value to remove
         """
 
         current_node = self.head
@@ -121,7 +127,7 @@ class DoublyLinkedList:
         """
         First index of given value.
 
-        :param value: Value to find.
+        :param value: value to find
         :return: value index
         """
 
@@ -141,7 +147,7 @@ class DoublyLinkedList:
         """
         Number of instances of given value.
 
-        :param value: Value to count.
+        :param value: value to count
         :return: value count
         """
 

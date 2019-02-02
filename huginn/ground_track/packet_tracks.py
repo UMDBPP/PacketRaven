@@ -8,26 +8,18 @@ from huginn.ground_track import data_structures
 from huginn.telemetry import packets
 
 
-class GroundTrack:
-    def __init__(self, callsign: str, packets=None):
+class LocationPacketTrack:
+    def __init__(self, packets=None):
         """
-        Instantiate GroundTrack object with initial conditions.
+        Location packet track.
 
-        :param callsign: Callsign of ground track.
-        :param packets: Iterable of packets.
+        :param packets: iterable of packets
         """
 
-        self.callsign = callsign
         self.packets = data_structures.DoublyLinkedList(packets)
 
-    def append(self, packet: packets.APRS):
-        packet_callsign = packet['callsign']
-
-        if packet_callsign == self.callsign:
-            # TODO check if packet is a duplicate
-            self.packets.append(packet)
-        else:
-            print(f'Packet callsign {packet_callsign} does not match ground track callsign {self.callsign}.')
+    def append(self, packet: packets.LocationPacket):
+        self.packets.append(packet)
 
     def altitude(self) -> float:
         """
@@ -42,7 +34,7 @@ class GroundTrack:
         """
         Return coordinates of most recent packet.
 
-        :param z: Whether to include altitude as third entry in tuple.
+        :param z: whether to include altitude as third entry in tuple
         :return: tuple of coordinates (lon, lat[, alt])
         """
 
@@ -55,11 +47,11 @@ class GroundTrack:
         :return: ascent rate in meters per second
         """
 
-        if len(self.packets) >= 2:
+        if len(self.packets) > 1:
             # TODO implement filtering
             return (self.packets[-1] - self.packets[-2]).ascent_rate
         else:
-            raise ValueError('Not enough packets to process request.')
+            return 0.0
 
     def ground_speed(self) -> float:
         """
@@ -68,11 +60,11 @@ class GroundTrack:
         :return: ground speed in meters per second
         """
 
-        if len(self.packets) >= 2:
+        if len(self.packets) > 1:
             # TODO implement filtering
             return (self.packets[-1] - self.packets[-2]).ground_speed
         else:
-            raise ValueError('Not enough packets to process request.')
+            return 0.0
 
     def seconds_to_impact(self) -> float:
         """
@@ -97,10 +89,10 @@ class GroundTrack:
         :return: distance to point in meters
         """
 
-        if len(self.packets) >= 1:
+        if len(self.packets) > 0:
             return self.packets[-1].distance_to_point(longitude, latitude)
         else:
-            raise ValueError('Not enough packets to process request.')
+            return 0.0
 
     def __getitem__(self, index: int):
         """
@@ -122,7 +114,35 @@ class GroundTrack:
         return len(self.packets)
 
     def __eq__(self, other):
-        return self.callsign == other.callsign and self.packets == other.packets
+        return self.packets == other.packets
 
-    def __str__(self) -> str:
-        return f'APRS ground track {self.callsign}'
+    def __str__(self):
+        return str(list(self))
+
+
+class APRSTrack(LocationPacketTrack):
+    def __init__(self, callsign: str, packets=None):
+        """
+        APRS packet track.
+
+        :param callsign: callsign of APRS packets
+        :param packets: iterable of packets
+        """
+
+        self.callsign = callsign
+        super().__init__(packets)
+
+    def append(self, packet: packets.APRSPacket):
+        packet_callsign = packet['callsign']
+
+        if packet_callsign == self.callsign:
+            # TODO check if packet is a duplicate
+            super().append(packet)
+        else:
+            print(f'Packet callsign {packet_callsign} does not match ground track callsign {self.callsign}.')
+
+    def __eq__(self, other):
+        return self.callsign == other.callsign and super().__eq__(other)
+
+    def __str__(self):
+        return f'{self.callsign}: {super().__str__()}'

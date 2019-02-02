@@ -7,6 +7,9 @@ verify_ssl = true
 
 [packages]
 haversine = "*"
+pyserial = "*"
+logbook = "*"
+aprslib = "*"
 
 [requires]
 python_version = "3.7"

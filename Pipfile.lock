@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "a08eb4dc1a9e7fd24a5ebae44d0acc4b804f877094d0989a0db2e1a450840afe"
+            "sha256": "ed3c7a2acd3c9deac5a5aaeb30eee055601b71729ba2b143af15026d5f65a55f"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -16,6 +16,14 @@
         ]
     },
     "default": {
+        "aprslib": {
+            "hashes": [
+                "sha256:39420ad77d3595d0085cdd65829d8c863de5d2a2c6ff3681d2b9c5c635abdb17",
+                "sha256:dfb5a3435e49039c536f76aaef88132c5c6161bbda2fa41f6b77782b3296848e"
+            ],
+            "index": "pypi",
+            "version": "==0.6.46"
+        },
         "haversine": {
             "hashes": [
                 "sha256:145b5941d9438fbea0ce67cbc1b786a94c8618bfde07272a6a568464e7f73cd9",
@@ -24,6 +32,21 @@
             ],
             "index": "pypi",
             "version": "==2.0.0"
+        },
+        "logbook": {
+            "hashes": [
+                "sha256:a5a96792abd8172c80d61b7530e134524f20e2841981038031e602ed5920fef5"
+            ],
+            "index": "pypi",
+            "version": "==1.4.3"
+        },
+        "pyserial": {
+            "hashes": [
+                "sha256:6e2d401fdee0eab996cf734e67773a0143b932772ca8b42451440cfed942c627",
+                "sha256:e0770fadba80c31013896c7e6ef703f72e7834965954a78e71a3049488d4d7d8"
+            ],
+            "index": "pypi",
+            "version": "==3.4"
         }
     },
     "develop": {}

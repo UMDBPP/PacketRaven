@@ -9,7 +9,7 @@ import math
 
 import haversine
 
-from huginn.telemetry.parsing import parse_aprs_packet
+from huginn.telemetry import packet_parsing
 
 
 class LocationPacket:
@@ -43,7 +43,7 @@ class LocationPacket:
         """
         Return coordinates.
 
-        :param z: Whether to include altitude as third entry in tuple.
+        :param z: whether to include altitude as third entry in tuple
         :return: tuple of coordinates (lon, lat[, alt])
         """
 
@@ -60,7 +60,7 @@ class LocationPacket:
         """
         Return subtraction of packets in the form of Delta object.
 
-        :param other: Packet object
+        :param other: location packet
         :return: Delta object
         """
 
@@ -74,7 +74,7 @@ class LocationPacket:
         """
         Whether this packet equals another packet, ignoring datetime (because of possible staggered duplicate packets).
 
-        :param other: Packet to compare to this one.
+        :param other: packet to compare to this one
         :return: equality
         """
 
@@ -84,7 +84,7 @@ class LocationPacket:
         return f'{self.time} ({self.longitude:.3f}, {self.latitude:.3f}, {self.altitude:.2f})'
 
 
-class APRS(LocationPacket):
+class APRSPacket(LocationPacket):
     """
     APRS packet containing parsed APRS fields, along with location and time.
     """
@@ -93,12 +93,12 @@ class APRS(LocationPacket):
         """
         Construct APRS packet object from raw packet and given datetime.
 
-        :param raw_aprs: String containing raw packet.
+        :param raw_aprs: string containing raw packet
         :param time: Time of packet, either as datetime object, seconds since Unix epoch, or ISO format date string.
         """
 
         # parse packet, units are metric
-        parsed_packet = parse_aprs_packet(raw_aprs)
+        parsed_packet = packet_parsing.parse_aprs_packet(raw_aprs)
 
         # TODO make HABduino add timestamp to packet upon transmission
         if time is not None:
@@ -137,11 +137,14 @@ class APRS(LocationPacket):
         """
         Whether this packet equals another packet, including callsign and comment.
 
-        :param other: Packet to compare to this one.
+        :param other: packet to compare to this one
         :return: equality
         """
 
         return super().__eq__(other) and self['callsign'] == other['callsign'] and self['comment'] == other['comment']
 
     def __str__(self) -> str:
-        return f'{super().__str__()} {self["callsign"]} "{self["comment"]}"'
+        return f'{self["callsign"]} {super().__str__()} "{self["comment"]}"'
+
+    def __repr__(self):
+        return str(self)

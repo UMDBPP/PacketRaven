@@ -8,9 +8,9 @@ import datetime
 import unittest
 
 from huginn.ground_track import data_structures
-from huginn.ground_track import ground_track
+from huginn.ground_track import packet_tracks
+from huginn.telemetry import packet_parsing
 from huginn.telemetry import packets
-from huginn.telemetry import parsing
 
 
 class TestDoublyLinkedList(unittest.TestCase):
@@ -73,8 +73,8 @@ class TestDoublyLinkedList(unittest.TestCase):
 
 
 class TestPackets(unittest.TestCase):
-    def test_aprs(self):
-        packet = packets.APRS(
+    def test_aprs_init(self):
+        packet = packets.APRSPacket(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
             time='2018-11-11T10:20:13')
 
@@ -85,13 +85,13 @@ class TestPackets(unittest.TestCase):
         self.assertEqual('|!Q|  /W3EAX,262,0,18\'C,http://www.umd.edu', packet['comment'])
 
     def test_equality(self):
-        packet_1 = packets.APRS(
+        packet_1 = packets.APRSPacket(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
             time='2018-11-11T10:20:13')
-        packet_2 = packets.APRS(
+        packet_2 = packets.APRSPacket(
             "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
             time='2018-11-11T10:21:24')
-        packet_3 = packets.APRS(
+        packet_3 = packets.APRSPacket(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
             time='2018-11-11T10:21:31')
 
@@ -99,10 +99,10 @@ class TestPackets(unittest.TestCase):
         self.assertTrue(packet_1 == packet_3)
 
     def test_subtraction(self):
-        packet_1 = packets.APRS(
+        packet_1 = packets.APRSPacket(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
             time='2018-11-11T10:20:13')
-        packet_2 = packets.APRS(
+        packet_2 = packets.APRSPacket(
             "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
             time='2018-11-11T10:21:24')
 
@@ -113,16 +113,16 @@ class TestPackets(unittest.TestCase):
         self.assertEqual(2408.700970494594, packet_delta.horizontal_distance)
 
 
-class TestGroundTrack(unittest.TestCase):
+class TestPacketTracks(unittest.TestCase):
     def test_append(self):
-        packet_1 = packets.APRS(
+        packet_1 = packets.APRSPacket(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
             time='2018-11-11T10:20:13')
-        packet_2 = packets.APRS(
+        packet_2 = packets.APRSPacket(
             "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
             time='2018-11-11T10:21:24')
 
-        track = ground_track.GroundTrack('W3EAX-8')
+        track = packet_tracks.APRSTrack('W3EAX-8')
 
         track.append(packet_1)
         track.append(packet_2)
@@ -131,11 +131,11 @@ class TestGroundTrack(unittest.TestCase):
         self.assertTrue(track[1] is packet_2)
 
     def test_rates(self):
-        packet = packets.APRS(
+        packet = packets.APRSPacket(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
             time='2018-11-11T10:20:13')
 
-        track = ground_track.GroundTrack('W3EAX-8')
+        track = packet_tracks.APRSTrack('W3EAX-8')
 
         track.append(packet)
 
@@ -144,14 +144,14 @@ class TestGroundTrack(unittest.TestCase):
         self.assertEqual(packet.altitude, track.altitude())
 
     def test_values(self):
-        packet_1 = packets.APRS(
+        packet_1 = packets.APRSPacket(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
             time='2018-11-11T10:20:13')
-        packet_2 = packets.APRS(
+        packet_2 = packets.APRSPacket(
             "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
             time='2018-11-11T10:21:24')
 
-        track = ground_track.GroundTrack('W3EAX-8', [packet_1, packet_2])
+        track = packet_tracks.APRSTrack('W3EAX-8', [packet_1, packet_2])
 
         self.assertEqual((packet_2 - packet_1).ascent_rate, track.ascent_rate())
         self.assertEqual((packet_2 - packet_1).ground_speed, track.ground_speed())
@@ -159,7 +159,7 @@ class TestGroundTrack(unittest.TestCase):
 
 class TestParser(unittest.TestCase):
     def test_parse_aprs_packet(self):
-        parsed_packet = parsing.parse_aprs_packet(
+        parsed_packet = packet_parsing.parse_aprs_packet(
             'W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18\'C,http://www.umd.edu')
 
         self.assertEqual('W3EAX-8', parsed_packet['from'])
@@ -167,6 +167,10 @@ class TestParser(unittest.TestCase):
         self.assertEqual(39.7003564996876, parsed_packet['latitude'])
         self.assertEqual(8201.8632, parsed_packet['altitude'])
         self.assertEqual('|!Q|  /W3EAX,262,0,18\'C,http://www.umd.edu', parsed_packet['comment'])
+
+    def test_partial_packets(self):
+        self.assertRaises(packet_parsing.PartialPacketError, packet_parsing.parse_aprs_packet, 'W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,KM4LKM')
+        self.assertRaises(packet_parsing.PartialPacketError, packet_parsing.parse_aprs_packet, 'W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:')
 
 
 if __name__ == '__main__':
