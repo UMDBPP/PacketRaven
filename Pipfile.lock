@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "d758c325d56df88069d03dda9ef4fd045bfbf08de42d9bb83631f7a9fa30400c"
+            "sha256": "a08eb4dc1a9e7fd24a5ebae44d0acc4b804f877094d0989a0db2e1a450840afe"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -16,14 +16,6 @@
         ]
     },
     "default": {
-        "aprslib": {
-            "hashes": [
-                "sha256:39420ad77d3595d0085cdd65829d8c863de5d2a2c6ff3681d2b9c5c635abdb17",
-                "sha256:dfb5a3435e49039c536f76aaef88132c5c6161bbda2fa41f6b77782b3296848e"
-            ],
-            "index": "pypi",
-            "version": "==0.6.46"
-        },
         "haversine": {
             "hashes": [
                 "sha256:145b5941d9438fbea0ce67cbc1b786a94c8618bfde07272a6a568464e7f73cd9",
