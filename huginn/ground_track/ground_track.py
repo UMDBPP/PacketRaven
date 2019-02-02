@@ -4,8 +4,8 @@ Ground track class for packet operations.
 __authors__ = ['Quinn Kupec', 'Zachary Burnett']
 """
 
-from balloontelemetry.ground_track import data_structures
-from balloontelemetry.telemetry import packets
+from huginn.ground_track import data_structures
+from huginn.telemetry import packets
 
 
 class GroundTrack:

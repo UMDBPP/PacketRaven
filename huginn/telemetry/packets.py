@@ -9,7 +9,7 @@ import math
 
 import haversine
 
-from balloontelemetry.telemetry.parsing import parse_aprs_packet
+from huginn.telemetry.parsing import parse_aprs_packet
 
 
 class LocationPacket:

@@ -7,10 +7,10 @@ __authors__ = ['Zachary Burnett']
 import datetime
 import unittest
 
-from balloontelemetry.ground_track import data_structures
-from balloontelemetry.ground_track import ground_track
-from balloontelemetry.telemetry import packets
-from balloontelemetry.telemetry import parsing
+from huginn.ground_track import data_structures
+from huginn.ground_track import ground_track
+from huginn.telemetry import packets
+from huginn.telemetry import parsing
 
 
 class TestDoublyLinkedList(unittest.TestCase):
