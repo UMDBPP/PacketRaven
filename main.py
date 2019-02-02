@@ -26,7 +26,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 2:
         log_directory = sys.argv[2]
     else:
-        log_directory = '~/Desktop/log'
+        log_directory = '/home/bpp/Desktop/log/'
 
     if not os.path.exists(log_directory):
         os.mkdir(log_directory)
@@ -66,3 +66,4 @@ if __name__ == '__main__':
                     message += f' seconds_to_impact={seconds_to_impact}'
 
                 log.notice(message)
+                print(message)
