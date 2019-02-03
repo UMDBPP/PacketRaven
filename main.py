@@ -17,6 +17,8 @@ from huginn.telemetry import radio_serial
 
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 
+APRS_CALLSIGNS = ['W3EAX-13']
+
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         port_name = sys.argv[1]
@@ -37,7 +39,7 @@ if __name__ == '__main__':
     logbook.FileHandler(log_filename).push_application()
     log = logbook.Logger('Huginn')
 
-    ground_tracks = {}
+    ground_tracks = {callsign: packet_tracks.APRSTrack(callsign) for callsign in APRS_CALLSIGNS}
 
     while True:
         raw_packets = radio_serial.raw_packets_from_serial(port_name)
@@ -51,9 +53,7 @@ if __name__ == '__main__':
             if parsed_packet is not None:
                 callsign = parsed_packet['callsign']
 
-                if callsign not in ground_tracks:
-                    ground_tracks[callsign] = packet_tracks.APRSTrack(callsign, [parsed_packet])
-                else:
+                if callsign in ground_tracks:
                     ground_tracks[callsign].append(parsed_packet)
 
                 ascent_rate = ground_tracks[callsign].ascent_rate()
