@@ -21,7 +21,6 @@ def raw_packets_from_serial(port_name: str, timeout: int = 1) -> list:
     packet_candidates = []
 
     with serial.Serial(port_name, timeout=1) as serial_connection:
-        # check if serial connection has data in its input buffer
         lines = serial_connection.readlines()
         for line in lines:
             if len(line) > APRS_PACKET_MINIMUM_LENGTH:
@@ -32,7 +31,7 @@ def raw_packets_from_serial(port_name: str, timeout: int = 1) -> list:
 
 if __name__ == '__main__':
     # packet_candidates = raw_packets_from_serial('/dev/ttyUSB0')
-    packet_candidates = raw_packets_from_serial('COM5')
+    packet_candidates = raw_packets_from_serial('COM8')
 
     print(f'{len(packet_candidates)} packet candidates found')
     print(packet_candidates)

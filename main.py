@@ -17,8 +17,6 @@ from huginn.telemetry import radio_serial
 
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 
-APRS_CALLSIGNS = ['W3EAX-13']
-
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         port_name = sys.argv[1]
@@ -26,7 +24,12 @@ if __name__ == '__main__':
         port_name = '/dev/ttyUSB0'
 
     if len(sys.argv) > 2:
-        log_directory = sys.argv[2]
+        callsigns = sys.argv[2].split(',')
+    else:
+        callsigns = ['W3EAX-13']
+
+    if len(sys.argv) > 3:
+        log_directory = sys.argv[3]
     else:
         log_directory = '/home/bpp/Desktop/log/'
 
@@ -39,31 +42,38 @@ if __name__ == '__main__':
     logbook.FileHandler(log_filename).push_application()
     log = logbook.Logger('Huginn')
 
-    ground_tracks = {callsign: packet_tracks.APRSTrack(callsign) for callsign in APRS_CALLSIGNS}
+    ground_tracks = {callsign: packet_tracks.APRSTrack(callsign) for callsign in callsigns}
 
     while True:
         raw_packets = radio_serial.raw_packets_from_serial(port_name)
         for raw_packet in raw_packets:
-            try:
-                parsed_packet = packets.APRSPacket(raw_packet)
-            except packet_parsing.PartialPacketError as error:
-                parsed_packet = None
-                log.debug(f'PartialPacketError: {error} ("{raw_packet}")')
+            callsign_present = False
 
-            if parsed_packet is not None:
-                callsign = parsed_packet['callsign']
+            for callsign in callsigns:
+                if callsign in raw_packet:
+                    callsign_present = True
 
-                if callsign in ground_tracks:
-                    ground_tracks[callsign].append(parsed_packet)
+            if callsign_present:
+                try:
+                    parsed_packet = packets.APRSPacket(raw_packet)
+                except packet_parsing.PartialPacketError as error:
+                    parsed_packet = None
+                    log.debug(f'PartialPacketError: {error} ("{raw_packet}")')
 
-                ascent_rate = ground_tracks[callsign].ascent_rate()
-                ground_speed = ground_tracks[callsign].ground_speed()
+                if parsed_packet is not None:
+                    callsign = parsed_packet['callsign']
 
-                message = f'{parsed_packet} ascent_rate={ascent_rate} ground_speed={ground_speed}'
+                    if callsign in ground_tracks:
+                        ground_tracks[callsign].append(parsed_packet)
 
-                if ascent_rate < 0:
-                    seconds_to_impact = ground_tracks[callsign].seconds_to_impact()
-                    message += f' seconds_to_impact={seconds_to_impact}'
+                    ascent_rate = ground_tracks[callsign].ascent_rate()
+                    ground_speed = ground_tracks[callsign].ground_speed()
 
-                log.notice(message)
-                print(message)
+                    message = f'{parsed_packet} ascent_rate={ascent_rate} ground_speed={ground_speed}'
+
+                    if ascent_rate < 0:
+                        seconds_to_impact = ground_tracks[callsign].seconds_to_impact()
+                        message += f' seconds_to_impact={seconds_to_impact}'
+
+                    log.notice(message)
+                    print(message)

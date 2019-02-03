@@ -19,7 +19,8 @@ class LocationPacketTrack:
         self.packets = data_structures.DoublyLinkedList(packets)
 
     def append(self, packet: packets.LocationPacket):
-        self.packets.append(packet)
+        if packet not in self.packets:
+            self.packets.append(packet)
 
     def altitude(self) -> float:
         """
@@ -136,7 +137,6 @@ class APRSTrack(LocationPacketTrack):
         packet_callsign = packet['callsign']
 
         if packet_callsign == self.callsign:
-            # TODO check if packet is a duplicate
             super().append(packet)
         else:
             print(f'Packet callsign {packet_callsign} does not match ground track callsign {self.callsign}.')
