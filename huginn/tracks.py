@@ -4,8 +4,7 @@ Ground track class for packet operations.
 __authors__ = ['Quinn Kupec', 'Zachary Burnett']
 """
 
-from huginn.ground_track import data_structures
-from huginn.telemetry import packets
+from huginn import structures, packets
 
 
 class LocationPacketTrack:
@@ -16,7 +15,7 @@ class LocationPacketTrack:
         :param packets: iterable of packets
         """
 
-        self.packets = data_structures.DoublyLinkedList(packets)
+        self.packets = structures.DoublyLinkedList(packets)
 
     def append(self, packet: packets.LocationPacket):
         if packet not in self.packets:

@@ -3,13 +3,23 @@
 
 A new version of Link-TLM, written in Python.
 
-#### Current Features
+##### Installation
+
+1. `pip install pipenv` 
+1. `git clone https://github.com/UMDBPP/huginn.git`
+2. `cd huginn`
+3. `pipenv install`
+ 
+
+##### Features
+
+###### Current
 
 1. APRS parsing over serial
 2. command-line printout
 3. logging
 
-#### Upcoming Features
+###### Upcoming
 
 1. live track prediction
 2. Iridium telemetry

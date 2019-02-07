@@ -9,7 +9,7 @@ import math
 
 import haversine
 
-from huginn.telemetry import packet_parsing
+from huginn import parsing
 
 
 class LocationPacket:
@@ -98,7 +98,7 @@ class APRSPacket(LocationPacket):
         """
 
         # parse packet, units are metric
-        parsed_packet = packet_parsing.parse_aprs_packet(raw_aprs)
+        parsed_packet = parsing.parse_aprs_packet(raw_aprs)
 
         # TODO make HABduino add timestamp to packet upon transmission
         if time is not None:

@@ -7,15 +7,12 @@ __authors__ = ['Zachary Burnett']
 import datetime
 import unittest
 
-from huginn.ground_track import data_structures
-from huginn.ground_track import packet_tracks
-from huginn.telemetry import packet_parsing
-from huginn.telemetry import packets
+from huginn import tracks, structures, parsing, packets
 
 
 class TestDoublyLinkedList(unittest.TestCase):
     def test_getitem(self):
-        list_1 = data_structures.DoublyLinkedList([0, 5, 4, 'foo', 5, 6])
+        list_1 = structures.DoublyLinkedList([0, 5, 4, 'foo', 5, 6])
 
         self.assertEqual(0, list_1[0])
         self.assertEqual(0, list_1.head.value)
@@ -24,21 +21,21 @@ class TestDoublyLinkedList(unittest.TestCase):
         self.assertEqual(6, list_1.tail.value)
 
     def test_len(self):
-        list_1 = data_structures.DoublyLinkedList()
-        list_2 = data_structures.DoublyLinkedList([0, 'foo'])
+        list_1 = structures.DoublyLinkedList()
+        list_2 = structures.DoublyLinkedList([0, 'foo'])
 
         self.assertEqual(0, len(list_1))
         self.assertEqual(2, len(list_2))
 
     def test_extend(self):
-        list_1 = data_structures.DoublyLinkedList([0])
+        list_1 = structures.DoublyLinkedList([0])
         list_1.extend(['foo', 5])
 
         self.assertEqual([0, 'foo', 5], list_1)
         self.assertTrue(list_1.head is not list_1.tail)
 
     def test_append(self):
-        list_1 = data_structures.DoublyLinkedList()
+        list_1 = structures.DoublyLinkedList()
         list_1.append(0)
 
         self.assertEqual(0, list_1[0])
@@ -46,15 +43,15 @@ class TestDoublyLinkedList(unittest.TestCase):
         self.assertTrue(list_1.head is list_1.tail)
 
     def test_insert(self):
-        list_1 = data_structures.DoublyLinkedList([0, 'foo'])
+        list_1 = structures.DoublyLinkedList([0, 'foo'])
         list_1.insert('bar', 0)
 
         self.assertEqual(['bar', 0, 'foo'], list_1)
 
     def test_remove(self):
-        list_1 = data_structures.DoublyLinkedList(['a', 'a'])
-        list_2 = data_structures.DoublyLinkedList(['a', 'b', 'c'])
-        list_3 = data_structures.DoublyLinkedList([0, 5, 4, 'foo', 0, 0])
+        list_1 = structures.DoublyLinkedList(['a', 'a'])
+        list_2 = structures.DoublyLinkedList(['a', 'b', 'c'])
+        list_3 = structures.DoublyLinkedList([0, 5, 4, 'foo', 0, 0])
 
         list_1.remove('a')
         del list_2[0]
@@ -74,7 +71,7 @@ class TestDoublyLinkedList(unittest.TestCase):
 
 class TestPackets(unittest.TestCase):
     def test_aprs_init(self):
-        packet = packets.APRSPacket(
+        packet = packet.APRSPacket(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
             time='2018-11-11T10:20:13')
 
@@ -122,7 +119,7 @@ class TestPacketTracks(unittest.TestCase):
             "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
             time='2018-11-11T10:21:24')
 
-        track = packet_tracks.APRSTrack('W3EAX-8')
+        track = tracks.APRSTrack('W3EAX-8')
 
         track.append(packet_1)
         track.append(packet_2)
@@ -131,17 +128,17 @@ class TestPacketTracks(unittest.TestCase):
         self.assertTrue(track[1] is packet_2)
 
     def test_rates(self):
-        packet = packets.APRSPacket(
+        packet_1 = packets.APRSPacket(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
             time='2018-11-11T10:20:13')
 
-        track = packet_tracks.APRSTrack('W3EAX-8')
+        track = tracks.APRSTrack('W3EAX-8')
 
-        track.append(packet)
+        track.append(packet_1)
 
-        self.assertEqual(packet.altitude, track.altitude())
-        self.assertEqual(packet.coordinates(), track.coordinates())
-        self.assertEqual(packet.altitude, track.altitude())
+        self.assertEqual(packet_1.altitude, track.altitude())
+        self.assertEqual(packet_1.coordinates(), track.coordinates())
+        self.assertEqual(packet_1.altitude, track.altitude())
 
     def test_values(self):
         packet_1 = packets.APRSPacket(
@@ -151,7 +148,7 @@ class TestPacketTracks(unittest.TestCase):
             "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
             time='2018-11-11T10:21:24')
 
-        track = packet_tracks.APRSTrack('W3EAX-8', [packet_1, packet_2])
+        track = tracks.APRSTrack('W3EAX-8', [packet_1, packet_2])
 
         self.assertEqual((packet_2 - packet_1).ascent_rate, track.ascent_rate())
         self.assertEqual((packet_2 - packet_1).ground_speed, track.ground_speed())
@@ -159,7 +156,7 @@ class TestPacketTracks(unittest.TestCase):
 
 class TestParser(unittest.TestCase):
     def test_parse_aprs_packet(self):
-        parsed_packet = packet_parsing.parse_aprs_packet(
+        parsed_packet = parsing.parse_aprs_packet(
             'W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18\'C,http://www.umd.edu')
 
         self.assertEqual('W3EAX-8', parsed_packet['from'])
@@ -169,9 +166,9 @@ class TestParser(unittest.TestCase):
         self.assertEqual('|!Q|  /W3EAX,262,0,18\'C,http://www.umd.edu', parsed_packet['comment'])
 
     def test_partial_packets(self):
-        self.assertRaises(packet_parsing.PartialPacketError, packet_parsing.parse_aprs_packet,
+        self.assertRaises(parsing.PartialPacketError, parsing.parse_aprs_packet,
                           'W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,KM4LKM')
-        self.assertRaises(packet_parsing.PartialPacketError, packet_parsing.parse_aprs_packet,
+        self.assertRaises(parsing.PartialPacketError, parsing.parse_aprs_packet,
                           'W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:')
 
 

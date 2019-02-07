@@ -10,10 +10,7 @@ import sys
 
 import logbook
 
-from huginn.ground_track import packet_tracks
-from huginn.telemetry import packet_parsing
-from huginn.telemetry import packets
-from huginn.telemetry import radio_serial
+from huginn import tracks, parsing, serial, packets
 
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 
@@ -42,10 +39,10 @@ if __name__ == '__main__':
     logbook.FileHandler(log_filename).push_application()
     log = logbook.Logger('Huginn')
 
-    ground_tracks = {callsign: packet_tracks.APRSTrack(callsign) for callsign in callsigns}
+    ground_tracks = {callsign: tracks.APRSTrack(callsign) for callsign in callsigns}
 
     while True:
-        raw_packets = radio_serial.raw_packets_from_serial(port_name)
+        raw_packets = serial.serial_packet_candidates(port_name)
         for raw_packet in raw_packets:
             callsign_present = False
 
@@ -56,7 +53,7 @@ if __name__ == '__main__':
             if callsign_present:
                 try:
                     parsed_packet = packets.APRSPacket(raw_packet)
-                except packet_parsing.PartialPacketError as error:
+                except parsing.PartialPacketError as error:
                     parsed_packet = None
                     log.debug(f'PartialPacketError: {error} ("{raw_packet}")')
 
