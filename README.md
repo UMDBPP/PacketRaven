@@ -1,7 +1,7 @@
 # Huginn
 ### Balloon payload telemetry over APRS 
 
-A new version of Link-TLM, written in Python.
+A new version of Link-TLM, written in Python 3.7.
 
 ##### Installation
 
