@@ -71,15 +71,15 @@ class TestDoublyLinkedList(unittest.TestCase):
 
 class TestPackets(unittest.TestCase):
     def test_aprs_init(self):
-        packet = packet.APRSPacket(
+        packet_1 = packets.APRSPacket(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
             time='2018-11-11T10:20:13')
 
-        self.assertEqual(datetime.datetime(2018, 11, 11, 10, 20, 13), packet.time)
-        self.assertEqual((-77.90921071284187, 39.7003564996876, 8201.8632), packet.coordinates(z=True))
-        self.assertTrue(packet['callsign'] is packet['from'])
-        self.assertEqual('W3EAX-8', packet['callsign'])
-        self.assertEqual('|!Q|  /W3EAX,262,0,18\'C,http://www.umd.edu', packet['comment'])
+        self.assertEqual(datetime.datetime(2018, 11, 11, 10, 20, 13), packet_1.time)
+        self.assertEqual((-77.90921071284187, 39.7003564996876, 8201.8632), packet_1.coordinates(z=True))
+        self.assertTrue(packet_1['callsign'] is packet_1['from'])
+        self.assertEqual('W3EAX-8', packet_1['callsign'])
+        self.assertEqual('|!Q|  /W3EAX,262,0,18\'C,http://www.umd.edu', packet_1['comment'])
 
     def test_equality(self):
         packet_1 = packets.APRSPacket(
