@@ -17,11 +17,15 @@ class LocationPacket:
     4D location packet, containing longitude, latitude, altitude, and time.
     """
 
-    def __init__(self, time: datetime.datetime, longitude: float, latitude: float, altitude: float):
+    def __init__(self, time: datetime.datetime, longitude: float, latitude: float, altitude: float = 0):
         self.time = time
         self.longitude = longitude
         self.latitude = latitude
-        self.altitude = altitude
+
+        if altitude is not None:
+            self.altitude = altitude
+        else:
+            self.altitude = 0
 
     class Delta:
         def __init__(self, seconds: float, horizontal_distance: float, vertical_distance: float):
@@ -66,7 +70,7 @@ class LocationPacket:
 
         seconds = (self.time - other.time).total_seconds()
         horizontal_distance = self.distance_to_point(other.longitude, other.latitude)
-        vertical_distance = self.altitude - other.altitude
+        vertical_distance = abs(self.altitude - other.altitude)
 
         return self.Delta(seconds, horizontal_distance, vertical_distance)
 
@@ -115,9 +119,12 @@ class APRSPacket(LocationPacket):
             # otherwise default to time the packet was received (now)
             time = datetime.datetime.now()
 
-        super().__init__(time, parsed_packet['longitude'], parsed_packet['latitude'],
-                         parsed_packet['altitude'])
+        if 'altitude' in parsed_packet:
+            altitude = parsed_packet['altitude']
+        else:
+            altitude = None
 
+        super().__init__(time, parsed_packet['longitude'], parsed_packet['latitude'], altitude)
         self.parsed_packet = parsed_packet
 
     def __getitem__(self, field: str):
