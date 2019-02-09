@@ -44,10 +44,10 @@ class DoublyLinkedList:
         def __eq__(self, other) -> bool:
             return self.value == other.value
 
-        def __str__(self):
+        def __str__(self) -> str:
             return str(self.value)
 
-        def __repr__(self):
+        def __repr__(self) -> str:
             return str(self)
 
     def append(self, value):
@@ -162,7 +162,7 @@ class DoublyLinkedList:
 
         return num_nodes_with_value
 
-    def _node_at_index(self, index: int):
+    def _node_at_index(self, index: int) -> Node:
         """
         Node indexing function.
 

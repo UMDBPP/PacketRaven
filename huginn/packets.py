@@ -84,7 +84,7 @@ class LocationPacket:
 
         return self.longitude == other.longitude and self.latitude == other.latitude and self.altitude == other.altitude
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.time} ({self.longitude:.3f}, {self.latitude:.3f}, {self.altitude:.2f})'
 
 
@@ -153,5 +153,5 @@ class APRSPacket(LocationPacket):
     def __str__(self) -> str:
         return f'{self["callsign"]} {super().__str__()} "{self["comment"]}"'
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self)

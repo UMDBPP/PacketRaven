@@ -113,10 +113,10 @@ class LocationPacketTrack:
     def __len__(self) -> int:
         return len(self.packets)
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return self.packets == other.packets
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(list(self))
 
 
@@ -140,8 +140,8 @@ class APRSTrack(LocationPacketTrack):
         else:
             print(f'Packet callsign {packet_callsign} does not match ground track callsign {self.callsign}.')
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return self.callsign == other.callsign and super().__eq__(other)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.callsign}: {super().__str__()}'
