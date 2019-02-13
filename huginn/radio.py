@@ -8,6 +8,15 @@ import serial
 from serial.tools import list_ports
 
 
+def find_port() -> str:
+    com_ports = serial.tools.list_ports.comports()
+
+    if len(com_ports) > 0:
+        return com_ports[0].device
+    else:
+        return None
+
+
 def connect(serial_port: str = None) -> serial.Serial:
     """
     Connect to radio over serial port.
@@ -17,17 +26,15 @@ def connect(serial_port: str = None) -> serial.Serial:
     """
 
     if serial_port is None:
-        com_ports = serial.tools.list_ports.comports()
+        serial_port = find_port()
 
-        if len(com_ports) == 0:
-            raise EnvironmentError('No open serial ports found.')
-
-        serial_port = com_ports[0].device
+    if serial_port is None:
+        raise EnvironmentError('No open serial ports found.')
 
     return serial.Serial(serial_port, baudrate=9600, timeout=1)
 
 
-def packets(serial_connection: serial.Serial) -> list:
+def get_packets(serial_connection: serial.Serial) -> list:
     """
     Get potential packet strings from given serial connection.
 
@@ -39,5 +46,5 @@ def packets(serial_connection: serial.Serial) -> list:
 
 
 if __name__ == '__main__':
-    packet_candidates = packets(connect())
+    packet_candidates = get_packets(connect())
     print(packet_candidates)
