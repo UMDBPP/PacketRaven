@@ -6,20 +6,29 @@ A new version of Link-TLM, written in Python 3.7.
 ##### Installation
 
 1. `pip install pipenv` 
-1. `git clone https://github.com/UMDBPP/huginn.git`
-2. `cd huginn`
-3. `pipenv install`
+2. `git clone https://github.com/UMDBPP/huginn.git`
+3. `cd huginn`
+4. `pipenv install`
  
+##### Usage
+
+1. `cd huginn`
+2. `pipenv run huginn.py`
 
 ##### Features
 
 ###### Current
 
-1. APRS parsing over serial
-2. command-line printout
-3. logging
+- APRS packet parsing over serial
+- log to file
 
-###### Upcoming
+###### In-Progress
 
-1. live track prediction
-2. Iridium telemetry
+- altitude plot with `matplotlib`
+- flight track plot with `cartopy`
+
+###### Future
+
+- live track prediction
+- Iridium telemetry and commands
+- live chase navigation
