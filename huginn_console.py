@@ -13,8 +13,6 @@ import logbook
 
 from huginn import parsing, radio, packets, tracks
 
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
-
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         log_filename = sys.argv[1]
