@@ -2,6 +2,7 @@ import datetime
 import sys
 import tkinter
 import tkinter.filedialog
+import tkinter.messagebox
 
 import logbook
 
@@ -13,82 +14,93 @@ class HuginnGUI:
         self.main_window = tkinter.Tk()
         self.main_window.title('Huginn Balloon Telemetry')
 
-        self.top_frame = tkinter.Frame(self.main_window)
-        self.top_frame.pack()
-
         self.running = False
-
         self.packet_tracks = {}
 
-        self.serial_port_label = tkinter.Label(self.top_frame, text='Port:')
-        self.serial_port_input = tkinter.Entry(self.top_frame, width=12)
-        serial_port = radio.find_port()
-        if serial_port is not None:
-            self.serial_port_input.insert(0, serial_port)
-        self.serial_port_label.grid(row=0, column=0)
-        self.serial_port_input.grid(row=0, column=1)
+        self.frames = {}
+        self.elements = {}
+        self.last_row = 0
 
-        self.logfile_label = tkinter.Label(self.top_frame, text='Log:')
-        self.logfile_input = tkinter.Entry(self.top_frame, width=45)
-        self.logfile_input.insert(0, f'huginn_log_{datetime.datetime.now().strftime("%Y%m%dT%H%M%S")}.txt')
-        self.logfile_button = tkinter.Button(self.top_frame, text='...', command=self.select_logfile)
-        self.logfile_label.grid(row=1, column=0)
-        self.logfile_input.grid(row=1, column=1)
+        self.frames['top'] = tkinter.Frame(self.main_window)
+        self.frames['top'].pack()
+
+        self.frames['separator'] = tkinter.Frame(height=2, bd=1, relief=tkinter.SUNKEN)
+        self.frames['separator'].pack(fill=tkinter.X, padx=5, pady=5)
+
+        self.frames['bottom'] = tkinter.Frame(self.main_window)
+        self.frames['bottom'].pack()
+
+        self.add_entry_box(self.frames['top'], 'port')
+
+        self.serial_port = radio.find_port()
+
+        self.add_entry_box(self.frames['top'], title='log', width=45)
+        self.elements['log'].insert(0, f'huginn_log_{datetime.datetime.now().strftime("%Y%m%dT%H%M%S")}.txt')
+        self.logfile_button = tkinter.Button(self.frames['top'], text='...', command=self.select_logfile)
         self.logfile_button.grid(row=1, column=2)
 
         self.start_stop_button_text = tkinter.StringVar()
-        self.start_stop_button = tkinter.Button(self.top_frame, textvariable=self.start_stop_button_text,
-                                                command=self.start_stop)
         self.start_stop_button_text.set('Start')
-        self.start_stop_button.grid(row=2, column=1)
+        self.start_stop_button = tkinter.Button(self.frames['top'], textvariable=self.start_stop_button_text,
+                                                command=self.start_stop)
+        self.start_stop_button.grid(row=self.last_row, column=1)
+        self.last_row += 1
 
-        separator = tkinter.Frame(height=2, bd=1, relief=tkinter.SUNKEN)
-        separator.pack(fill=tkinter.X, padx=5, pady=5)
+        self.add_text_box(self.frames['bottom'], title='longitude', units='°')
+        self.add_text_box(self.frames['bottom'], title='latitude', units='°')
+        self.add_text_box(self.frames['bottom'], title='altitude', units='m')
+        self.add_text_box(self.frames['bottom'], title='ground_speed', units='m/s')
+        self.add_text_box(self.frames['bottom'], title='ascent_rate', units='m/s')
 
-        self.bottom_frame = tkinter.Frame(self.main_window)
-        self.bottom_frame.pack()
+        for element in self.frames['bottom'].winfo_children():
+            element.configure(state=tkinter.DISABLED)
 
-        self.longitude_label = tkinter.Label(self.bottom_frame, text='Longitude:')
-        self.longitude_text = tkinter.Text(self.bottom_frame, width=10, height=1)
-        self.longitude_label.grid(row=3, column=0)
-        self.longitude_text.grid(row=3, column=1)
-
-        self.latitude_label = tkinter.Label(self.bottom_frame, text='Latitude:')
-        self.latitude_text = tkinter.Text(self.bottom_frame, width=10, height=1)
-        self.latitude_label.grid(row=4, column=0)
-        self.latitude_text.grid(row=4, column=1)
-
-        self.altitude_label = tkinter.Label(self.bottom_frame, text='Altitude:')
-        self.altitude_text = tkinter.Text(self.bottom_frame, width=10, height=1)
-        self.altitude_units_label = tkinter.Label(self.bottom_frame, text='m')
-        self.altitude_label.grid(row=5, column=0)
-        self.altitude_text.grid(row=5, column=1)
-        self.altitude_units_label.grid(row=5, column=2)
-
-        self.ground_speed_label = tkinter.Label(self.bottom_frame, text='Ground speed:')
-        self.ground_speed_text = tkinter.Text(self.bottom_frame, width=10, height=1)
-        self.ground_speed_units_label = tkinter.Label(self.bottom_frame, text='m/s')
-        self.ground_speed_label.grid(row=6, column=0)
-        self.ground_speed_text.grid(row=6, column=1)
-        self.ground_speed_units_label.grid(row=6, column=2)
-
-        self.ascent_rate_label = tkinter.Label(self.bottom_frame, text='Ascent rate:')
-        self.ascent_rate_text = tkinter.Text(self.bottom_frame, width=10, height=1)
-        self.ascent_rate_units_label = tkinter.Label(self.bottom_frame, text='m/s')
-        self.ascent_rate_label.grid(row=7, column=0)
-        self.ascent_rate_text.grid(row=7, column=1)
-        self.ascent_rate_units_label.grid(row=7, column=2)
-
-        for child in self.bottom_frame.winfo_children():
-            child.configure(state='disable')
+        if self.serial_port is not None:
+            self.elements['port'].insert(0, self.serial_port)
+        else:
+            tkinter.messagebox.showwarning('Startup Warning', 'No connected serial ports.')
 
         self.main_window.mainloop()
 
+    def add_text_box(self, frame: tkinter.Frame, title: str, units: str = None, row: int = None, entry: bool = False,
+                     width: int = 10):
+        if row is None:
+            row = self.last_row
+
+        column = 0
+
+        element_label = tkinter.Label(frame, text=title)
+        element_label.grid(row=row, column=column)
+
+        column += 1
+
+        if entry:
+            element = tkinter.Entry(frame, width=width)
+        else:
+            element = tkinter.Text(frame, width=width, height=1)
+
+        element.grid(row=row, column=column)
+
+        column += 1
+
+        if units is not None:
+            units_label = tkinter.Label(frame, text=units)
+            units_label.grid(row=row, column=column)
+
+        column += 1
+
+        self.last_row = row + 1
+
+        self.elements[title] = element
+
+    def add_entry_box(self, frame: tkinter.Frame, title: str, row: int = None, width: int = 10):
+        self.add_text_box(frame, title, row=row, entry=True, width=width)
+
     def select_logfile(self):
-        filename = self.logfile_input.get()
+        filename = self.elements['log'].get()
         log_path = tkinter.filedialog.asksaveasfilename(title='Huginn log location...', initialfile=filename,
                                                         filetypes=[('Text', '*.txt')])
-        self.logfile_input.insert(0, log_path)
+        self.replace_text(self.elements['log'], log_path)
 
     def start_stop(self):
         if self.running:
@@ -97,56 +109,79 @@ class HuginnGUI:
         else:
             self.running = True
             self.start_stop_button_text.set('Stop')
-            self.run()
+
+            serial_port = self.elements['port'].get()
+
+            if serial_port is '':
+                serial_port = None
+
+            log_filename = self.elements['log'].get()
+
+            try:
+                self.radio_connection = radio.connect(serial_port)
+
+                logbook.FileHandler(log_filename, level='DEBUG', bubble=True).push_application()
+                logbook.StreamHandler(sys.stdout, level='INFO', bubble=True).push_application()
+                self.logger = logbook.Logger('Huginn')
+
+                self.logger.info(f'Opening {self.radio_connection.name}')
+                self.run()
+            except Exception as error:
+                self.running = False
+                self.start_stop_button_text.set('Start')
+
+    def replace_text(self, element, value):
+        if type(element) is tkinter.Text:
+            start_index = '1.0'
+        else:
+            start_index = 0
+
+        element.delete(start_index, tkinter.END)
+        element.insert(start_index, value)
 
     def run(self):
-        log_filename = self.logfile_input.get()
-        serial_port = self.serial_port_input.get()
+        if self.running:
+            for child in self.frames['bottom'].winfo_children():
+                child.configure(state='normal')
 
-        if serial_port is '':
-            serial_port = None
+            raw_packets = radio.get_packets(self.radio_connection)
 
-        with radio.connect(serial_port) as radio_connection:
-            logbook.FileHandler(log_filename, level='DEBUG', bubble=True).push_application()
-            logbook.StreamHandler(sys.stdout, level='INFO', bubble=True).push_application()
-            logger = logbook.Logger('Huginn')
+            for raw_packet in raw_packets:
+                try:
+                    parsed_packet = packets.APRSPacket(raw_packet)
+                except parsing.PartialPacketError as error:
+                    parsed_packet = None
+                    self.logger.debug(f'PartialPacketError: {error} ("{raw_packet}")')
 
-            logger.info(f'Opening {radio_connection.name}')
+                if parsed_packet is not None:
+                    callsign = parsed_packet['callsign']
 
-            if self.running:
-                for child in self.bottom_frame.winfo_children():
-                    child.configure(state='enable')
+                    if callsign in self.packet_tracks:
+                        self.packet_tracks[callsign].append(parsed_packet)
+                    else:
+                        self.packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
 
-                raw_packets = radio.get_packets(radio_connection)
+                    longitude, latitude, altitude = self.packet_tracks[callsign].coordinates(z=True)
+                    ascent_rate = self.packet_tracks[callsign].ascent_rate()
+                    ground_speed = self.packet_tracks[callsign].ground_speed()
+                    seconds_to_impact = self.packet_tracks[callsign].seconds_to_impact()
 
-                for raw_packet in raw_packets:
-                    try:
-                        parsed_packet = packets.APRSPacket(raw_packet)
-                    except parsing.PartialPacketError as error:
-                        parsed_packet = None
-                        logger.debug(f'PartialPacketError: {error} ("{raw_packet}")')
+                    self.replace_text(self.elements['longitude'], longitude)
+                    self.replace_text(self.elements['latitude'], latitude)
+                    self.replace_text(self.elements['altitude'], altitude)
+                    self.replace_text(self.elements['ground_speed'], ground_speed)
+                    self.replace_text(self.elements['ascent_rate'], ascent_rate)
 
-                    if parsed_packet is not None:
-                        callsign = parsed_packet['callsign']
+                    self.logger.info(
+                        f'{parsed_packet} ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}')
 
-                        if callsign in self.packet_tracks:
-                            self.packet_tracks[callsign].append(parsed_packet)
-                        else:
-                            self.packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
+            self.main_window.after(2000, self.run)
+        else:
+            for child in self.frames['bottom'].winfo_children():
+                child.configure(state='disable')
 
-                        ascent_rate = self.packet_tracks[callsign].ascent_rate()
-                        ground_speed = self.packet_tracks[callsign].ground_speed()
-                        seconds_to_impact = self.packet_tracks[callsign].seconds_to_impact()
-
-                        logger.info(
-                            f'{parsed_packet} ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}')
-
-                self.main_window.after(2000, self.run)
-            else:
-                for child in self.bottom_frame.winfo_children():
-                    child.configure(state='disable')
-
-                logger.notice(f'Closing {radio_connection.name}')
+            self.logger.notice(f'Closing {self.radio_connection.name}')
+            self.radio_connection.close()
 
 
 if __name__ == '__main__':
