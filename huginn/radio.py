@@ -8,33 +8,49 @@ import serial
 from serial.tools import list_ports
 
 
-def find_port() -> str:
+def ports() -> str:
+    """
+    Iterate over available serial ports.
+
+    :return: port name
+    """
+
     com_ports = serial.tools.list_ports.comports()
 
-    if len(com_ports) > 0:
-        return com_ports[0].device
+    for com_port in com_ports:
+        yield com_port.device
     else:
         return None
 
 
+def port() -> str:
+    """
+    Get next port in ports list.
+
+    :return: port name
+    """
+
+    try:
+        return next(ports())
+    except StopIteration:
+        raise OSError('No open serial ports.')
+
+
 def connect(serial_port: str = None) -> serial.Serial:
     """
-    Connect to radio over serial port.
+    Connect to radio over given serial port.
 
     :param serial_port: port name
     :return: serial connection
     """
 
     if serial_port is None:
-        serial_port = find_port()
-
-    if serial_port is None:
-        raise EnvironmentError('No open serial ports found.')
+        serial_port = port()
 
     return serial.Serial(serial_port, baudrate=9600, timeout=1)
 
 
-def get_packets(serial_connection: serial.Serial) -> list:
+def read(serial_connection: serial.Serial) -> list:
     """
     Get potential packet strings from given serial connection.
 
@@ -46,5 +62,5 @@ def get_packets(serial_connection: serial.Serial) -> list:
 
 
 if __name__ == '__main__':
-    packet_candidates = get_packets(connect())
+    packet_candidates = read(connect())
     print(packet_candidates)

@@ -32,18 +32,16 @@ class HuginnGUI:
 
         self.add_entry_box(self.frames['top'], 'port')
 
-        self.serial_port = radio.find_port()
+        self.add_entry_box(self.frames['top'], title='logfile', width=45)
+        self.elements['logfile'].insert(0, f'huginn_log_{datetime.datetime.now().strftime("%Y%m%dT%H%M%S")}.txt')
+        logfile_button = tkinter.Button(self.frames['top'], text='...', command=self.select_logfile)
+        logfile_button.grid(row=1, column=2)
 
-        self.add_entry_box(self.frames['top'], title='log', width=45)
-        self.elements['log'].insert(0, f'huginn_log_{datetime.datetime.now().strftime("%Y%m%dT%H%M%S")}.txt')
-        self.logfile_button = tkinter.Button(self.frames['top'], text='...', command=self.select_logfile)
-        self.logfile_button.grid(row=1, column=2)
-
-        self.start_stop_button_text = tkinter.StringVar()
-        self.start_stop_button_text.set('Start')
-        self.start_stop_button = tkinter.Button(self.frames['top'], textvariable=self.start_stop_button_text,
-                                                command=self.start_stop)
-        self.start_stop_button.grid(row=self.last_row, column=1)
+        self.start_stop_text = tkinter.StringVar()
+        self.start_stop_text.set('Start')
+        start_stop_button = tkinter.Button(self.frames['top'], textvariable=self.start_stop_text,
+                                           command=self.start_stop)
+        start_stop_button.grid(row=self.last_row, column=1)
         self.last_row += 1
 
         self.add_text_box(self.frames['bottom'], title='longitude', units='°')
@@ -55,10 +53,10 @@ class HuginnGUI:
         for element in self.frames['bottom'].winfo_children():
             element.configure(state=tkinter.DISABLED)
 
-        if self.serial_port is not None:
-            self.elements['port'].insert(0, self.serial_port)
-        else:
-            tkinter.messagebox.showwarning('Startup Warning', 'No connected serial ports.')
+        try:
+            self.elements['port'].insert(0, radio.port())
+        except OSError as error:
+            tkinter.messagebox.showwarning('Startup Warning', error)
 
         self.main_window.mainloop()
 
@@ -97,7 +95,7 @@ class HuginnGUI:
         self.add_text_box(frame, title, row=row, entry=True, width=width)
 
     def select_logfile(self):
-        filename = self.elements['log'].get()
+        filename = self.elements['logfile'].get()
         log_path = tkinter.filedialog.asksaveasfilename(title='Huginn log location...', initialfile=filename,
                                                         filetypes=[('Text', '*.txt')])
         self.replace_text(self.elements['log'], log_path)
@@ -105,30 +103,33 @@ class HuginnGUI:
     def start_stop(self):
         if self.running:
             self.running = False
-            self.start_stop_button_text.set('Start')
+            self.start_stop_text.set('Start')
+
+            for element in self.frames['bottom'].winfo_children():
+                element.configure(state=tkinter.DISABLED)
         else:
             self.running = True
-            self.start_stop_button_text.set('Stop')
-
-            serial_port = self.elements['port'].get()
-
-            if serial_port is '':
-                serial_port = None
-
-            log_filename = self.elements['log'].get()
+            self.start_stop_text.set('Stop')
 
             try:
-                self.radio_connection = radio.connect(serial_port)
+                self.serial_port = self.elements['port'].get()
 
-                logbook.FileHandler(log_filename, level='DEBUG', bubble=True).push_application()
+                if self.serial_port is '':
+                    serial_port = radio.port()
+                    self.replace_text(self.elements['port'], serial_port)
+
+                logbook.FileHandler(self.elements['logfile'].get(), level='DEBUG', bubble=True).push_application()
                 logbook.StreamHandler(sys.stdout, level='INFO', bubble=True).push_application()
                 self.logger = logbook.Logger('Huginn')
+
+                self.radio_connection = radio.connect(self.serial_port)
 
                 self.logger.info(f'Opening {self.radio_connection.name}')
                 self.run()
             except Exception as error:
                 self.running = False
-                self.start_stop_button_text.set('Start')
+                self.start_stop_text.set('Start')
+                tkinter.messagebox.showerror('Initialization Error', error)
 
     def replace_text(self, element, value):
         if type(element) is tkinter.Text:
@@ -141,10 +142,10 @@ class HuginnGUI:
 
     def run(self):
         if self.running:
-            for child in self.frames['bottom'].winfo_children():
-                child.configure(state='normal')
+            for element in self.frames['bottom'].winfo_children():
+                element.configure(state='normal')
 
-            raw_packets = radio.get_packets(self.radio_connection)
+            raw_packets = radio.read(self.radio_connection)
 
             for raw_packet in raw_packets:
                 try:
@@ -177,9 +178,6 @@ class HuginnGUI:
 
             self.main_window.after(2000, self.run)
         else:
-            for child in self.frames['bottom'].winfo_children():
-                child.configure(state='disable')
-
             self.logger.notice(f'Closing {self.radio_connection.name}')
             self.radio_connection.close()
 

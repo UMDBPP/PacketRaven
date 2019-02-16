@@ -39,7 +39,7 @@ if __name__ == '__main__':
         logger.info(f'Opening {radio_connection.name}.')
 
         while True:
-            raw_packets = radio.get_packets(radio_connection)
+            raw_packets = radio.read(radio_connection)
 
             for raw_packet in raw_packets:
                 try:
