@@ -5,11 +5,10 @@ __authors__ = ['Quinn Kupec', 'Zachary Burnett']
 """
 
 import datetime
+import logging
 import os
 import sys
 import time
-
-import logbook
 
 from huginn import parsing, radio, packets, tracks
 
@@ -35,13 +34,23 @@ if __name__ == '__main__':
         log_filename = os.path.join(log_filename, f'{datetime.datetime.now().strftime("%Y%m%dT%H%M%S")}_huginn_log.txt')
 
     with radio.connect(serial_port) as radio_connection:
-        logbook.FileHandler(log_filename, level='DEBUG', bubble=True).push_application()
-        logbook.StreamHandler(sys.stdout, level='INFO', bubble=True).push_application()
-        logger = logbook.Logger('Huginn')
+        log_formatter = logging.Formatter('%(asctime)s;%(levelname)s;%(message)s', '%Y-%m-%d %H:%M:%S')
+
+        log_file = logging.FileHandler(log_filename)
+        log_file.setLevel(logging.INFO)
+        log_file.setFormatter(log_formatter)
+
+        log_console = logging.StreamHandler()
+        log_console.setLevel(logging.DEBUG)
+        log_console.setFormatter(log_formatter)
+
+        root_logger = logging.getLogger()
+        root_logger.addHandler(log_file)
+        root_logger.addHandler(log_console)
 
         packet_tracks = {}
 
-        logger.info(f'Opening {radio_connection.name}.')
+        logging.info(f'Opening {radio_connection.name}.')
 
         while True:
             raw_packets = radio.read(radio_connection)
@@ -51,7 +60,7 @@ if __name__ == '__main__':
                     parsed_packet = packets.APRSPacket(raw_packet)
                 except parsing.PartialPacketError as error:
                     parsed_packet = None
-                    logger.debug(f'PartialPacketError: {error} ("{raw_packet}")')
+                    logging.debug(f'PartialPacketError: {error} ("{raw_packet}")')
 
                 if parsed_packet is not None:
                     callsign = parsed_packet['callsign']
@@ -65,7 +74,7 @@ if __name__ == '__main__':
                     ground_speed = packet_tracks[callsign].ground_speed()
                     seconds_to_impact = packet_tracks[callsign].seconds_to_impact()
 
-                    logger.info(
+                    logging.info(
                         f'{parsed_packet} ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}')
 
             time.sleep(1)

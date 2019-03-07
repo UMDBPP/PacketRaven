@@ -1,10 +1,8 @@
 import datetime
-import sys
+import logging
 import tkinter
 import tkinter.filedialog
 import tkinter.messagebox
-
-import logbook
 
 from huginn import radio, packets, parsing, tracks
 
@@ -126,13 +124,23 @@ class HuginnGUI:
                     serial_port = radio.port()
                     self.replace_text(self.elements['port'], serial_port)
 
-                logbook.FileHandler(self.elements['logfile'].get(), level='DEBUG', bubble=True).push_application()
-                logbook.StreamHandler(sys.stdout, level='INFO', bubble=True).push_application()
-                self.logger = logbook.Logger('Huginn')
+                log_formatter = logging.Formatter('%(asctime)s;%(levelname)s;%(message)s', '%Y-%m-%d %H:%M:%S')
+
+                log_file = logging.FileHandler(self.elements['logfile'].get())
+                log_file.setLevel(logging.INFO)
+                log_file.setFormatter(log_formatter)
+
+                log_console = logging.StreamHandler()
+                log_console.setLevel(logging.DEBUG)
+                log_console.setFormatter(log_formatter)
+
+                root_logger = logging.getLogger()
+                root_logger.addHandler(log_file)
+                root_logger.addHandler(log_console)
 
                 self.radio_connection = radio.connect(self.serial_port)
 
-                self.logger.info(f'Opening {self.radio_connection.name}')
+                logging.info(f'Opening {self.radio_connection.name}')
                 self.run()
             except Exception as error:
                 self.running = False
@@ -151,7 +159,7 @@ class HuginnGUI:
                     parsed_packet = packets.APRSPacket(raw_packet)
                 except parsing.PartialPacketError as error:
                     parsed_packet = None
-                    self.logger.debug(f'PartialPacketError: {error} ("{raw_packet}")')
+                    logging.debug(f'PartialPacketError: {error} ("{raw_packet}")')
 
                 if parsed_packet is not None:
                     callsign = parsed_packet['callsign']
@@ -172,12 +180,12 @@ class HuginnGUI:
                     self.replace_text(self.elements['ground_speed'], ground_speed)
                     self.replace_text(self.elements['ascent_rate'], ascent_rate)
 
-                    self.logger.info(
+                    logging.info(
                         f'{parsed_packet} ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}')
 
             self.main_window.after(1000, self.run)
         else:
-            self.logger.notice(f'Closing {self.radio_connection.name}')
+            logging.info(f'Closing {self.radio_connection.name}')
             self.radio_connection.close()
 
 
