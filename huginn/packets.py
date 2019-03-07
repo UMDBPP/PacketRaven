@@ -17,15 +17,11 @@ class LocationPacket:
     4D location packet, containing longitude, latitude, altitude, and time.
     """
 
-    def __init__(self, time: datetime.datetime, longitude: float, latitude: float, altitude: float = 0):
+    def __init__(self, time: datetime.datetime, longitude: float, latitude: float, altitude: float = None):
         self.time = time
         self.longitude = longitude
         self.latitude = latitude
-
-        if altitude is not None:
-            self.altitude = altitude
-        else:
-            self.altitude = 0
+        self.altitude = altitude if altitude is not None else 0
 
     class Delta:
         def __init__(self, seconds: float, horizontal_distance: float, vertical_distance: float):

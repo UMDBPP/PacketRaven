@@ -65,9 +65,9 @@ def parse_aprs_packet(raw_aprs: str) -> dict:
 
 def decompress_aprs_lon(compressed_lon: str) -> float:
     """
-    Decode longitude string from base 91 ASCII to float.
+    Decode longitude string from APRS compressed format (shifted ASCII in base 91) to a float.
 
-    :param compressed_lon: compressed longitude string
+    :param compressed_lon: compressed APRS longitude string
     :return: longitude
     """
 
@@ -83,9 +83,9 @@ def decompress_aprs_lon(compressed_lon: str) -> float:
 
 def decompress_aprs_lat(compressed_lat: str) -> float:
     """
-    Decode latitude string from base 91 ASCII to float.
+    Decode latitude string from APRS compressed format (shifted ASCII in base 91) to a float.
 
-    :param compressed_lat: compressed latitude string
+    :param compressed_lat: compressed APRS latitude string
     :return: latitude
     """
 

@@ -4,6 +4,9 @@ Ground track class for packet operations.
 __authors__ = ['Quinn Kupec', 'Zachary Burnett']
 """
 
+import cartopy.crs
+import matplotlib.pyplot
+
 from huginn import structures, packets
 
 
@@ -93,6 +96,11 @@ class LocationPacketTrack:
             return self.packets[-1].distance_to_point(longitude, latitude)
         else:
             return 0.0
+
+    def plot(self):
+        axis = matplotlib.pyplot.axes(projection=cartopy.crs.PlateCarree())
+        axis.coastlines()
+        matplotlib.pyplot.show()
 
     def __getitem__(self, index: int):
         """

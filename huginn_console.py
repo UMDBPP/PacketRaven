@@ -24,6 +24,11 @@ if __name__ == '__main__':
     else:
         serial_port = None
 
+    if len(sys.argv) > 3:
+        debug = bool(sys.argv[3])
+    else:
+        debug = False
+
     if os.path.isdir(log_filename):
         if not os.path.exists(log_filename):
             os.mkdir(log_filename)

@@ -37,11 +37,10 @@ class HuginnGUI:
         logfile_button = tkinter.Button(self.frames['top'], text='...', command=self.select_logfile)
         logfile_button.grid(row=1, column=2)
 
-        self.start_stop_text = tkinter.StringVar()
-        self.start_stop_text.set('Start')
-        start_stop_button = tkinter.Button(self.frames['top'], textvariable=self.start_stop_text,
-                                           command=self.start_stop)
-        start_stop_button.grid(row=self.last_row, column=1)
+        self.toggle_text = tkinter.StringVar()
+        self.toggle_text.set('Start')
+        toggle_button = tkinter.Button(self.frames['top'], textvariable=self.toggle_text, command=self.toggle)
+        toggle_button.grid(row=self.last_row, column=1)
         self.last_row += 1
 
         self.add_text_box(self.frames['bottom'], title='longitude', units='°')
@@ -100,16 +99,25 @@ class HuginnGUI:
                                                         filetypes=[('Text', '*.txt')])
         self.replace_text(self.elements['log'], log_path)
 
-    def start_stop(self):
+    def replace_text(self, element, value):
+        if type(element) is tkinter.Text:
+            start_index = '1.0'
+        else:
+            start_index = 0
+
+        element.delete(start_index, tkinter.END)
+        element.insert(start_index, value)
+
+    def toggle(self):
         if self.running:
             self.running = False
-            self.start_stop_text.set('Start')
+            self.toggle_text.set('Start')
 
             for element in self.frames['bottom'].winfo_children():
                 element.configure(state=tkinter.DISABLED)
         else:
             self.running = True
-            self.start_stop_text.set('Stop')
+            self.toggle_text.set('Stop')
 
             try:
                 self.serial_port = self.elements['port'].get()
@@ -128,17 +136,8 @@ class HuginnGUI:
                 self.run()
             except Exception as error:
                 self.running = False
-                self.start_stop_text.set('Start')
+                self.toggle_text.set('Start')
                 tkinter.messagebox.showerror('Initialization Error', error)
-
-    def replace_text(self, element, value):
-        if type(element) is tkinter.Text:
-            start_index = '1.0'
-        else:
-            start_index = 0
-
-        element.delete(start_index, tkinter.END)
-        element.insert(start_index, value)
 
     def run(self):
         if self.running:
@@ -176,7 +175,7 @@ class HuginnGUI:
                     self.logger.info(
                         f'{parsed_packet} ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}')
 
-            self.main_window.after(2000, self.run)
+            self.main_window.after(1000, self.run)
         else:
             self.logger.notice(f'Closing {self.radio_connection.name}')
             self.radio_connection.close()
