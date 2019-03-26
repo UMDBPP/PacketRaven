@@ -4,7 +4,7 @@ import tkinter
 import tkinter.filedialog
 import tkinter.messagebox
 
-from huginn import radio, packets, parsing, tracks
+from huginn import radio, tracks
 
 
 class HuginnGUI:
@@ -50,10 +50,10 @@ class HuginnGUI:
         for element in self.frames['bottom'].winfo_children():
             element.configure(state=tkinter.DISABLED)
 
-        try:
-            self.elements['port'].insert(0, radio.port())
-        except OSError as error:
-            tkinter.messagebox.showwarning('Startup Warning', error)
+        # try:
+        #     self.elements['port'].insert(0, radio.port())
+        # except OSError as error:
+        #     tkinter.messagebox.showwarning('Startup Warning', error)
 
         self.main_window.mainloop()
 
@@ -124,23 +124,17 @@ class HuginnGUI:
                     serial_port = radio.port()
                     self.replace_text(self.elements['port'], serial_port)
 
-                log_formatter = logging.Formatter('%(asctime)s;%(levelname)s;%(message)s', '%Y-%m-%d %H:%M:%S')
+                log_filename = self.elements['logfile'].get()
+                logging.basicConfig(filename=log_filename, level=logging.INFO,
+                                    datefmt='%Y-%m-%d %H:%M:%S', format='[%(asctime)s] %(levelname)s: %(message)s')
+                console = logging.StreamHandler()
+                console.setLevel(logging.DEBUG)
+                logging.getLogger('').addHandler(console)
 
-                log_file = logging.FileHandler(self.elements['logfile'].get())
-                log_file.setLevel(logging.INFO)
-                log_file.setFormatter(log_formatter)
+                self.radio_connection = radio.Radio(self.serial_port)
+                self.serial_port = self.radio_connection.serial_port
 
-                log_console = logging.StreamHandler()
-                log_console.setLevel(logging.DEBUG)
-                log_console.setFormatter(log_formatter)
-
-                root_logger = logging.getLogger()
-                root_logger.addHandler(log_file)
-                root_logger.addHandler(log_console)
-
-                self.radio_connection = radio.connect(self.serial_port)
-
-                logging.info(f'Opening {self.radio_connection.name}')
+                logging.info(f'Opening {self.serial_port}')
                 self.run()
             except Exception as error:
                 self.running = False
@@ -152,40 +146,33 @@ class HuginnGUI:
             for element in self.frames['bottom'].winfo_children():
                 element.configure(state='normal')
 
-            raw_packets = radio.read(self.radio_connection)
+            parsed_packets = self.radio_connection.read()
 
-            for raw_packet in raw_packets:
-                try:
-                    parsed_packet = packets.APRSPacket(raw_packet)
-                except parsing.PartialPacketError as error:
-                    parsed_packet = None
-                    logging.debug(f'PartialPacketError: {error} ("{raw_packet}")')
+            for parsed_packet in parsed_packets:
+                callsign = parsed_packet['callsign']
 
-                if parsed_packet is not None:
-                    callsign = parsed_packet['callsign']
+                if callsign in self.packet_tracks:
+                    self.packet_tracks[callsign].append(parsed_packet)
+                else:
+                    self.packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
 
-                    if callsign in self.packet_tracks:
-                        self.packet_tracks[callsign].append(parsed_packet)
-                    else:
-                        self.packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
+                longitude, latitude, altitude = self.packet_tracks[callsign].coordinates(z=True)
+                ascent_rate = self.packet_tracks[callsign].ascent_rate()
+                ground_speed = self.packet_tracks[callsign].ground_speed()
+                seconds_to_impact = self.packet_tracks[callsign].seconds_to_impact()
 
-                    longitude, latitude, altitude = self.packet_tracks[callsign].coordinates(z=True)
-                    ascent_rate = self.packet_tracks[callsign].ascent_rate()
-                    ground_speed = self.packet_tracks[callsign].ground_speed()
-                    seconds_to_impact = self.packet_tracks[callsign].seconds_to_impact()
+                self.replace_text(self.elements['longitude'], longitude)
+                self.replace_text(self.elements['latitude'], latitude)
+                self.replace_text(self.elements['altitude'], altitude)
+                self.replace_text(self.elements['ground_speed'], ground_speed)
+                self.replace_text(self.elements['ascent_rate'], ascent_rate)
 
-                    self.replace_text(self.elements['longitude'], longitude)
-                    self.replace_text(self.elements['latitude'], latitude)
-                    self.replace_text(self.elements['altitude'], altitude)
-                    self.replace_text(self.elements['ground_speed'], ground_speed)
-                    self.replace_text(self.elements['ascent_rate'], ascent_rate)
-
-                    logging.info(
-                        f'{parsed_packet} ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}')
+                logging.info(
+                    f'{parsed_packet} ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}')
 
             self.main_window.after(1000, self.run)
         else:
-            logging.info(f'Closing {self.radio_connection.name}')
+            logging.info(f'Closing {self.radio_connection.serial_port}')
             self.radio_connection.close()
 
 

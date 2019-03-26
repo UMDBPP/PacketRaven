@@ -10,13 +10,13 @@ import os
 import sys
 import time
 
-from huginn import parsing, radio, packets, tracks
+from huginn import radio, tracks
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         log_filename = sys.argv[1]
     else:
-        log_filename = os.path.join(os.path.expanduser('~'), 'Desktop', 'log')
+        log_filename = os.path.join(os.path.expanduser('~'), 'Desktop', 'log.txt')
 
     if len(sys.argv) > 2:
         serial_port = sys.argv[2]
@@ -33,48 +33,34 @@ if __name__ == '__main__':
             os.mkdir(log_filename)
         log_filename = os.path.join(log_filename, f'{datetime.datetime.now().strftime("%Y%m%dT%H%M%S")}_huginn_log.txt')
 
-    with radio.connect(serial_port) as radio_connection:
-        log_formatter = logging.Formatter('%(asctime)s;%(levelname)s;%(message)s', '%Y-%m-%d %H:%M:%S')
+    radio_connection = radio.Radio(serial_port)
 
-        log_file = logging.FileHandler(log_filename)
-        log_file.setLevel(logging.INFO)
-        log_file.setFormatter(log_formatter)
+    logging.basicConfig(filename=log_filename, level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S',
+                        format='[%(asctime)s] %(levelname)s: %(message)s')
+    console = logging.StreamHandler()
+    console.setLevel(logging.DEBUG)
+    logging.getLogger('').addHandler(console)
 
-        log_console = logging.StreamHandler()
-        log_console.setLevel(logging.DEBUG)
-        log_console.setFormatter(log_formatter)
+    packet_tracks = {}
 
-        root_logger = logging.getLogger()
-        root_logger.addHandler(log_file)
-        root_logger.addHandler(log_console)
+    logging.info(f'Opening {radio_connection.serial_port}.')
 
-        packet_tracks = {}
+    while True:
+        parsed_packets = radio_connection.read()
 
-        logging.info(f'Opening {radio_connection.name}.')
+        for parsed_packet in parsed_packets:
+            callsign = parsed_packet['callsign']
 
-        while True:
-            raw_packets = radio.read(radio_connection)
+            if callsign in packet_tracks:
+                packet_tracks[callsign].append(parsed_packet)
+            else:
+                packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
 
-            for raw_packet in raw_packets:
-                try:
-                    parsed_packet = packets.APRSPacket(raw_packet)
-                except parsing.PartialPacketError as error:
-                    parsed_packet = None
-                    logging.debug(f'PartialPacketError: {error} ("{raw_packet}")')
+            ascent_rate = packet_tracks[callsign].ascent_rate()
+            ground_speed = packet_tracks[callsign].ground_speed()
+            seconds_to_impact = packet_tracks[callsign].seconds_to_impact()
 
-                if parsed_packet is not None:
-                    callsign = parsed_packet['callsign']
+            logging.info(
+                f'{parsed_packet} ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}')
 
-                    if callsign in packet_tracks:
-                        packet_tracks[callsign].append(parsed_packet)
-                    else:
-                        packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
-
-                    ascent_rate = packet_tracks[callsign].ascent_rate()
-                    ground_speed = packet_tracks[callsign].ground_speed()
-                    seconds_to_impact = packet_tracks[callsign].seconds_to_impact()
-
-                    logging.info(
-                        f'{parsed_packet} ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}')
-
-            time.sleep(1)
+        time.sleep(1)
