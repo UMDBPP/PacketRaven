@@ -133,8 +133,8 @@ class HuginnGUI:
 
                 self.radio_connection = radio.Radio(self.serial_port)
                 self.serial_port = self.radio_connection.serial_port
-
                 logging.info(f'Opening {self.serial_port}')
+
                 self.run()
             except Exception as error:
                 self.running = False

@@ -5,7 +5,7 @@ __authors__ = ['Quinn Kupec', 'Zachary Burnett']
 """
 
 import cartopy.crs
-import matplotlib.pyplot
+from matplotlib import pyplot
 
 from huginn import structures, packets
 
@@ -98,9 +98,16 @@ class LocationPacketTrack:
             return 0.0
 
     def plot(self):
-        axis = matplotlib.pyplot.axes(projection=cartopy.crs.PlateCarree())
-        axis.coastlines()
-        matplotlib.pyplot.show()
+        axis = pyplot.axes(projection=cartopy.crs.PlateCarree())
+
+        points = []
+
+        for packet in self.packets:
+            points.append(packet.coordinates(z=False))
+
+        x, y = zip(*points)
+
+        axis.plot(x, y)
 
     def __getitem__(self, index: int):
         """
