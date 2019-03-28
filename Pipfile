@@ -9,7 +9,6 @@ verify_ssl = true
 pyserial = "*"
 haversine = "*"
 aprslib = "*"
-matplotlib = "*"
 
 [requires]
 python_version = "3.7"
