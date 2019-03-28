@@ -4,13 +4,17 @@ import tkinter
 import tkinter.filedialog
 import tkinter.messagebox
 
+import cartopy
+from matplotlib import pyplot
+
 from huginn import radio, tracks
 
 
 class HuginnGUI:
     def __init__(self):
-        self.main_window = tkinter.Tk()
-        self.main_window.title('Huginn Balloon Telemetry')
+        self.windows = {}
+        self.windows['main'] = tkinter.Tk()
+        self.windows['main'].title('Huginn Balloon Telemetry')
 
         self.running = False
         self.packet_tracks = {}
@@ -19,13 +23,13 @@ class HuginnGUI:
         self.elements = {}
         self.last_row = 0
 
-        self.frames['top'] = tkinter.Frame(self.main_window)
+        self.frames['top'] = tkinter.Frame(self.windows['main'])
         self.frames['top'].pack()
 
         self.frames['separator'] = tkinter.Frame(height=2, bd=1, relief=tkinter.SUNKEN)
         self.frames['separator'].pack(fill=tkinter.X, padx=5, pady=5)
 
-        self.frames['bottom'] = tkinter.Frame(self.main_window)
+        self.frames['bottom'] = tkinter.Frame(self.windows['main'])
         self.frames['bottom'].pack()
 
         self.add_entry_box(self.frames['top'], 'port')
@@ -55,7 +59,7 @@ class HuginnGUI:
         # except OSError as error:
         #     tkinter.messagebox.showwarning('Startup Warning', error)
 
-        self.main_window.mainloop()
+        self.windows['main'].mainloop()
 
     def add_text_box(self, frame: tkinter.Frame, title: str, units: str = None, row: int = None, entry: bool = False,
                      width: int = 10):
@@ -135,6 +139,9 @@ class HuginnGUI:
                 self.serial_port = self.radio_connection.serial_port
                 logging.info(f'Opening {self.serial_port}')
 
+                self.windows['map'] = pyplot.figure()
+                self.windows['plot'] = pyplot.figure()
+
                 self.run()
             except Exception as error:
                 self.running = False
@@ -170,7 +177,24 @@ class HuginnGUI:
                 logging.info(
                     f'{parsed_packet} ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}')
 
-            self.main_window.after(1000, self.run)
+                self.windows['map'].clear()
+                map_axis = self.windows['map'].add_axes(projection=cartopy.crs.PlateCarree())
+                for packet_track in self.packet_tracks:
+                    packet_track.plot(map_axis)
+
+                self.windows['plot'].clear()
+                plot_axis = self.windows['plot'].add_axes()
+                for packet_track in self.packet_tracks:
+                    times = []
+                    altitudes = []
+
+                    for packet in packet_track.packets:
+                        times.append(packet.time)
+                        altitudes.append(packet.altitude)
+
+                    plot_axis.plot(times, altitudes)
+
+            self.windows['main'].after(1000, self.run)
         else:
             logging.info(f'Closing {self.radio_connection.serial_port}')
             self.radio_connection.close()

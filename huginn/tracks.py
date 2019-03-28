@@ -97,8 +97,9 @@ class LocationPacketTrack:
         else:
             return 0.0
 
-    def plot(self):
-        axis = pyplot.axes(projection=cartopy.crs.PlateCarree())
+    def plot(self, axis=None):
+        if axis is None:
+            axis = pyplot.axes(projection=cartopy.crs.PlateCarree())
 
         points = []
 
