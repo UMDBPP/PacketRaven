@@ -62,4 +62,4 @@ if __name__ == '__main__':
 
             time.sleep(1)
     else:
-        print('usage: huginn [-h] port_name log_path')
+        print('usage: huginn serial_port [log_path]')
