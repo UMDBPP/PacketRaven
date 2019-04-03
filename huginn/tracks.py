@@ -4,6 +4,8 @@ Ground track class for packet operations.
 __authors__ = ['Quinn Kupec', 'Zachary Burnett']
 """
 
+from typing import Union
+
 import cartopy.crs
 from matplotlib import pyplot
 
@@ -33,7 +35,7 @@ class LocationPacketTrack:
 
         return self.packets[-1].altitude
 
-    def coordinates(self, z: bool = False) -> tuple:
+    def coordinates(self) -> tuple:
         """
         Return coordinates of most recent packet.
 
@@ -41,7 +43,7 @@ class LocationPacketTrack:
         :return: tuple of coordinates (lon, lat[, alt])
         """
 
-        return self.packets[-1].coordinates(z)
+        return self.packets[-1].coordinates()
 
     def ascent_rate(self) -> float:
         """
@@ -97,20 +99,13 @@ class LocationPacketTrack:
         else:
             return 0.0
 
-    def plot(self, axis=None):
+    def plot(self, axis: pyplot.Axes = None, **kwargs) -> pyplot.Line2D:
         if axis is None:
             axis = pyplot.axes(projection=cartopy.crs.PlateCarree())
 
-        points = []
+        return axis.plot(*zip(*[packet.coordinates()[0:1] for packet in self.packets]), **kwargs)
 
-        for packet in self.packets:
-            points.append(packet.coordinates(z=False))
-
-        x, y = zip(*points)
-
-        axis.plot(x, y)
-
-    def __getitem__(self, index: int):
+    def __getitem__(self, index: Union[int, slice]) -> packets.LocationPacket:
         """
         Indexing function (for integer indexing of packets).
 

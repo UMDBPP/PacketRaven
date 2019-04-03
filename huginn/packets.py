@@ -5,9 +5,10 @@ __authors__ = ['Quinn Kupec', 'Zachary Burnett']
 """
 
 import datetime
-import math
 
 import haversine
+import math
+import shapely.geometry
 
 from huginn import parsing
 
@@ -39,18 +40,17 @@ class LocationPacket:
         def __str__(self) -> str:
             return f'{self.seconds} s, {self.vertical_distance:6.2f} m vertical, {self.horizontal_distance:6.2f} m horizontal'
 
-    def coordinates(self, z: bool = False) -> tuple:
+    def geometry(self):
+        return shapely.geometry.Point(self.coordinates())
+
+    def coordinates(self) -> tuple:
         """
         Return coordinates.
 
-        :param z: whether to include altitude as third entry in tuple
-        :return: tuple of coordinates (lon, lat[, alt])
+        :return: tuple of coordinates (lon, lat, alt)
         """
 
-        if z:
-            return self.longitude, self.latitude, self.altitude
-        else:
-            return self.longitude, self.latitude
+        return self.longitude, self.latitude, self.altitude
 
     def distance_to_point(self, longitude, latitude) -> float:
         # TODO implement WGS84 distance

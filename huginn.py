@@ -112,11 +112,15 @@ class HuginnGUI:
 
     def toggle(self):
         if self.running:
-            self.running = False
-            self.toggle_text.set('Start')
+            self.windows['plot'].clear()
+
+            pyplot.close(self.windows['plot'])
 
             for element in self.frames['bottom'].winfo_children():
                 element.configure(state=tkinter.DISABLED)
+
+            self.toggle_text.set('Start')
+            self.running = False
         else:
             self.running = True
             self.toggle_text.set('Stop')
@@ -139,8 +143,8 @@ class HuginnGUI:
                 self.serial_port = self.radio_connection.serial_port
                 logging.info(f'Opening {self.serial_port}')
 
-                self.windows['map'] = pyplot.figure()
                 self.windows['plot'] = pyplot.figure()
+                pyplot.show(block=False)
 
                 self.run()
             except Exception as error:
@@ -163,7 +167,7 @@ class HuginnGUI:
                 else:
                     self.packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
 
-                longitude, latitude, altitude = self.packet_tracks[callsign].coordinates(z=True)
+                longitude, latitude, altitude = self.packet_tracks[callsign].coordinates()
                 ascent_rate = self.packet_tracks[callsign].ascent_rate()
                 ground_speed = self.packet_tracks[callsign].ground_speed()
                 seconds_to_impact = self.packet_tracks[callsign].seconds_to_impact()
@@ -177,14 +181,16 @@ class HuginnGUI:
                 logging.info(
                     f'{parsed_packet} ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}')
 
-                self.windows['map'].clear()
-                map_axis = self.windows['map'].add_axes(projection=cartopy.crs.PlateCarree())
-                for packet_track in self.packet_tracks:
+                self.windows['plot'].clear()
+
+                map_axis = self.windows['plot'].add_subplot(1, 2, 1, projection=cartopy.crs.PlateCarree())
+                map_axis.set_adjustable('datalim')
+                plot_axis = self.windows['plot'].add_subplot(1, 2, 2)
+
+                for callsign, packet_track in self.packet_tracks.items():
                     packet_track.plot(map_axis)
 
-                self.windows['plot'].clear()
-                plot_axis = self.windows['plot'].add_axes()
-                for packet_track in self.packet_tracks:
+                for callsign, packet_track in self.packet_tracks.items():
                     times = []
                     altitudes = []
 
@@ -193,6 +199,8 @@ class HuginnGUI:
                         altitudes.append(packet.altitude)
 
                     plot_axis.plot(times, altitudes)
+
+                self.windows['plot'].canvas.draw_idle()
 
             self.windows['main'].after(1000, self.run)
         else:
