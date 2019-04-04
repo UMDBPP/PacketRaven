@@ -99,10 +99,19 @@ class LocationPacketTrack:
             return 0.0
 
     def plot(self, axis: pyplot.Axes = None, **kwargs) -> pyplot.Line2D:
+        from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+
         if axis is None:
             axis = pyplot.axes(projection=cartopy.crs.PlateCarree())
 
-        return axis.plot(*zip(*[packet.coordinates()[0:1] for packet in self.packets]), **kwargs)
+        grid_lines = axis.gridlines(crs=cartopy.crs.PlateCarree(), draw_labels=True, linewidth=2,
+                                    color='gray', alpha=0.5, linestyle='--')
+        grid_lines.xlabels_top = False
+        grid_lines.ylabels_right = False
+        grid_lines.xformatter = LONGITUDE_FORMATTER
+        grid_lines.yformatter = LATITUDE_FORMATTER
+
+        return axis.plot(*zip(*[packet.coordinates()[0:2] for packet in self.packets]), **kwargs)
 
     def __getitem__(self, index: Union[int, slice]) -> packets.LocationPacket:
         """

@@ -5,9 +5,7 @@ import tkinter.filedialog
 import tkinter.messagebox
 
 import cartopy
-from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 from matplotlib import pyplot
-from matplotlib import ticker
 
 from huginn import radio, tracks
 
@@ -17,6 +15,9 @@ class HuginnGUI:
         self.windows = {}
         self.windows['main'] = tkinter.Tk()
         self.windows['main'].title('huginn main')
+
+        self.axes = {}
+        self.lines = {}
 
         self.running = False
         self.packet_tracks = {}
@@ -146,13 +147,28 @@ class HuginnGUI:
                 else:
                     self.windows['plot'] = pyplot.figure(num='huginn plots')
 
-                pyplot.show(block=False)
+                map_axis = self.windows['plot'].add_subplot(1, 2, 1, projection=cartopy.crs.PlateCarree())
+                map_axis.add_feature(
+                    cartopy.feature.NaturalEarthFeature('cultural', 'admin_1_states_provinces_lines', '110m',
+                                                        facecolor='none', edgecolor='black'))
+                map_axis.add_feature(
+                    cartopy.feature.NaturalEarthFeature('physical', 'coastline', '110m', facecolor='none',
+                                                        edgecolor='black'))
+                map_axis.coastlines()
 
-                self.run()
+                self.axes['map'] = map_axis
+                self.axes['plot'] = self.windows['plot'].add_subplot(1, 2, 2)
+
+                self.lines['map'] = {}
+                self.lines['plot'] = {}
+
+                pyplot.show(block=False)
             except Exception as error:
                 self.running = False
                 self.toggle_text.set('Start')
                 tkinter.messagebox.showerror('Initialization Error', error)
+
+            self.run()
 
     def run(self):
         if self.running:
@@ -186,35 +202,44 @@ class HuginnGUI:
                 logging.info(
                     f'{parsed_packet} ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}')
 
-                self.windows['plot'].clear()
-
-                map_axis = self.windows['plot'].add_subplot(1, 2, 1, projection=cartopy.crs.PlateCarree())
-                map_axis.set_adjustable('datalim')
-                plot_axis = self.windows['plot'].add_subplot(1, 2, 2)
-
-                map_axis.coastlines()
-                grid_lines = map_axis.gridlines(crs=cartopy.crs.PlateCarree(), draw_labels=True, linewidth=2,
-                                                color='gray',
-                                                alpha=0.5, linestyle='--')
-                grid_lines.xlabels_top = False
-                grid_lines.xlocator = ticker.FixedLocator([-180, -45, 0, 45, 180])
-                grid_lines.xformatter = LONGITUDE_FORMATTER
-                grid_lines.yformatter = LATITUDE_FORMATTER
-                grid_lines.xlabel_style = {'size': 15, 'color': 'gray'}
-                grid_lines.xlabel_style = {'color': 'red', 'weight': 'bold'}
+                map_axis = self.axes['map']
+                plot_axis = self.axes['plot']
 
                 for callsign, packet_track in self.packet_tracks.items():
-                    packet_track.plot(map_axis)
+                    if callsign in self.lines['map']:
+                        x, y = zip(*(packet.coordinates()[0:2] for packet in packet_track.packets))
+
+                        # enforce square aspect ratio
+                        x_bounds = (min(x), max(x))
+                        y_bounds = (min(y), max(y))
+                        x_domain = max(x) - min(x)
+                        y_domain = max(y) - min(y)
+
+                        padding = abs(x_domain - y_domain) / 4
+
+                        y_bounds = (y_bounds[0] - padding, y_bounds[1] + padding)
+                        x_bounds = (x_bounds[0] - padding, x_bounds[1] + padding)
+
+                        map_axis.set_xlim(*x_bounds)
+                        map_axis.set_ylim(*y_bounds)
+
+                        self.lines['map'][callsign].set_xdata(x)
+                        self.lines['map'][callsign].set_ydata(y)
+                    else:
+                        self.lines['map'][callsign], = packet_track.plot(map_axis)
 
                 for callsign, packet_track in self.packet_tracks.items():
-                    times = []
-                    altitudes = []
+                    times = [packet.time for packet in packet_track.packets]
+                    altitudes = [packet.altitude for packet in packet_track.packets]
 
-                    for packet in packet_track.packets:
-                        times.append(packet.time)
-                        altitudes.append(packet.altitude)
+                    if callsign in self.lines['plot']:
+                        plot_axis.set_xlim(min(times), max(times))
+                        plot_axis.set_ylim(min(altitudes), max(altitudes))
 
-                    plot_axis.plot(times, altitudes)
+                        self.lines['plot'][callsign].set_xdata(times)
+                        self.lines['plot'][callsign].set_ydata(altitudes)
+                    else:
+                        self.lines['plot'][callsign], = plot_axis.plot(times, altitudes)
 
                 self.windows['plot'].canvas.draw_idle()
 
