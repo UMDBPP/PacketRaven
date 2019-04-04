@@ -23,8 +23,7 @@ class LocationPacketTrack:
         self.packets = structures.DoublyLinkedList(packets)
 
     def append(self, packet: packets.LocationPacket):
-        if packet not in self.packets:
-            self.packets.append(packet)
+        self.packets.append(packet)
 
     def altitude(self) -> float:
         """

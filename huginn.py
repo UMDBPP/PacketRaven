@@ -5,7 +5,9 @@ import tkinter.filedialog
 import tkinter.messagebox
 
 import cartopy
+from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 from matplotlib import pyplot
+from matplotlib import ticker
 
 from huginn import radio, tracks
 
@@ -14,7 +16,7 @@ class HuginnGUI:
     def __init__(self):
         self.windows = {}
         self.windows['main'] = tkinter.Tk()
-        self.windows['main'].title('Huginn Balloon Telemetry')
+        self.windows['main'].title('huginn main')
 
         self.running = False
         self.packet_tracks = {}
@@ -112,10 +114,6 @@ class HuginnGUI:
 
     def toggle(self):
         if self.running:
-            self.windows['plot'].clear()
-
-            pyplot.close(self.windows['plot'])
-
             for element in self.frames['bottom'].winfo_children():
                 element.configure(state=tkinter.DISABLED)
 
@@ -143,7 +141,11 @@ class HuginnGUI:
                 self.serial_port = self.radio_connection.serial_port
                 logging.info(f'Opening {self.serial_port}')
 
-                self.windows['plot'] = pyplot.figure()
+                if 'plot' in self.windows:
+                    self.windows['plot'].clear()
+                else:
+                    self.windows['plot'] = pyplot.figure(num='huginn plots')
+
                 pyplot.show(block=False)
 
                 self.run()
@@ -163,7 +165,10 @@ class HuginnGUI:
                 callsign = parsed_packet['callsign']
 
                 if callsign in self.packet_tracks:
-                    self.packet_tracks[callsign].append(parsed_packet)
+                    if parsed_packet not in self.packet_tracks[callsign]:
+                        self.packet_tracks[callsign].append(parsed_packet)
+                    else:
+                        logging.debug(f'Received duplicate packet: {parsed_packet}')
                 else:
                     self.packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
 
@@ -186,6 +191,17 @@ class HuginnGUI:
                 map_axis = self.windows['plot'].add_subplot(1, 2, 1, projection=cartopy.crs.PlateCarree())
                 map_axis.set_adjustable('datalim')
                 plot_axis = self.windows['plot'].add_subplot(1, 2, 2)
+
+                map_axis.coastlines()
+                grid_lines = map_axis.gridlines(crs=cartopy.crs.PlateCarree(), draw_labels=True, linewidth=2,
+                                                color='gray',
+                                                alpha=0.5, linestyle='--')
+                grid_lines.xlabels_top = False
+                grid_lines.xlocator = ticker.FixedLocator([-180, -45, 0, 45, 180])
+                grid_lines.xformatter = LONGITUDE_FORMATTER
+                grid_lines.yformatter = LATITUDE_FORMATTER
+                grid_lines.xlabel_style = {'size': 15, 'color': 'gray'}
+                grid_lines.xlabel_style = {'color': 'red', 'weight': 'bold'}
 
                 for callsign, packet_track in self.packet_tracks.items():
                     packet_track.plot(map_axis)
