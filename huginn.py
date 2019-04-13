@@ -7,7 +7,7 @@ import tkinter.messagebox
 import cartopy
 from matplotlib import pyplot
 
-from huginn import radio, tracks
+from huginn import radio, tracks, CALLSIGN_FILTER
 
 
 class HuginnGUI:
@@ -193,11 +193,12 @@ class HuginnGUI:
                 ground_speed = self.packet_tracks[callsign].ground_speed()
                 seconds_to_impact = self.packet_tracks[callsign].seconds_to_impact()
 
-                self.replace_text(self.elements['longitude'], longitude)
-                self.replace_text(self.elements['latitude'], latitude)
-                self.replace_text(self.elements['altitude'], altitude)
-                self.replace_text(self.elements['ground_speed'], ground_speed)
-                self.replace_text(self.elements['ascent_rate'], ascent_rate)
+                if callsign in CALLSIGN_FILTER:
+                    self.replace_text(self.elements['longitude'], longitude)
+                    self.replace_text(self.elements['latitude'], latitude)
+                    self.replace_text(self.elements['altitude'], altitude)
+                    self.replace_text(self.elements['ground_speed'], ground_speed)
+                    self.replace_text(self.elements['ascent_rate'], ascent_rate)
 
                 logging.info(
                     f'{parsed_packet} ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}')
@@ -205,7 +206,9 @@ class HuginnGUI:
                 map_axis = self.axes['map']
                 plot_axis = self.axes['plot']
 
-                for callsign, packet_track in self.packet_tracks.items():
+                if callsign in CALLSIGN_FILTER:
+                    packet_track = self.packet_tracks[callsign]
+
                     if callsign in self.lines['map']:
                         x, y = zip(*(packet.coordinates()[0:2] for packet in packet_track.packets))
 
@@ -228,7 +231,6 @@ class HuginnGUI:
                     else:
                         self.lines['map'][callsign], = packet_track.plot(map_axis)
 
-                for callsign, packet_track in self.packet_tracks.items():
                     times = [packet.time for packet in packet_track.packets]
                     altitudes = [packet.altitude for packet in packet_track.packets]
 
@@ -241,7 +243,7 @@ class HuginnGUI:
                     else:
                         self.lines['plot'][callsign], = plot_axis.plot(times, altitudes)
 
-                self.windows['plot'].canvas.draw_idle()
+                    self.windows['plot'].canvas.draw_idle()
 
             self.windows['main'].after(1000, self.run)
         else:
