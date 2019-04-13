@@ -4,7 +4,7 @@ import tkinter
 import tkinter.filedialog
 import tkinter.messagebox
 
-from huginn import radio, tracks
+from huginn import radio, tracks, CALLSIGN_FILTER
 
 
 class HuginnGUI:
@@ -161,11 +161,12 @@ class HuginnGUI:
                 ground_speed = self.packet_tracks[callsign].ground_speed()
                 seconds_to_impact = self.packet_tracks[callsign].seconds_to_impact()
 
-                self.replace_text(self.elements['longitude'], longitude)
-                self.replace_text(self.elements['latitude'], latitude)
-                self.replace_text(self.elements['altitude'], altitude)
-                self.replace_text(self.elements['ground_speed'], ground_speed)
-                self.replace_text(self.elements['ascent_rate'], ascent_rate)
+                if callsign in CALLSIGN_FILTER:
+                    self.replace_text(self.elements['longitude'], longitude)
+                    self.replace_text(self.elements['latitude'], latitude)
+                    self.replace_text(self.elements['altitude'], altitude)
+                    self.replace_text(self.elements['ground_speed'], ground_speed)
+                    self.replace_text(self.elements['ascent_rate'], ascent_rate)
 
                 logging.info(
                     f'{parsed_packet} ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}')
