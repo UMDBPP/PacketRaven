@@ -5,11 +5,13 @@ __authors__ = []
 """
 import datetime
 import logging
+from typing import List
 
 import serial
 from serial.tools import list_ports
 
 from huginn import packets, parsing
+from huginn.packets import APRSLocationPacket
 
 
 def ports() -> str:
@@ -19,9 +21,7 @@ def ports() -> str:
     :return: port name
     """
 
-    com_ports = serial.tools.list_ports.comports()
-
-    for com_port in com_ports:
+    for com_port in serial.tools.list_ports.comports():
         yield com_port.device
     else:
         return None
@@ -38,6 +38,15 @@ def port() -> str:
         return next(ports())
     except StopIteration:
         raise OSError('No open serial ports.')
+
+
+def parse_packet(raw_packet: str, packet_time: datetime.datetime = None) -> APRSLocationPacket:
+    try:
+        return packets.APRSLocationPacket(raw_packet, packet_time)
+    except parsing.PartialPacketError as error:
+        logging.debug(f'PartialPacketError: {error} "{raw_packet}"')
+    except ValueError as error:
+        logging.debug(f'ValueError: {error} "{raw_packet}"')
 
 
 class Radio:
@@ -61,7 +70,7 @@ class Radio:
 
             self.serial_connection = serial.Serial(self.serial_port, baudrate=9600, timeout=1)
 
-    def read(self) -> list:
+    def read(self) -> List[APRSLocationPacket]:
         """
         Get potential packet strings from given serial connection.
 
@@ -75,18 +84,11 @@ class Radio:
             line = self.serial_connection.readline()
             if len(line) > 0:
                 packet_time = datetime.datetime.strptime(line[:19], '%Y-%m-%d %H:%M:%S')
-                raw_packet = line[25:]
-
-                try:
-                    parsed_packets.append(packets.APRSPacket(raw_packet, packet_time))
-                except parsing.PartialPacketError as error:
-                    logging.debug(f'PartialPacketError: {error} ("{raw_packet}")')
+                raw_packet = str(line[25:])
+                parse_packet(raw_packet, packet_time)
         else:
-            for raw_packet in [line.decode('utf-8') for line in self.serial_connection.readlines()]:
-                try:
-                    parsed_packets.append(packets.APRSPacket(raw_packet))
-                except parsing.PartialPacketError as error:
-                    logging.debug(f'PartialPacketError: {error} ("{raw_packet}")')
+            for line in self.serial_connection.readlines():
+                parse_packet(line.decode('utf-8'))
 
         return parsed_packets
 

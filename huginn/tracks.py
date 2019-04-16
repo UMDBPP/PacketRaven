@@ -132,7 +132,7 @@ class APRSTrack(LocationPacketTrack):
         self.callsign = callsign
         super().__init__(packets)
 
-    def append(self, packet: packets.APRSPacket):
+    def append(self, packet: packets.APRSLocationPacket):
         packet_callsign = packet['callsign']
 
         if packet_callsign == self.callsign:

@@ -53,12 +53,15 @@ if __name__ == '__main__':
                 else:
                     packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
 
-                ascent_rate = packet_tracks[callsign].ascent_rate()
-                ground_speed = packet_tracks[callsign].ground_speed()
-                seconds_to_impact = packet_tracks[callsign].seconds_to_impact()
+                message = f'{parsed_packet}'
 
-                logging.info(
-                    f'{parsed_packet} ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}')
+                if 'longitude' in parsed_packet and 'latitude' in parsed_packet:
+                    ascent_rate = packet_tracks[callsign].ascent_rate()
+                    ground_speed = packet_tracks[callsign].ground_speed()
+                    seconds_to_impact = packet_tracks[callsign].seconds_to_impact()
+                    message += f'ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}'
+
+                logging.info(message)
 
             time.sleep(1)
     else:

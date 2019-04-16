@@ -84,7 +84,7 @@ class LocationPacket:
         return f'{self.time} ({self.longitude:.3f}, {self.latitude:.3f}, {self.altitude:.2f})'
 
 
-class APRSPacket(LocationPacket):
+class APRSLocationPacket(LocationPacket):
     """
     APRS packet containing parsed APRS fields, along with location and time.
     """
@@ -100,28 +100,21 @@ class APRSPacket(LocationPacket):
         # parse packet, units are metric
         parsed_packet = parsing.parse_aprs_packet(raw_aprs)
 
-        # TODO make HABduino add timestamp to packet upon transmission
-        if time is not None:
-            if type(time) in [int, float]:
-                # assume Unix epoch
-                time = datetime.datetime.fromtimestamp(time)
-            elif type(time) is str:
-                # assume ISO format date string
-                time = datetime.datetime.fromisoformat(time)
-        elif 'timestamp' in parsed_packet:
-            # extract time from Unix epoch
-            time = datetime.datetime.fromtimestamp(float(parsed_packet['timestamp']))
-        else:
-            # otherwise default to time the packet was received (now)
-            time = datetime.datetime.now()
+        if 'longitude' in parsed_packet and 'latitude' in parsed_packet:
+            if time is None:
+                if 'timestamp' in parsed_packet:
+                    # extract time from Unix epoch
+                    time = datetime.datetime.fromtimestamp(float(parsed_packet['timestamp']))
+                else:
+                    # TODO make HABduino add timestamp to packet upon transmission
+                    # otherwise default to time the packet was received (now)
+                    time = datetime.datetime.now()
 
-        if 'altitude' in parsed_packet:
-            altitude = parsed_packet['altitude']
+            super().__init__(time, parsed_packet['longitude'], parsed_packet['latitude'],
+                             parsed_packet['altitude'] if 'altitude' in parsed_packet else None)
+            self.parsed_packet = parsed_packet
         else:
-            altitude = None
-
-        super().__init__(time, parsed_packet['longitude'], parsed_packet['latitude'], altitude)
-        self.parsed_packet = parsed_packet
+            raise ValueError(f'Input packet does not contain location data: {raw_aprs}')
 
     def __getitem__(self, field: str):
         """
@@ -134,7 +127,10 @@ class APRSPacket(LocationPacket):
         if field == 'callsign':
             field = 'from'
 
-        return self.parsed_packet[field]
+        if field in self.parsed_packet:
+            return self.parsed_packet[field]
+        else:
+            raise KeyError(f'Packet does not contain the field "{field}"')
 
     def __eq__(self, other) -> bool:
         """
