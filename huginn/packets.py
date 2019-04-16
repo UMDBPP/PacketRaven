@@ -8,7 +8,6 @@ import datetime
 
 import haversine
 import math
-import shapely.geometry
 
 from huginn import parsing
 
@@ -39,9 +38,6 @@ class LocationPacket:
 
         def __str__(self) -> str:
             return f'{self.seconds} s, {self.vertical_distance:6.2f} m vertical, {self.horizontal_distance:6.2f} m horizontal'
-
-    def geometry(self):
-        return shapely.geometry.Point(self.coordinates())
 
     def coordinates(self) -> tuple:
         """

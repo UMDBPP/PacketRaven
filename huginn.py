@@ -4,7 +4,7 @@ import tkinter
 import tkinter.filedialog
 import tkinter.messagebox
 
-import cartopy
+import numpy
 from matplotlib import pyplot
 
 from huginn import radio, tracks, CALLSIGN_FILTER
@@ -17,7 +17,6 @@ class HuginnGUI:
         self.windows['main'].title('huginn main')
 
         self.axes = {}
-        self.lines = {}
 
         self.running = False
         self.packet_tracks = {}
@@ -147,20 +146,8 @@ class HuginnGUI:
                 else:
                     self.windows['plot'] = pyplot.figure(num='huginn plots')
 
-                map_axis = self.windows['plot'].add_subplot(1, 2, 1, projection=cartopy.crs.PlateCarree())
-                map_axis.add_feature(
-                    cartopy.feature.NaturalEarthFeature('cultural', 'admin_1_states_provinces_lines', '110m',
-                                                        facecolor='none', edgecolor='black'))
-                map_axis.add_feature(
-                    cartopy.feature.NaturalEarthFeature('physical', 'coastline', '110m', facecolor='none',
-                                                        edgecolor='black'))
-                map_axis.coastlines()
-
-                self.axes['map'] = map_axis
-                self.axes['plot'] = self.windows['plot'].add_subplot(1, 2, 2)
-
-                self.lines['map'] = {}
-                self.lines['plot'] = {}
+                self.axes['altitude'] = {'axis': self.windows['plot'].add_subplot(1, 2, 1), 'lines': {}}
+                self.axes['ascent_rate'] = {'axis': self.windows['plot'].add_subplot(1, 2, 2), 'lines': {}}
 
                 pyplot.show(block=False)
             except Exception as error:
@@ -203,45 +190,36 @@ class HuginnGUI:
                 logging.info(
                     f'{parsed_packet} ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}')
 
-                map_axis = self.axes['map']
-                plot_axis = self.axes['plot']
+                altitude_axis = self.axes['altitude']['axis']
+                ascent_rate_axis = self.axes['ascent_rate']['axis']
 
                 if callsign in CALLSIGN_FILTER:
                     packet_track = self.packet_tracks[callsign]
 
-                    if callsign in self.lines['map']:
-                        x, y = zip(*(packet.coordinates()[0:2] for packet in packet_track.packets))
+                    packet_track_packets = packet_track.packets
 
-                        # enforce square aspect ratio
-                        x_bounds = (min(x), max(x))
-                        y_bounds = (min(y), max(y))
-                        x_domain = max(x) - min(x)
-                        y_domain = max(y) - min(y)
+                    times = [packet.time for packet in packet_track_packets]
+                    altitudes = [packet.altitude for packet in packet_track_packets]
+                    ascent_rates = [0] + [packet_delta.ascent_rate for packet_delta in
+                                          numpy.diff(numpy.array(packet_track_packets))]
 
-                        padding = abs(x_domain - y_domain) / 4
+                    if callsign in self.axes['altitude']['lines']:
+                        altitude_axis.set_xlim(min(times), max(times))
+                        altitude_axis.set_ylim(min(altitudes), max(altitudes))
 
-                        y_bounds = (y_bounds[0] - padding, y_bounds[1] + padding)
-                        x_bounds = (x_bounds[0] - padding, x_bounds[1] + padding)
-
-                        map_axis.set_xlim(*x_bounds)
-                        map_axis.set_ylim(*y_bounds)
-
-                        self.lines['map'][callsign].set_xdata(x)
-                        self.lines['map'][callsign].set_ydata(y)
+                        self.axes['altitude']['lines'][callsign].set_xdata(times)
+                        self.axes['altitude']['lines'][callsign].set_ydata(altitudes)
                     else:
-                        self.lines['map'][callsign], = packet_track.plot(map_axis)
+                        self.axes['altitude']['lines'][callsign], = altitude_axis.plot(times, altitudes)
 
-                    times = [packet.time for packet in packet_track.packets]
-                    altitudes = [packet.altitude for packet in packet_track.packets]
+                    if callsign in self.axes['ascent_rate']['lines']:
+                        ascent_rate_axis.set_xlim(min(times), max(times))
+                        ascent_rate_axis.set_ylim(min(ascent_rates), max(ascent_rates))
 
-                    if callsign in self.lines['plot']:
-                        plot_axis.set_xlim(min(times), max(times))
-                        plot_axis.set_ylim(min(altitudes), max(altitudes))
-
-                        self.lines['plot'][callsign].set_xdata(times)
-                        self.lines['plot'][callsign].set_ydata(altitudes)
+                        self.axes['ascent_rate']['lines'][callsign].set_xdata(times)
+                        self.axes['ascent_rate']['lines'][callsign].set_ydata(ascent_rates)
                     else:
-                        self.lines['plot'][callsign], = plot_axis.plot(times, altitudes)
+                        self.axes['ascent_rate']['lines'][callsign], = ascent_rate_axis.plot(times, ascent_rates)
 
                     self.windows['plot'].canvas.draw_idle()
 
