@@ -210,7 +210,7 @@ class HuginnGUI:
                         self.axes['altitude']['lines'][callsign].set_xdata(times)
                         self.axes['altitude']['lines'][callsign].set_ydata(altitudes)
                     else:
-                        self.axes['altitude']['lines'][callsign], = altitude_axis.plot(times, altitudes)
+                        self.axes['altitude']['lines'][callsign], = altitude_axis.plot(times, altitudes, '-o')
 
                     if callsign in self.axes['ascent_rate']['lines']:
                         ascent_rate_axis.set_xlim(min(times), max(times))
@@ -219,7 +219,7 @@ class HuginnGUI:
                         self.axes['ascent_rate']['lines'][callsign].set_xdata(times)
                         self.axes['ascent_rate']['lines'][callsign].set_ydata(ascent_rates)
                     else:
-                        self.axes['ascent_rate']['lines'][callsign], = ascent_rate_axis.plot(times, ascent_rates)
+                        self.axes['ascent_rate']['lines'][callsign], = ascent_rate_axis.plot(times, ascent_rates, '-o')
 
                     self.windows['plot'].canvas.draw_idle()
 

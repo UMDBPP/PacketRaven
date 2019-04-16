@@ -62,7 +62,7 @@ class LocationPacket:
 
         seconds = (self.time - other.time).total_seconds()
         horizontal_distance = self.distance_to_point(other.longitude, other.latitude)
-        vertical_distance = abs(self.altitude - other.altitude)
+        vertical_distance = self.altitude - other.altitude
 
         return self.Delta(seconds, horizontal_distance, vertical_distance)
 
