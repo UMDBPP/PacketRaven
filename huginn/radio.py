@@ -58,11 +58,12 @@ class Radio:
         :param serial_port: port name
         """
 
-        self.serial_port = serial_port.strip('"')
-        self.is_text_file = self.serial_port is not None and '.txt' in self.serial_port
-
-        if self.serial_port is None:
+        if serial_port is None:
             self.serial_port = port()
+        else:
+            self.serial_port = serial_port.strip('"')
+
+        self.is_text_file = self.serial_port is not None and '.txt' in self.serial_port
 
         if self.is_text_file:
             # open text file as dummy serial connection
