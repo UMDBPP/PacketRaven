@@ -56,10 +56,10 @@ class HuginnGUI:
         for element in self.frames['bottom'].winfo_children():
             element.configure(state=tkinter.DISABLED)
 
-        # try:
-        #     self.elements['port'].insert(0, radio.port())
-        # except OSError as error:
-        #     tkinter.messagebox.showwarning('Startup Warning', error)
+        try:
+            self.replace_text(self.elements['port'], radio.port())
+        except OSError as error:
+            tkinter.messagebox.showwarning('Startup Warning', error)
 
         self.windows['main'].mainloop()
 
@@ -114,15 +114,15 @@ class HuginnGUI:
 
     def toggle(self):
         if self.running:
+            self.radio_connection.close()
+            logging.info(f'Closed port {self.radio_connection.serial_port}')
+
             for element in self.frames['bottom'].winfo_children():
                 element.configure(state=tkinter.DISABLED)
 
             self.toggle_text.set('Start')
             self.running = False
         else:
-            self.running = True
-            self.toggle_text.set('Stop')
-
             try:
                 self.serial_port = self.elements['port'].get()
 
@@ -139,7 +139,7 @@ class HuginnGUI:
 
                 self.radio_connection = radio.Radio(self.serial_port)
                 self.serial_port = self.radio_connection.serial_port
-                logging.info(f'Opening {self.serial_port}')
+                logging.info(f'Opened port {self.serial_port}')
 
                 if 'plot' in self.windows:
                     self.windows['plot'].clear()
@@ -150,21 +150,24 @@ class HuginnGUI:
                 self.axes['ascent_rate'] = {'axis': self.windows['plot'].add_subplot(1, 2, 2), 'lines': {}}
 
                 pyplot.show(block=False)
+
+                for element in self.frames['bottom'].winfo_children():
+                    element.configure(state='normal')
+
+                self.toggle_text.set('Stop')
+                self.running = True
+
+                self.run()
             except Exception as error:
-                self.running = False
-                self.toggle_text.set('Start')
                 tkinter.messagebox.showerror('Initialization Error', error)
 
             self.run()
 
     def run(self):
         if self.running:
-            for element in self.frames['bottom'].winfo_children():
-                element.configure(state='normal')
+            parsed_aprs_packets = self.radio_connection.read()
 
-            parsed_packets = self.radio_connection.read()
-
-            for parsed_packet in parsed_packets:
+            for parsed_packet in parsed_aprs_packets:
                 callsign = parsed_packet['callsign']
 
                 if callsign in self.packet_tracks:
@@ -175,20 +178,23 @@ class HuginnGUI:
                 else:
                     self.packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
 
-                longitude, latitude, altitude = self.packet_tracks[callsign].coordinates()
-                ascent_rate = self.packet_tracks[callsign].ascent_rate()
-                ground_speed = self.packet_tracks[callsign].ground_speed()
-                seconds_to_impact = self.packet_tracks[callsign].seconds_to_impact()
+                message = f'{parsed_packet}'
 
-                if callsign in CALLSIGN_FILTER:
-                    self.replace_text(self.elements['longitude'], longitude)
-                    self.replace_text(self.elements['latitude'], latitude)
-                    self.replace_text(self.elements['altitude'], altitude)
-                    self.replace_text(self.elements['ground_speed'], ground_speed)
-                    self.replace_text(self.elements['ascent_rate'], ascent_rate)
+                if 'longitude' in parsed_packet and 'latitude' in parsed_packet:
+                    longitude, latitude, altitude = self.packet_tracks[callsign].coordinates()
+                    ascent_rate = self.packet_tracks[callsign].ascent_rate()
+                    ground_speed = self.packet_tracks[callsign].ground_speed()
+                    seconds_to_impact = self.packet_tracks[callsign].seconds_to_impact()
+                    message += f'ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}'
 
-                logging.info(
-                    f'{parsed_packet} ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}')
+                    if callsign in CALLSIGN_FILTER:
+                        self.replace_text(self.elements['longitude'], longitude)
+                        self.replace_text(self.elements['latitude'], latitude)
+                        self.replace_text(self.elements['altitude'], altitude)
+                        self.replace_text(self.elements['ground_speed'], ground_speed)
+                        self.replace_text(self.elements['ascent_rate'], ascent_rate)
+
+                logging.info(message)
 
                 altitude_axis = self.axes['altitude']['axis']
                 ascent_rate_axis = self.axes['ascent_rate']['axis']
@@ -225,8 +231,7 @@ class HuginnGUI:
 
             self.windows['main'].after(1000, self.run)
         else:
-            logging.info(f'Closing {self.radio_connection.serial_port}')
-            self.radio_connection.close()
+            logging.info('Stopping...')
 
 
 if __name__ == '__main__':

@@ -71,37 +71,40 @@ class TestDoublyLinkedList(unittest.TestCase):
 
 class TestPackets(unittest.TestCase):
     def test_aprs_init(self):
-        packet_1 = packets.APRSPacket(
+        packet_1 = packets.APRSLocationPacket(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
-            time='2018-11-11T10:20:13')
+            time=datetime.datetime(2018, 11, 11, 10, 20, 13))
 
-        self.assertEqual(datetime.datetime(2018, 11, 11, 10, 20, 13), packet_1.time)
         self.assertEqual((-77.90921071284187, 39.7003564996876, 8201.8632), packet_1.coordinates(z=True))
         self.assertTrue(packet_1['callsign'] is packet_1['from'])
         self.assertEqual('W3EAX-8', packet_1['callsign'])
         self.assertEqual('|!Q|  /W3EAX,262,0,18\'C,http://www.umd.edu', packet_1['comment'])
 
     def test_equality(self):
-        packet_1 = packets.APRSPacket(
+        packet_1 = packets.APRSLocationPacket(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
-            time='2018-11-11T10:20:13')
-        packet_2 = packets.APRSPacket(
+            datetime.datetime(2018, 11, 11, 10, 20, 13))
+        packet_2 = packets.APRSLocationPacket(
             "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
-            time='2018-11-11T10:21:24')
-        packet_3 = packets.APRSPacket(
+            time=datetime.datetime(2018, 11, 11, 10, 21, 24))
+        packet_3 = packets.APRSLocationPacket(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
-            time='2018-11-11T10:21:31')
+            time=datetime.datetime(2018, 11, 11, 10, 21, 31))
+        packet_4 = packets.APRSLocationPacket(
+            "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
+            time=datetime.datetime(2018, 11, 11, 10, 20, 13))
 
         self.assertTrue(packet_1 != packet_2)
         self.assertTrue(packet_1 == packet_3)
+        self.assertTrue(packet_1 != packet_4)
 
     def test_subtraction(self):
-        packet_1 = packets.APRSPacket(
+        packet_1 = packets.APRSLocationPacket(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
-            time='2018-11-11T10:20:13')
-        packet_2 = packets.APRSPacket(
+            time=datetime.datetime(2018, 11, 11, 10, 20, 13))
+        packet_2 = packets.APRSLocationPacket(
             "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
-            time='2018-11-11T10:21:24')
+            time=datetime.datetime(2018, 11, 11, 10, 21, 24))
 
         packet_delta = packet_2 - packet_1
 
@@ -112,12 +115,12 @@ class TestPackets(unittest.TestCase):
 
 class TestPacketTracks(unittest.TestCase):
     def test_append(self):
-        packet_1 = packets.APRSPacket(
+        packet_1 = packets.APRSLocationPacket(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
-            time='2018-11-11T10:20:13')
-        packet_2 = packets.APRSPacket(
+            time=datetime.datetime(2018, 11, 11, 10, 20, 13))
+        packet_2 = packets.APRSLocationPacket(
             "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
-            time='2018-11-11T10:21:24')
+            time=datetime.datetime(2018, 11, 11, 10, 21, 24))
 
         track = tracks.APRSTrack('W3EAX-8')
 
@@ -128,9 +131,9 @@ class TestPacketTracks(unittest.TestCase):
         self.assertTrue(track[1] is packet_2)
 
     def test_rates(self):
-        packet_1 = packets.APRSPacket(
+        packet_1 = packets.APRSLocationPacket(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
-            time='2018-11-11T10:20:13')
+            time=datetime.datetime(2018, 11, 11, 10, 20, 13))
 
         track = tracks.APRSTrack('W3EAX-8')
 
@@ -141,12 +144,12 @@ class TestPacketTracks(unittest.TestCase):
         self.assertEqual(packet_1.altitude, track.altitude())
 
     def test_values(self):
-        packet_1 = packets.APRSPacket(
+        packet_1 = packets.APRSLocationPacket(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
-            time='2018-11-11T10:20:13')
-        packet_2 = packets.APRSPacket(
+            time=datetime.datetime(2018, 11, 11, 10, 20, 13))
+        packet_2 = packets.APRSLocationPacket(
             "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
-            time='2018-11-11T10:21:24')
+            time=datetime.datetime(2018, 11, 11, 10, 21, 24))
 
         track = tracks.APRSTrack('W3EAX-8', [packet_1, packet_2])
 
