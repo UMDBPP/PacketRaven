@@ -75,7 +75,7 @@ class TestPackets(unittest.TestCase):
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
             time=datetime.datetime(2018, 11, 11, 10, 20, 13))
 
-        self.assertEqual((-77.90921071284187, 39.7003564996876, 8201.8632), packet_1.coordinates(z=True))
+        self.assertEqual((-77.90921071284187, 39.7003564996876, 8201.8632), packet_1.coordinates())
         self.assertTrue(packet_1['callsign'] is packet_1['from'])
         self.assertEqual('W3EAX-8', packet_1['callsign'])
         self.assertEqual('|!Q|  /W3EAX,262,0,18\'C,http://www.umd.edu', packet_1['comment'])

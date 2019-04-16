@@ -35,7 +35,6 @@ class LocationPacketTrack:
         """
         Return coordinates of most recent packet.
 
-        :param z: whether to include altitude as third entry in tuple
         :return: tuple of coordinates (lon, lat[, alt])
         """
 

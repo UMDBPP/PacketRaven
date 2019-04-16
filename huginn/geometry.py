@@ -181,9 +181,9 @@ class Polygon:
 
 
 def from_wkt(wkt: str):
-    type, coords = wkt.split(' ', 1)
+    geometry_type, coords = wkt.split(' ', 1)
 
-    if type.upper() == 'POLYGON':
+    if geometry_type.upper() == 'POLYGON':
         points = [[Point(*[float(entry) for entry in coord.split(' ')]) for coord in
                    ring_coords[1:-1].split(', ')] for ring_coords in coords[1:-1].split('), (')]
 
@@ -198,9 +198,9 @@ def from_wkt(wkt: str):
         points = [Point(*[float(entry) for entry in coord.split(' ')]) for coord in
                   coords[1:-1].split(', ')]
 
-        if type.upper() == 'POINT':
+        if geometry_type.upper() == 'POINT':
             return points[0]
-        elif type.upper() == 'LINESTRING':
+        elif geometry_type.upper() == 'LINESTRING':
             return Polyline(points)
 
 

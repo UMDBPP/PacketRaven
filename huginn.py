@@ -7,14 +7,15 @@ import tkinter.messagebox
 import numpy
 from matplotlib import pyplot
 
-from huginn import radio, tracks, CALLSIGN_FILTER
+from huginn import radio, tracks, BALLOON_CALLSIGNS
 
 
 class HuginnGUI:
     def __init__(self):
-        self.windows = {}
-        self.windows['main'] = tkinter.Tk()
+        self.windows = {'main': tkinter.Tk()}
         self.windows['main'].title('huginn main')
+
+        self.connections = {}
 
         self.axes = {}
 
@@ -57,9 +58,11 @@ class HuginnGUI:
             element.configure(state=tkinter.DISABLED)
 
         try:
-            self.replace_text(self.elements['port'], radio.port())
-        except OSError as error:
-            tkinter.messagebox.showwarning('Startup Warning', error)
+            radio_port = radio.port()
+        except OSError:
+            radio_port = ''
+
+        self.replace_text(self.elements['port'], radio_port)
 
         self.windows['main'].mainloop()
 
@@ -103,19 +106,10 @@ class HuginnGUI:
                                                         filetypes=[('Text', '*.txt')])
         self.replace_text(self.elements['log'], log_path)
 
-    def replace_text(self, element, value):
-        if type(element) is tkinter.Text:
-            start_index = '1.0'
-        else:
-            start_index = 0
-
-        element.delete(start_index, tkinter.END)
-        element.insert(start_index, value)
-
     def toggle(self):
         if self.running:
-            self.radio_connection.close()
-            logging.info(f'Closed port {self.radio_connection.serial_port}')
+            self.connections['radio'].close()
+            logging.info(f'Closed port {self.connections["radio"].serial_port}')
 
             for element in self.frames['bottom'].winfo_children():
                 element.configure(state=tkinter.DISABLED)
@@ -137,8 +131,8 @@ class HuginnGUI:
                 console.setLevel(logging.DEBUG)
                 logging.getLogger('').addHandler(console)
 
-                self.radio_connection = radio.Radio(self.serial_port)
-                self.serial_port = self.radio_connection.serial_port
+                self.connections['radio'] = radio.Radio(self.serial_port)
+                self.serial_port = self.connections['radio'].serial_port
                 logging.info(f'Opened port {self.serial_port}')
 
                 if 'plot' in self.windows:
@@ -164,74 +158,82 @@ class HuginnGUI:
             self.run()
 
     def run(self):
-        if self.running:
-            parsed_aprs_packets = self.radio_connection.read()
+        parsed_packets = self.connections['radio'].read()
 
-            for parsed_packet in parsed_aprs_packets:
-                callsign = parsed_packet['callsign']
+        for parsed_packet in parsed_packets:
+            callsign = parsed_packet['callsign']
 
-                if callsign in self.packet_tracks:
-                    if parsed_packet not in self.packet_tracks[callsign]:
-                        self.packet_tracks[callsign].append(parsed_packet)
-                    else:
-                        logging.debug(f'Received duplicate packet: {parsed_packet}')
+            if callsign in self.packet_tracks:
+                if parsed_packet not in self.packet_tracks[callsign]:
+                    self.packet_tracks[callsign].append(parsed_packet)
                 else:
-                    self.packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
+                    logging.debug(f'Received duplicate packet: {parsed_packet}')
+            else:
+                self.packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
 
-                message = f'{parsed_packet}'
+            message = f'{parsed_packet}'
 
-                if 'longitude' in parsed_packet and 'latitude' in parsed_packet:
-                    longitude, latitude, altitude = self.packet_tracks[callsign].coordinates()
-                    ascent_rate = self.packet_tracks[callsign].ascent_rate()
-                    ground_speed = self.packet_tracks[callsign].ground_speed()
-                    seconds_to_impact = self.packet_tracks[callsign].seconds_to_impact()
-                    message += f'ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}'
+            if 'longitude' in parsed_packet and 'latitude' in parsed_packet:
+                longitude, latitude, altitude = self.packet_tracks[callsign].coordinates()
+                ascent_rate = self.packet_tracks[callsign].ascent_rate()
+                ground_speed = self.packet_tracks[callsign].ground_speed()
+                seconds_to_impact = self.packet_tracks[callsign].seconds_to_impact()
+                message += f'ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}'
 
-                    if callsign in CALLSIGN_FILTER:
-                        self.replace_text(self.elements['longitude'], longitude)
-                        self.replace_text(self.elements['latitude'], latitude)
-                        self.replace_text(self.elements['altitude'], altitude)
-                        self.replace_text(self.elements['ground_speed'], ground_speed)
-                        self.replace_text(self.elements['ascent_rate'], ascent_rate)
+                if callsign in BALLOON_CALLSIGNS:
+                    self.replace_text(self.elements['longitude'], longitude)
+                    self.replace_text(self.elements['latitude'], latitude)
+                    self.replace_text(self.elements['altitude'], altitude)
+                    self.replace_text(self.elements['ground_speed'], ground_speed)
+                    self.replace_text(self.elements['ascent_rate'], ascent_rate)
 
-                logging.info(message)
+            logging.info(message)
 
-                altitude_axis = self.axes['altitude']['axis']
-                ascent_rate_axis = self.axes['ascent_rate']['axis']
+            altitude_axis = self.axes['altitude']['axis']
+            ascent_rate_axis = self.axes['ascent_rate']['axis']
 
-                if callsign in CALLSIGN_FILTER:
-                    packet_track = self.packet_tracks[callsign]
+            if callsign in BALLOON_CALLSIGNS:
+                packet_track = self.packet_tracks[callsign]
 
-                    packet_track_packets = packet_track.packets
+                packet_track_packets = packet_track.packets
 
-                    times = [packet.time for packet in packet_track_packets]
-                    altitudes = [packet.altitude for packet in packet_track_packets]
-                    ascent_rates = [0] + [packet_delta.ascent_rate for packet_delta in
-                                          numpy.diff(numpy.array(packet_track_packets))]
+                times = [packet.time for packet in packet_track_packets]
+                altitudes = [packet.altitude for packet in packet_track_packets]
+                ascent_rates = [0] + [packet_delta.ascent_rate for packet_delta in
+                                      numpy.diff(numpy.array(packet_track_packets))]
 
-                    if callsign in self.axes['altitude']['lines']:
-                        altitude_axis.set_xlim(min(times), max(times))
-                        altitude_axis.set_ylim(min(altitudes), max(altitudes))
+                if callsign in self.axes['altitude']['lines']:
+                    altitude_axis.set_xlim(min(times), max(times))
+                    altitude_axis.set_ylim(min(altitudes), max(altitudes))
 
-                        self.axes['altitude']['lines'][callsign].set_xdata(times)
-                        self.axes['altitude']['lines'][callsign].set_ydata(altitudes)
-                    else:
-                        self.axes['altitude']['lines'][callsign], = altitude_axis.plot(times, altitudes, '-o')
+                    self.axes['altitude']['lines'][callsign].set_xdata(times)
+                    self.axes['altitude']['lines'][callsign].set_ydata(altitudes)
+                else:
+                    self.axes['altitude']['lines'][callsign], = altitude_axis.plot(times, altitudes, '-o')
 
-                    if callsign in self.axes['ascent_rate']['lines']:
-                        ascent_rate_axis.set_xlim(min(times), max(times))
-                        ascent_rate_axis.set_ylim(min(ascent_rates), max(ascent_rates))
+                if callsign in self.axes['ascent_rate']['lines']:
+                    ascent_rate_axis.set_xlim(min(times), max(times))
+                    ascent_rate_axis.set_ylim(min(ascent_rates), max(ascent_rates))
 
-                        self.axes['ascent_rate']['lines'][callsign].set_xdata(times)
-                        self.axes['ascent_rate']['lines'][callsign].set_ydata(ascent_rates)
-                    else:
-                        self.axes['ascent_rate']['lines'][callsign], = ascent_rate_axis.plot(times, ascent_rates, '-o')
+                    self.axes['ascent_rate']['lines'][callsign].set_xdata(times)
+                    self.axes['ascent_rate']['lines'][callsign].set_ydata(ascent_rates)
+                else:
+                    self.axes['ascent_rate']['lines'][callsign], = ascent_rate_axis.plot(times, ascent_rates, '-o')
 
-                    self.windows['plot'].canvas.draw_idle()
+                self.windows['plot'].canvas.draw_idle()
 
+        if self.running:
             self.windows['main'].after(1000, self.run)
+
+    @staticmethod
+    def replace_text(element, value):
+        if type(element) is tkinter.Text:
+            start_index = '1.0'
         else:
-            logging.info('Stopping...')
+            start_index = 0
+
+        element.delete(start_index, tkinter.END)
+        element.insert(start_index, value)
 
 
 if __name__ == '__main__':

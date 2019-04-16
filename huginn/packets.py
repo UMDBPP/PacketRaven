@@ -123,10 +123,23 @@ class APRSLocationPacket(LocationPacket):
         if field == 'callsign':
             field = 'from'
 
-        if field in self.parsed_packet:
+        if self.__contains__(field):
             return self.parsed_packet[field]
         else:
             raise KeyError(f'Packet does not contain the field "{field}"')
+
+    def __contains__(self, field: str):
+        """
+        Whether packet contains field.
+
+        :param field: APRS field name
+        :return: whether field exists
+        """
+
+        if field == 'callsign':
+            field = 'from'
+
+        return field in self.parsed_packet
 
     def __eq__(self, other) -> bool:
         """
