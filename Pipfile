@@ -10,6 +10,7 @@ pyserial = "*"
 haversine = "*"
 aprslib = "*"
 pyinstaller = "*"
+numpy = "*"
 matplotlib = "*"
 
 [requires]
