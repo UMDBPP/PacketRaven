@@ -45,9 +45,11 @@ def parse_packet(raw_packet: str, packet_time: datetime.datetime = None) -> APRS
     try:
         return packets.APRSLocationPacket(raw_packet, packet_time)
     except parsing.PartialPacketError as error:
-        logging.debug(f'PartialPacketError: {error} "{raw_packet}"')
+        logging.error(f'PartialPacketError: {error} "{raw_packet}"')
     except ValueError as error:
-        logging.debug(f'ValueError: {error} "{raw_packet}"')
+        logging.error(f'ValueError: {error} "{raw_packet}"')
+    except UnicodeDecodeError as error:
+        logging.error(f'UnicodeDecodeError: {error} "{raw_packet}"')
 
 
 class Radio:
