@@ -36,3 +36,7 @@ Features:
 - live track prediction
 - Iridium telemetry and commands
 - live chase navigation
+
+#### Testing
+
+`python tests/tests/py`
