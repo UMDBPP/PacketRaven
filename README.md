@@ -24,7 +24,7 @@ Features:
 1. `pip install pipenv`
 2. `git clone https://github.com/UMDBPP/huginn.git` 
 3. `cd huginn`
-4. `pipenv install`
+4. `pipenv install -r requirements.txt`
 
 ##### Building from source
 
