@@ -1,4 +1,7 @@
-# Huginn
+# Huginn 
+
+[![Build Status](https://travis-ci.org/UMDBPP/huginn.svg?branch=master)](https://travis-ci.org/UMDBPP/huginn)
+
 ### Balloon payload telemetry over APRS
 
 Huginn is a new version of Link-TLM written in Python 3.7
