@@ -12,20 +12,23 @@ from huginn import tracks, structures, parsing, packets
 
 
 class TestDoublyLinkedList():
-    def test_getitem(self):
+    def test_index(self):
         list_1 = structures.DoublyLinkedList([0, 5, 4, 'foo', 5, 6])
 
         assert list_1[0] == 0
-        assert list_1.head.value == 0
+        assert list_1[0] is list_1.head.value
         assert list_1[3] == 'foo'
+        assert list_1[-2] == 5
         assert list_1[-1] == 6
-        assert list_1.tail.value == 6
+        assert list_1[-1] is list_1.tail.value
 
-    def test_len(self):
+    def test_length(self):
         list_1 = structures.DoublyLinkedList()
-        list_2 = structures.DoublyLinkedList([0, 'foo'])
 
         assert len(list_1) == 0
+
+        list_2 = structures.DoublyLinkedList([0, 'foo'])
+
         assert len(list_2) == 2
 
     def test_extend(self):
@@ -49,22 +52,32 @@ class TestDoublyLinkedList():
 
         assert list_1 == ['bar', 0, 'foo']
 
+    def test_equality(self):
+        list_1 = structures.DoublyLinkedList([5, 4, 'foo'])
+
+        assert list_1 == [5, 4, 'foo']
+        assert list_1 == (5, 4, 'foo')
+        assert list_1 != [5, 4, 'foo', 6, 2]
+
     def test_remove(self):
         list_1 = structures.DoublyLinkedList(['a', 'a'])
-        list_2 = structures.DoublyLinkedList(['a', 'b', 'c'])
-        list_3 = structures.DoublyLinkedList([0, 5, 4, 'foo', 0, 0])
-
         list_1.remove('a')
-        del list_2[0]
-        del list_2[-1]
-        list_3.remove(0)
 
         assert len(list_1) == 0
         assert list_1.head is None
         assert list_1.tail is None
+
+        list_2 = structures.DoublyLinkedList(['a', 'b', 'c'])
+        del list_2[0]
+        del list_2[-1]
+
         assert len(list_2) == 1
         assert list_2[0] == 'b'
         assert list_2[-1] == 'b'
+
+        list_3 = structures.DoublyLinkedList([0, 5, 4, 'foo', 0, 0])
+        list_3.remove(0)
+
         assert list_3 == [5, 4, 'foo']
         assert list_3[0] == 5
         assert list_3[-1] == 'foo'
@@ -130,6 +143,7 @@ class TestPacketTracks():
 
         assert track[0] is packet_1
         assert track[1] is packet_2
+        assert track[-1] is packet_2
 
     def test_rates(self):
         packet_1 = packets.APRSLocationPacket(
