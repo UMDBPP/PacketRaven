@@ -1,6 +1,0 @@
-aprslib==0.6.46
-haversine==2.1.1
-numpy==1.16.4
-pyserial==3.4
-python-dateutil==2.8.0
-six==1.12.0
