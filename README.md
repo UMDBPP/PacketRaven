@@ -42,4 +42,4 @@ Features:
 
 #### Testing
 
-`python tests/tests/py`
+`python tests/py`
