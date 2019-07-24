@@ -15,7 +15,7 @@ Features:
 
 1. `git clone https://github.com/UMDBPP/huginn.git`
 2. `cd huginn`
-3. `./dist/huginn.exe serial_port [log_path]`
+3. `./dist/huginn.exe [serial_port] [log_path]`
  
 #### Developing
 
