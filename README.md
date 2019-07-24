@@ -38,4 +38,4 @@ To build a binary executable, you can use PyInstaller (`pipenv install pyinstall
 
 #### Testing
 
-`pipenv run tests.py`
+`pipenv run pytest`
