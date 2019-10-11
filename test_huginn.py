@@ -148,7 +148,7 @@ class TestPacketTracks():
         assert track[1] is packet_2
         assert track[-1] is packet_2
 
-    def test_rates(self):
+    def test_values(self):
         packet_1 = APRSLocationPacket(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
             time=datetime(2018, 11, 11, 10, 20, 13))
@@ -161,7 +161,7 @@ class TestPacketTracks():
         assert track.coordinates() == packet_1.coordinates()
         assert track.altitude() == packet_1.altitude
 
-    def test_values(self):
+    def test_rates(self):
         packet_1 = APRSLocationPacket(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
             time=datetime(2018, 11, 11, 10, 20, 13))

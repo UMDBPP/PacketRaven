@@ -4,12 +4,12 @@ APRS packet class for packet operations.
 __authors__ = ['Quinn Kupec', 'Zachary Burnett']
 """
 
-import datetime
-
-import haversine
 import math
+from datetime import datetime
 
-from huginn import parsing
+from haversine import haversine
+
+from huginn.parsing import parse_aprs_packet
 
 
 class LocationPacket:
@@ -17,7 +17,7 @@ class LocationPacket:
     4D location packet, containing longitude, latitude, altitude, and time.
     """
 
-    def __init__(self, time: datetime.datetime, longitude: float, latitude: float, altitude: float = None):
+    def __init__(self, time: datetime, longitude: float, latitude: float, altitude: float = None):
         self.time = time
         self.longitude = longitude
         self.latitude = latitude
@@ -50,7 +50,7 @@ class LocationPacket:
 
     def distance_to_point(self, longitude, latitude) -> float:
         # TODO implement WGS84 distance
-        return haversine.haversine((self.latitude, self.longitude), (latitude, longitude), unit='m')
+        return haversine((self.latitude, self.longitude), (latitude, longitude), unit='m')
 
     def __sub__(self, other) -> Delta:
         """
@@ -85,7 +85,7 @@ class APRSLocationPacket(LocationPacket):
     APRS packet containing parsed APRS fields, along with location and time.
     """
 
-    def __init__(self, raw_aprs: str, time: datetime.datetime = None):
+    def __init__(self, raw_aprs: str, time: datetime = None):
         """
         Construct APRS packet object from raw packet and given datetime.
 
@@ -94,17 +94,17 @@ class APRSLocationPacket(LocationPacket):
         """
 
         # parse packet, units are metric
-        parsed_packet = parsing.parse_aprs_packet(raw_aprs)
+        parsed_packet = parse_aprs_packet(raw_aprs)
 
         if 'longitude' in parsed_packet and 'latitude' in parsed_packet:
             if time is None:
                 if 'timestamp' in parsed_packet:
                     # extract time from Unix epoch
-                    time = datetime.datetime.fromtimestamp(float(parsed_packet['timestamp']))
+                    time = datetime.fromtimestamp(float(parsed_packet['timestamp']))
                 else:
                     # TODO make HABduino add timestamp to packet upon transmission
                     # otherwise default to time the packet was received (now)
-                    time = datetime.datetime.now()
+                    time = datetime.now()
 
             super().__init__(time, parsed_packet['longitude'], parsed_packet['latitude'],
                              parsed_packet['altitude'] if 'altitude' in parsed_packet else None)
