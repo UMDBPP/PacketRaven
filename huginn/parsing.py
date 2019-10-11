@@ -4,7 +4,7 @@ Parse a APRS packets from raw strings.
 __authors__ = ['Zachary Burnett', 'Nick Rossomando']
 """
 
-import aprslib
+from aprslib import parse, ParseError
 
 
 class PartialPacketError(Exception):
@@ -22,8 +22,8 @@ def parse_aprs_packet(raw_aprs: str) -> dict:
     """
 
     try:
-        parsed_packet = aprslib.parse(raw_aprs)
-    except aprslib.ParseError as error:
+        parsed_packet = parse(raw_aprs)
+    except ParseError as error:
         raise PartialPacketError(str(error))
 
     # parsed = {'raw': str(raw_aprs)}

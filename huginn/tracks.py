@@ -6,7 +6,8 @@ __authors__ = ['Quinn Kupec', 'Zachary Burnett']
 
 from typing import Union
 
-from huginn import structures, packets
+from huginn.packets import LocationPacket, APRSLocationPacket
+from huginn.structures import DoublyLinkedList
 
 
 class LocationPacketTrack:
@@ -17,9 +18,9 @@ class LocationPacketTrack:
         :param packets: iterable of packets
         """
 
-        self.packets = structures.DoublyLinkedList(packets)
+        self.packets = DoublyLinkedList(packets)
 
-    def append(self, packet: packets.LocationPacket):
+    def append(self, packet: LocationPacket):
         self.packets.append(packet)
 
     def altitude(self) -> float:
@@ -94,7 +95,7 @@ class LocationPacketTrack:
         else:
             return 0.0
 
-    def __getitem__(self, index: Union[int, slice]) -> packets.LocationPacket:
+    def __getitem__(self, index: Union[int, slice]) -> LocationPacket:
         """
         Indexing function (for integer indexing of packets).
 
@@ -132,7 +133,7 @@ class APRSTrack(LocationPacketTrack):
         self.callsign = callsign
         super().__init__(packets)
 
-    def append(self, packet: packets.APRSLocationPacket):
+    def append(self, packet: APRSLocationPacket):
         packet_callsign = packet['callsign']
 
         if packet_callsign == self.callsign:

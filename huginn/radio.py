@@ -4,15 +4,15 @@ Read serial connection from radio and extract APRS packets.
 __authors__ = []
 """
 
-import datetime
 import logging
+from datetime import datetime
 from typing import List
 
-import serial
+from serial import Serial
 from serial.tools import list_ports
 
-from huginn import packets, parsing
 from huginn.packets import APRSLocationPacket
+from huginn.parsing import PartialPacketError
 
 
 def ports() -> str:
@@ -22,7 +22,7 @@ def ports() -> str:
     :return: port name
     """
 
-    for com_port in serial.tools.list_ports.comports():
+    for com_port in list_ports.comports():
         yield com_port.device
     else:
         return None
@@ -41,10 +41,10 @@ def port() -> str:
         raise OSError('No open serial ports.')
 
 
-def parse_packet(raw_packet: str, packet_time: datetime.datetime = None) -> APRSLocationPacket:
+def parse_packet(raw_packet: str, packet_time: datetime = None) -> APRSLocationPacket:
     try:
-        return packets.APRSLocationPacket(raw_packet, packet_time)
-    except parsing.PartialPacketError as error:
+        return APRSLocationPacket(raw_packet, packet_time)
+    except PartialPacketError as error:
         logging.error(f'PartialPacketError: {error} "{raw_packet}"')
     except ValueError as error:
         logging.error(f'ValueError: {error} "{raw_packet}"')
@@ -71,7 +71,7 @@ class Radio:
             # open text file as dummy serial connection
             self.serial_connection = open(self.serial_port)
         else:
-            self.serial_connection = serial.Serial(self.serial_port, baudrate=9600, timeout=1)
+            self.serial_connection = Serial(self.serial_port, baudrate=9600, timeout=1)
 
     def read(self) -> List[APRSLocationPacket]:
         """
@@ -85,7 +85,7 @@ class Radio:
         if self.is_text_file:
             line = self.serial_connection.readline()
             if len(line) > 0:
-                packet_time = datetime.datetime.strptime(line[:19], '%Y-%m-%d %H:%M:%S')
+                packet_time = datetime.strptime(line[:19], '%Y-%m-%d %H:%M:%S')
                 raw_packet = str(line[25:]).strip('\n')
                 parsed_packets.append(parse_packet(raw_packet, packet_time))
         else:
