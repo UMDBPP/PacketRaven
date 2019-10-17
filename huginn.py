@@ -1,9 +1,10 @@
 import logging
 import os
 import tkinter
-import tkinter.filedialog
-import tkinter.messagebox
 from datetime import datetime
+from tkinter import filedialog, messagebox
+
+import numpy
 
 from huginn import radio, tracks, BALLOON_CALLSIGNS
 
@@ -20,6 +21,7 @@ class HuginnGUI:
 
         self.frames = {}
         self.elements = {}
+        self.extensions = {}
         self.last_row = 0
 
         self.frames['top'] = tkinter.Frame(self.main_window)
@@ -35,8 +37,15 @@ class HuginnGUI:
 
         self.__add_entry_box(self.frames['top'], title='log_file', width=45)
         self.elements['log_file'].insert(0, f'huginn_log_{datetime.now():%Y%m%dT%H%M%S}.txt')
+        self.extensions['log_file'] = os.path.splitext(self.elements['log_file'].get())[1]
         log_file_button = tkinter.Button(self.frames['top'], text='...', command=self.__select_log_file)
         log_file_button.grid(row=self.last_row, column=2)
+
+        self.__add_entry_box(self.frames['top'], title='output_file', width=45)
+        self.elements['output_file'].insert(0, f'huginn_output_{datetime.now():%Y%m%dT%H%M%S}.kml')
+        self.extensions['output_file'] = os.path.splitext(self.elements['output_file'].get())[1]
+        output_file_button = tkinter.Button(self.frames['top'], text='...', command=self.__select_output_file)
+        output_file_button.grid(row=self.last_row, column=2)
 
         self.toggle_text = tkinter.StringVar()
         self.toggle_text.set('Start')
@@ -98,11 +107,23 @@ class HuginnGUI:
 
     def __select_log_file(self):
         filename = os.path.splitext(self.elements['log_file'].get())[0]
-        path = tkinter.filedialog.asksaveasfilename(title='Huginn log location...', initialfile=filename,
-                                                    defaultextension='.txt', filetypes=[('Text', '*.txt')])
+        path = filedialog.asksaveasfilename(title='Huginn log location...', initialfile=filename,
+                                            defaultextension='.txt',
+                                            filetypes=[('Text', '*.txt'), ('Comma-Separated Values', '*.csv')])
 
         if path != '':
             self.replace_text(self.elements['log_file'], path)
+            self.extensions['log_file'] = os.path.splitext(path)[1]
+
+    def __select_output_file(self):
+        filename = os.path.splitext(self.elements['output_file'].get())[0]
+        path = filedialog.asksaveasfilename(title='Huginn output location...', initialfile=filename,
+                                            defaultextension='.kml', filetypes=[('Keyhole Markup Language', '*.kml'),
+                                                                                ('GeoJSON', '*.geojson'),
+                                                                                ('GeoPackage', '*.gpkg')])
+        if path != '':
+            self.replace_text(self.elements['output_file'], path)
+            self.extensions['output_file'] = os.path.splitext(path)[1]
 
     def toggle(self):
         if self.running:
@@ -141,7 +162,7 @@ class HuginnGUI:
 
                 self.run()
             except Exception as error:
-                tkinter.messagebox.showerror('Initialization Error', error)
+                messagebox.showerror('Initialization Error', error)
 
     def run(self):
         parsed_packets = self.connections['radio'].read()
@@ -164,7 +185,7 @@ class HuginnGUI:
                 ascent_rate = self.packet_tracks[callsign].ascent_rate()
                 ground_speed = self.packet_tracks[callsign].ground_speed()
                 seconds_to_impact = self.packet_tracks[callsign].seconds_to_impact()
-                message = f'{message} ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}'
+                message += f'ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}'
 
                 if callsign in BALLOON_CALLSIGNS:
                     self.replace_text(self.elements['longitude'], longitude)
@@ -174,6 +195,23 @@ class HuginnGUI:
                     self.replace_text(self.elements['ascent_rate'], ascent_rate)
 
             logging.info(message)
+
+            if callsign in BALLOON_CALLSIGNS:
+                packet_track = self.packet_tracks[callsign]
+
+                packet_track_packets = packet_track.packets
+
+                times = [packet.time for packet in packet_track_packets]
+                altitudes = [packet.altitude for packet in packet_track_packets]
+                ascent_rates = [0] + [packet_delta.ascent_rate for packet_delta in
+                                      numpy.diff(numpy.array(packet_track_packets))]
+
+                if self.extensions['output'] == '.kml':
+                    pass
+                elif self.extensions['output'] == '.geojson':
+                    pass
+                elif self.extensions['output'] == '.gpkg':
+                    pass
 
         if self.running:
             self.main_window.after(1000, self.run)
