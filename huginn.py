@@ -104,7 +104,7 @@ class HuginnGUI:
         filename = self.elements['logfile'].get()
         log_path = tkinter.filedialog.asksaveasfilename(title='Huginn log location...', initialfile=filename,
                                                         filetypes=[('Text', '*.txt')])
-        self.replace_text(self.elements['log'], log_path)
+        self.replace_text(self.elements['logfile'], log_path)
 
     def toggle(self):
         if self.running:
@@ -154,8 +154,6 @@ class HuginnGUI:
                 self.run()
             except Exception as error:
                 tkinter.messagebox.showerror('Initialization Error', error)
-
-            self.run()
 
     def run(self):
         parsed_packets = self.connections['radio'].read()
