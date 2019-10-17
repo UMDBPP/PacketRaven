@@ -8,6 +8,8 @@ aprslib = "*"
 haversine = "*"
 numpy = "*"
 pyserial = "*"
+simplekml = "*"
+geojson = "*"
 
 [requires]
 python_version = "3.7"

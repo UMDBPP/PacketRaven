@@ -39,9 +39,14 @@ class LocationPacket:
         def __str__(self) -> str:
             return f'{self.seconds} s, {self.vertical_distance:6.2f} m vertical, {self.horizontal_distance:6.2f} m horizontal'
 
-    def coordinates(self) -> tuple:
+    @property
+    def coordinates(self) -> (float, float, float):
+        return self.coordinates
+
+    @coordinates.getter
+    def coordinates(self) -> (float, float, float):
         """
-        Return coordinates.
+        geographic coordinates of this packet
 
         :return: tuple of coordinates (lon, lat, alt)
         """

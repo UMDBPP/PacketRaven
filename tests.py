@@ -91,7 +91,7 @@ class TestPackets(unittest.TestCase):
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
             time=datetime(2018, 11, 11, 10, 20, 13))
 
-        assert packet_1.coordinates() == (-77.90921071284187, 39.7003564996876, 8201.8632)
+        assert packet_1.coordinates == (-77.90921071284187, 39.7003564996876, 8201.8632)
         assert packet_1['callsign'] is packet_1['from']
         assert packet_1['callsign'] == 'W3EAX-8'
         assert packet_1['comment'] == '|!Q|  /W3EAX,262,0,18\'C,http://www.umd.edu'
@@ -156,9 +156,9 @@ class TestPacketTracks(unittest.TestCase):
 
         track.append(packet_1)
 
-        assert track.altitude() == packet_1.altitude
-        assert track.coordinates() == packet_1.coordinates()
-        assert track.altitude() == packet_1.altitude
+        assert track.altitude == packet_1.altitude
+        assert track.coordinates == packet_1.coordinates
+        assert track.altitude == packet_1.altitude
 
     def test_rates(self):
         packet_1 = APRSLocationPacket(
@@ -170,8 +170,8 @@ class TestPacketTracks(unittest.TestCase):
 
         track = APRSTrack('W3EAX-8', [packet_1, packet_2])
 
-        assert track.ascent_rate() == (packet_2 - packet_1).ascent_rate
-        assert track.ground_speed() == (packet_2 - packet_1).ground_speed
+        assert track.ascent_rate == (packet_2 - packet_1).ascent_rate
+        assert track.ground_speed == (packet_2 - packet_1).ground_speed
 
 
 class TestParser(unittest.TestCase):

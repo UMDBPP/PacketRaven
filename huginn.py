@@ -4,7 +4,10 @@ import tkinter
 from datetime import datetime
 from tkinter import filedialog, messagebox
 
+import geojson
 import numpy
+import simplekml
+from geojson import Point, FeatureCollection, Feature, LineString
 
 from huginn import radio, tracks, BALLOON_CALLSIGNS
 
@@ -21,7 +24,6 @@ class HuginnGUI:
 
         self.frames = {}
         self.elements = {}
-        self.extensions = {}
         self.last_row = 0
 
         self.frames['top'] = tkinter.Frame(self.main_window)
@@ -37,13 +39,11 @@ class HuginnGUI:
 
         self.__add_entry_box(self.frames['top'], title='log_file', width=45)
         self.elements['log_file'].insert(0, f'huginn_log_{datetime.now():%Y%m%dT%H%M%S}.txt')
-        self.extensions['log_file'] = os.path.splitext(self.elements['log_file'].get())[1]
         log_file_button = tkinter.Button(self.frames['top'], text='...', command=self.__select_log_file)
         log_file_button.grid(row=self.last_row, column=2)
 
         self.__add_entry_box(self.frames['top'], title='output_file', width=45)
         self.elements['output_file'].insert(0, f'huginn_output_{datetime.now():%Y%m%dT%H%M%S}.kml')
-        self.extensions['output_file'] = os.path.splitext(self.elements['output_file'].get())[1]
         output_file_button = tkinter.Button(self.frames['top'], text='...', command=self.__select_output_file)
         output_file_button.grid(row=self.last_row, column=2)
 
@@ -108,22 +108,17 @@ class HuginnGUI:
     def __select_log_file(self):
         filename = os.path.splitext(self.elements['log_file'].get())[0]
         path = filedialog.asksaveasfilename(title='Huginn log location...', initialfile=filename,
-                                            defaultextension='.txt',
-                                            filetypes=[('Text', '*.txt'), ('Comma-Separated Values', '*.csv')])
+                                            defaultextension='.txt', filetypes=[('Text', '*.txt')])
 
         if path != '':
             self.replace_text(self.elements['log_file'], path)
-            self.extensions['log_file'] = os.path.splitext(path)[1]
 
     def __select_output_file(self):
         filename = os.path.splitext(self.elements['output_file'].get())[0]
         path = filedialog.asksaveasfilename(title='Huginn output location...', initialfile=filename,
-                                            defaultextension='.kml', filetypes=[('Keyhole Markup Language', '*.kml'),
-                                                                                ('GeoJSON', '*.geojson'),
-                                                                                ('GeoPackage', '*.gpkg')])
+                                            defaultextension='.kml', filetypes=[('Keyhole Markup Language', '*.kml')])
         if path != '':
             self.replace_text(self.elements['output_file'], path)
-            self.extensions['output_file'] = os.path.splitext(path)[1]
 
     def toggle(self):
         if self.running:
@@ -171,47 +166,59 @@ class HuginnGUI:
             callsign = parsed_packet['callsign']
 
             if callsign in self.packet_tracks:
-                if parsed_packet not in self.packet_tracks[callsign]:
-                    self.packet_tracks[callsign].append(parsed_packet)
-                else:
+                if parsed_packet in self.packet_tracks[callsign]:
                     logging.debug(f'Received duplicate packet: {parsed_packet}')
+                else:
+                    self.packet_tracks[callsign].append(parsed_packet)
             else:
+                logging.debug(f'Starting new packet track from current packet: {parsed_packet}')
                 self.packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
 
             message = f'{parsed_packet}'
+            packet_track = self.packet_tracks[callsign]
 
             if 'longitude' in parsed_packet and 'latitude' in parsed_packet:
-                longitude, latitude, altitude = self.packet_tracks[callsign].coordinates()
-                ascent_rate = self.packet_tracks[callsign].ascent_rate()
-                ground_speed = self.packet_tracks[callsign].ground_speed()
-                seconds_to_impact = self.packet_tracks[callsign].seconds_to_impact()
-                message += f'ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}'
+                message = f'{message} ascent_rate={packet_track.ascent_rate} ground_speed={packet_track.ground_speed} seconds_to_impact={packet_track.seconds_to_impact}'
 
                 if callsign in BALLOON_CALLSIGNS:
-                    self.replace_text(self.elements['longitude'], longitude)
-                    self.replace_text(self.elements['latitude'], latitude)
-                    self.replace_text(self.elements['altitude'], altitude)
-                    self.replace_text(self.elements['ground_speed'], ground_speed)
-                    self.replace_text(self.elements['ascent_rate'], ascent_rate)
+                    self.replace_text(self.elements['longitude'], packet_track.longitude)
+                    self.replace_text(self.elements['latitude'], packet_track.latitude)
+                    self.replace_text(self.elements['altitude'], packet_track.altitude)
+                    self.replace_text(self.elements['ground_speed'], packet_track.ground_speed)
+                    self.replace_text(self.elements['ascent_rate'], packet_track.ascent_rate)
+
+                    packet_deltas = numpy.diff(numpy.array(packet_track.packets))
+                    ascent_rates = [0] + [packet_delta.ascent_rate for packet_delta in packet_deltas]
+                    ground_speeds = [0] + [packet_delta.ground_speed for packet_delta in packet_deltas]
+
+                    output_filename = self.elements['output_file'].get()
+                    extension = os.path.splitext(output_filename)[1]
+
+                    if extension == '.kml':
+                        kml = simplekml.Kml()
+                        for packet in packet_track.packets:
+                            kml.newpoint(name=f'{packet.time:%Y%m%d%H%M%S}', coords=packet.coordinates)
+                        kml.newlinestring(name=callsign,
+                                          coords=[packet.coordinates for packet in packet_track.packets])
+                        kml.save(output_filename)
+                    elif extension == '.geojson':
+                        features = FeatureCollection([Feature(geometry=Point(packet.coordinates),
+                                                              properties={'time': f'{packet.time:%Y%m%d%H%M%S}',
+                                                                          'callsign': callsign,
+                                                                          'altitude': packet.altitude,
+                                                                          'ascent_rate': ascent_rates[packet_index],
+                                                                          'ground_speed': ground_speeds[packet_index]})
+                                                      for packet_index, packet in enumerate(packet_track.packets)] + [
+                                                         Feature(geometry=LineString([packet.coordinates for packet in
+                                                                                      packet_track.packets]),
+                                                                 properties={'callsign': callsign,
+                                                                             'altitude': packet_track.altitude,
+                                                                             'ascent_rate': packet_track.ascent_rate,
+                                                                             'ground_speed': packet_track.ground_speed,
+                                                                             'seconds_to_impact': packet_track.seconds_to_impact})])
+                        geojson.dump(features, output_filename)
 
             logging.info(message)
-
-            if callsign in BALLOON_CALLSIGNS:
-                packet_track = self.packet_tracks[callsign]
-
-                packet_track_packets = packet_track.packets
-
-                times = [packet.time for packet in packet_track_packets]
-                altitudes = [packet.altitude for packet in packet_track_packets]
-                ascent_rates = [0] + [packet_delta.ascent_rate for packet_delta in
-                                      numpy.diff(numpy.array(packet_track_packets))]
-
-                if self.extensions['output'] == '.kml':
-                    pass
-                elif self.extensions['output'] == '.geojson':
-                    pass
-                elif self.extensions['output'] == '.gpkg':
-                    pass
 
         if self.running:
             self.main_window.after(1000, self.run)
