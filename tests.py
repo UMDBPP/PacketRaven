@@ -4,9 +4,8 @@ Unit tests for balloon telemetry package.
 __authors__ = ['Zachary Burnett']
 """
 
+import unittest
 from datetime import datetime
-
-import pytest
 
 from huginn.packets import APRSLocationPacket
 from huginn.parsing import parse_aprs_packet, PartialPacketError
@@ -14,7 +13,7 @@ from huginn.structures import DoublyLinkedList
 from huginn.tracks import APRSTrack
 
 
-class TestDoublyLinkedList():
+class TestDoublyLinkedList(unittest.TestCase):
     def test_index(self):
         list_1 = DoublyLinkedList([0, 5, 4, 'foo', 5, 6])
 
@@ -86,7 +85,7 @@ class TestDoublyLinkedList():
         assert list_3[-1] == 'foo'
 
 
-class TestPackets():
+class TestPackets(unittest.TestCase):
     def test_aprs_init(self):
         packet_1 = APRSLocationPacket(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
@@ -130,7 +129,7 @@ class TestPackets():
         assert packet_delta.horizontal_distance == 2408.700970494594
 
 
-class TestPacketTracks():
+class TestPacketTracks(unittest.TestCase):
     def test_append(self):
         packet_1 = APRSLocationPacket(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
@@ -175,7 +174,7 @@ class TestPacketTracks():
         assert track.ground_speed() == (packet_2 - packet_1).ground_speed
 
 
-class TestParser():
+class TestParser(unittest.TestCase):
     def test_parse_aprs_packet(self):
         parsed_packet = parse_aprs_packet(
             'W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18\'C,http://www.umd.edu')
@@ -187,8 +186,12 @@ class TestParser():
         assert parsed_packet['comment'] == '|!Q|  /W3EAX,262,0,18\'C,http://www.umd.edu'
 
     def test_partial_packets(self):
-        with pytest.raises(PartialPacketError):
+        with self.assertRaises(PartialPacketError):
             parse_aprs_packet('W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,KM4LKM')
 
-        with pytest.raises(PartialPacketError):
+        with self.assertRaises(PartialPacketError):
             parse_aprs_packet('W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:')
+
+
+if __name__ == '__main__':
+    unittest.main()
