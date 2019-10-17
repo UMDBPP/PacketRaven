@@ -116,7 +116,8 @@ class HuginnGUI:
     def __select_output_file(self):
         filename = os.path.splitext(self.elements['output_file'].get())[0]
         path = filedialog.asksaveasfilename(title='Huginn output location...', initialfile=filename,
-                                            defaultextension='.kml', filetypes=[('Keyhole Markup Language', '*.kml')])
+                                            defaultextension='.kml', filetypes=[('Keyhole Markup Language', '*.kml'),
+                                                                                ('GeoJSON', '*.geojson')])
         if path != '':
             self.replace_text(self.elements['output_file'], path)
 
