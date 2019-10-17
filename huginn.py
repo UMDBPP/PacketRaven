@@ -1,10 +1,9 @@
-import datetime
 import logging
+import os
 import tkinter
 import tkinter.filedialog
 import tkinter.messagebox
-
-import numpy
+from datetime import datetime
 
 from huginn import radio, tracks, BALLOON_CALLSIGNS
 
@@ -32,24 +31,24 @@ class HuginnGUI:
         self.frames['bottom'] = tkinter.Frame(self.main_window)
         self.frames['bottom'].pack()
 
-        self.add_entry_box(self.frames['top'], 'port')
+        self.__add_entry_box(self.frames['top'], 'port')
 
-        self.add_entry_box(self.frames['top'], title='logfile', width=45)
-        self.elements['logfile'].insert(0, f'huginn_log_{datetime.datetime.now().strftime("%Y%m%dT%H%M%S")}.txt')
-        logfile_button = tkinter.Button(self.frames['top'], text='...', command=self.select_logfile)
-        logfile_button.grid(row=1, column=2)
+        self.__add_entry_box(self.frames['top'], title='log_file', width=45)
+        self.elements['log_file'].insert(0, f'huginn_log_{datetime.now():%Y%m%dT%H%M%S}.txt')
+        log_file_button = tkinter.Button(self.frames['top'], text='...', command=self.__select_log_file)
+        log_file_button.grid(row=self.last_row, column=2)
 
         self.toggle_text = tkinter.StringVar()
         self.toggle_text.set('Start')
         toggle_button = tkinter.Button(self.frames['top'], textvariable=self.toggle_text, command=self.toggle)
-        toggle_button.grid(row=self.last_row, column=1)
+        toggle_button.grid(row=self.last_row + 1, column=1)
         self.last_row += 1
 
-        self.add_text_box(self.frames['bottom'], title='longitude', units='°')
-        self.add_text_box(self.frames['bottom'], title='latitude', units='°')
-        self.add_text_box(self.frames['bottom'], title='altitude', units='m')
-        self.add_text_box(self.frames['bottom'], title='ground_speed', units='m/s')
-        self.add_text_box(self.frames['bottom'], title='ascent_rate', units='m/s')
+        self.__add_text_box(self.frames['bottom'], title='longitude', units='°')
+        self.__add_text_box(self.frames['bottom'], title='latitude', units='°')
+        self.__add_text_box(self.frames['bottom'], title='altitude', units='m')
+        self.__add_text_box(self.frames['bottom'], title='ground_speed', units='m/s')
+        self.__add_text_box(self.frames['bottom'], title='ascent_rate', units='m/s')
 
         for element in self.frames['bottom'].winfo_children():
             element.configure(state=tkinter.DISABLED)
@@ -63,10 +62,10 @@ class HuginnGUI:
 
         self.main_window.mainloop()
 
-    def add_text_box(self, frame: tkinter.Frame, title: str, units: str = None, row: int = None, entry: bool = False,
-                     width: int = 10):
+    def __add_text_box(self, frame: tkinter.Frame, title: str, units: str = None, row: int = None, entry: bool = False,
+                       width: int = 10):
         if row is None:
-            row = self.last_row
+            row = self.last_row + 1
 
         column = 0
 
@@ -90,18 +89,20 @@ class HuginnGUI:
 
         column += 1
 
-        self.last_row = row + 1
+        self.last_row = row
 
         self.elements[title] = element
 
-    def add_entry_box(self, frame: tkinter.Frame, title: str, row: int = None, width: int = 10):
-        self.add_text_box(frame, title, row=row, entry=True, width=width)
+    def __add_entry_box(self, frame: tkinter.Frame, title: str, row: int = None, width: int = 10):
+        self.__add_text_box(frame, title, row=row, entry=True, width=width)
 
-    def select_logfile(self):
-        filename = self.elements['logfile'].get()
-        log_path = tkinter.filedialog.asksaveasfilename(title='Huginn log location...', initialfile=filename,
-                                                        filetypes=[('Text', '*.txt')])
-        self.replace_text(self.elements['logfile'], log_path)
+    def __select_log_file(self):
+        filename = os.path.splitext(self.elements['log_file'].get())[0]
+        path = tkinter.filedialog.asksaveasfilename(title='Huginn log location...', initialfile=filename,
+                                                    defaultextension='.txt', filetypes=[('Text', '*.txt')])
+
+        if path != '':
+            self.replace_text(self.elements['log_file'], path)
 
     def toggle(self):
         if self.running:
@@ -121,7 +122,7 @@ class HuginnGUI:
                     serial_port = radio.port()
                     self.replace_text(self.elements['port'], serial_port)
 
-                log_filename = self.elements['logfile'].get()
+                log_filename = self.elements['log_file'].get()
                 logging.basicConfig(filename=log_filename, level=logging.INFO,
                                     datefmt='%Y-%m-%d %H:%M:%S', format='[%(asctime)s] %(levelname)s: %(message)s')
                 console = logging.StreamHandler()
@@ -133,7 +134,7 @@ class HuginnGUI:
                 logging.info(f'Opened port {self.serial_port}')
 
                 for element in self.frames['bottom'].winfo_children():
-                    element.configure(state='normal')
+                    element.configure(state=tkinter.ACTIVE)
 
                 self.toggle_text.set('Stop')
                 self.running = True
@@ -163,7 +164,7 @@ class HuginnGUI:
                 ascent_rate = self.packet_tracks[callsign].ascent_rate()
                 ground_speed = self.packet_tracks[callsign].ground_speed()
                 seconds_to_impact = self.packet_tracks[callsign].seconds_to_impact()
-                message += f'ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}'
+                message = f'{message} ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}'
 
                 if callsign in BALLOON_CALLSIGNS:
                     self.replace_text(self.elements['longitude'], longitude)
@@ -173,16 +174,6 @@ class HuginnGUI:
                     self.replace_text(self.elements['ascent_rate'], ascent_rate)
 
             logging.info(message)
-
-            if callsign in BALLOON_CALLSIGNS:
-                packet_track = self.packet_tracks[callsign]
-
-                packet_track_packets = packet_track.packets
-
-                times = [packet.time for packet in packet_track_packets]
-                altitudes = [packet.altitude for packet in packet_track_packets]
-                ascent_rates = [0] + [packet_delta.ascent_rate for packet_delta in
-                                      numpy.diff(numpy.array(packet_track_packets))]
 
         if self.running:
             self.main_window.after(1000, self.run)
