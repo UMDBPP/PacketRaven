@@ -5,19 +5,16 @@ import tkinter.filedialog
 import tkinter.messagebox
 
 import numpy
-from matplotlib import pyplot
 
 from huginn import radio, tracks, BALLOON_CALLSIGNS
 
 
 class HuginnGUI:
     def __init__(self):
-        self.windows = {'main': tkinter.Tk()}
-        self.windows['main'].title('huginn main')
+        self.main_window = tkinter.Tk()
+        self.main_window.title('huginn main')
 
         self.connections = {}
-
-        self.axes = {}
 
         self.running = False
         self.packet_tracks = {}
@@ -26,13 +23,13 @@ class HuginnGUI:
         self.elements = {}
         self.last_row = 0
 
-        self.frames['top'] = tkinter.Frame(self.windows['main'])
+        self.frames['top'] = tkinter.Frame(self.main_window)
         self.frames['top'].pack()
 
         self.frames['separator'] = tkinter.Frame(height=2, bd=1, relief=tkinter.SUNKEN)
         self.frames['separator'].pack(fill=tkinter.X, padx=5, pady=5)
 
-        self.frames['bottom'] = tkinter.Frame(self.windows['main'])
+        self.frames['bottom'] = tkinter.Frame(self.main_window)
         self.frames['bottom'].pack()
 
         self.add_entry_box(self.frames['top'], 'port')
@@ -64,7 +61,7 @@ class HuginnGUI:
 
         self.replace_text(self.elements['port'], radio_port)
 
-        self.windows['main'].mainloop()
+        self.main_window.mainloop()
 
     def add_text_box(self, frame: tkinter.Frame, title: str, units: str = None, row: int = None, entry: bool = False,
                      width: int = 10):
@@ -135,16 +132,6 @@ class HuginnGUI:
                 self.serial_port = self.connections['radio'].serial_port
                 logging.info(f'Opened port {self.serial_port}')
 
-                if 'plot' in self.windows:
-                    self.windows['plot'].clear()
-                else:
-                    self.windows['plot'] = pyplot.figure(num='huginn plots')
-
-                self.axes['altitude'] = {'axis': self.windows['plot'].add_subplot(1, 2, 1), 'lines': {}}
-                self.axes['ascent_rate'] = {'axis': self.windows['plot'].add_subplot(1, 2, 2), 'lines': {}}
-
-                pyplot.show(block=False)
-
                 for element in self.frames['bottom'].winfo_children():
                     element.configure(state='normal')
 
@@ -187,9 +174,6 @@ class HuginnGUI:
 
             logging.info(message)
 
-            altitude_axis = self.axes['altitude']['axis']
-            ascent_rate_axis = self.axes['ascent_rate']['axis']
-
             if callsign in BALLOON_CALLSIGNS:
                 packet_track = self.packet_tracks[callsign]
 
@@ -200,28 +184,8 @@ class HuginnGUI:
                 ascent_rates = [0] + [packet_delta.ascent_rate for packet_delta in
                                       numpy.diff(numpy.array(packet_track_packets))]
 
-                if callsign in self.axes['altitude']['lines']:
-                    altitude_axis.set_xlim(min(times), max(times))
-                    altitude_axis.set_ylim(min(altitudes), max(altitudes))
-
-                    self.axes['altitude']['lines'][callsign].set_xdata(times)
-                    self.axes['altitude']['lines'][callsign].set_ydata(altitudes)
-                else:
-                    self.axes['altitude']['lines'][callsign], = altitude_axis.plot(times, altitudes, '-o')
-
-                if callsign in self.axes['ascent_rate']['lines']:
-                    ascent_rate_axis.set_xlim(min(times), max(times))
-                    ascent_rate_axis.set_ylim(min(ascent_rates), max(ascent_rates))
-
-                    self.axes['ascent_rate']['lines'][callsign].set_xdata(times)
-                    self.axes['ascent_rate']['lines'][callsign].set_ydata(ascent_rates)
-                else:
-                    self.axes['ascent_rate']['lines'][callsign], = ascent_rate_axis.plot(times, ascent_rates, '-o')
-
-                self.windows['plot'].canvas.draw_idle()
-
         if self.running:
-            self.windows['main'].after(1000, self.run)
+            self.main_window.after(1000, self.run)
 
     @staticmethod
     def replace_text(element, value):
