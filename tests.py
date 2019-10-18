@@ -3,14 +3,16 @@ Unit tests for balloon telemetry package.
 
 __authors__ = ['Zachary Burnett']
 """
-
+import os
 import unittest
 from datetime import datetime
+from tempfile import TemporaryDirectory
 
 from huginn.packets import APRSLocationPacket
 from huginn.parsing import parse_aprs_packet, PartialPacketError
 from huginn.structures import DoublyLinkedList
 from huginn.tracks import APRSTrack
+from huginn.writer import write_aprs_packet_tracks
 
 
 class TestDoublyLinkedList(unittest.TestCase):
@@ -156,9 +158,7 @@ class TestPacketTracks(unittest.TestCase):
 
         track.append(packet_1)
 
-        assert track.altitude == packet_1.altitude
-        assert track.coordinates == packet_1.coordinates
-        assert track.altitude == packet_1.altitude
+        assert all(track.coordinates[-1] == packet_1.coordinates)
 
     def test_rates(self):
         packet_1 = APRSLocationPacket(
@@ -170,8 +170,8 @@ class TestPacketTracks(unittest.TestCase):
 
         track = APRSTrack('W3EAX-8', [packet_1, packet_2])
 
-        assert track.ascent_rate == (packet_2 - packet_1).ascent_rate
-        assert track.ground_speed == (packet_2 - packet_1).ground_speed
+        assert track.ascent_rate[-1] == (packet_2 - packet_1).ascent_rate
+        assert track.ground_speed[-1] == (packet_2 - packet_1).ground_speed
 
 
 class TestParser(unittest.TestCase):
@@ -191,6 +191,46 @@ class TestParser(unittest.TestCase):
 
         with self.assertRaises(PartialPacketError):
             parse_aprs_packet('W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:')
+
+
+class TestWriter(unittest.TestCase):
+    def test_write_kml(self):
+        packet_1 = APRSLocationPacket(
+            "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
+            time=datetime(2018, 11, 11, 10, 20, 13))
+        packet_2 = APRSLocationPacket(
+            "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
+            time=datetime(2018, 11, 11, 10, 21, 24))
+
+        track = APRSTrack('W3EAX-8')
+
+        track.append(packet_1)
+        track.append(packet_2)
+
+        temporary_directory = TemporaryDirectory()
+        output_filename = os.path.join(temporary_directory.name, 'test_output.kml')
+        write_aprs_packet_tracks([track], os.path.join(output_filename))
+        assert os.path.exists(output_filename)
+        del temporary_directory
+
+    def test_write_geojson(self):
+        packet_1 = APRSLocationPacket(
+            "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
+            time=datetime(2018, 11, 11, 10, 20, 13))
+        packet_2 = APRSLocationPacket(
+            "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
+            time=datetime(2018, 11, 11, 10, 21, 24))
+
+        track = APRSTrack('W3EAX-8')
+
+        track.append(packet_1)
+        track.append(packet_2)
+
+        temporary_directory = TemporaryDirectory()
+        output_filename = os.path.join(temporary_directory.name, 'test_output.geojson')
+        write_aprs_packet_tracks([track], os.path.join(output_filename))
+        assert os.path.exists(output_filename)
+        del temporary_directory
 
 
 if __name__ == '__main__':

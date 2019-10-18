@@ -7,14 +7,18 @@ __authors__ = ['Quinn Kupec', 'Zachary Burnett']
 import logging
 from typing import Union
 
+import numpy
+
 from huginn.packets import LocationPacket, APRSLocationPacket
 from huginn.structures import DoublyLinkedList
 
 
 class LocationPacketTrack:
-    def __init__(self, packets=None):
+    """ collection of location packets """
+
+    def __init__(self, packets: [LocationPacket] = None):
         """
-        Location packet track.
+        location packet track
 
         :param packets: iterable of packets
         """
@@ -25,110 +29,30 @@ class LocationPacketTrack:
         self.packets.append(packet)
 
     @property
-    def longitude(self):
-        return self.longitude
+    def time(self) -> numpy.array:
+        """ 1D array of packet date times """
+        return numpy.array(packet.time for packet in self.packets)
 
     @property
-    def latitude(self):
-        return self.latitude
+    def coordinates(self) -> numpy.array:
+        """ N x 3 array of geographic coordinates and meter altitude """
+        return numpy.stack((packet.coordinates for packet in self.packets), axis=0)
 
     @property
-    def altitude(self):
-        return self.altitude
+    def ascent_rate(self) -> numpy.array:
+        """ 1D array of ascent rate (m/s) """
+        return numpy.insert(numpy.array([packet_delta.ascent_rate for packet_delta in numpy.diff(self.packets)]), 0, 0)
 
     @property
-    def coordinates(self):
-        return self.coordinates
+    def ground_speed(self) -> numpy.array:
+        """ 1D array of ground speed (m/s) """
+        return numpy.insert(numpy.array([packet_delta.ground_speed for packet_delta in numpy.diff(self.packets)]), 0, 0)
 
     @property
-    def ascent_rate(self):
-        return self.ascent_rate
-
-    @property
-    def ground_speed(self):
-        return self.ground_speed
-
-    @property
-    def seconds_to_impact(self):
-        return self.seconds_to_impact
-
-    @longitude.getter
-    def longitude(self) -> float:
-        """
-        longitude of the most recent packet in this track
-
-        :return: longitude
-        """
-
-        return self.packets[-1].longitude
-
-    @latitude.getter
-    def latitude(self) -> float:
-        """
-        latitude of the most recent packet in this track
-
-        :return: latitude
-        """
-
-        return self.packets[-1].latitude
-
-    @altitude.getter
-    def altitude(self) -> float:
-        """
-        altitude of the most recent packet in this track
-
-        :return: altitude in meters
-        """
-
-        return self.packets[-1].altitude
-
-    @coordinates.getter
-    def coordinates(self) -> (float, float, float):
-        """
-        geographic coordinates of the most recent packet in this track
-
-        :return: tuple of coordinates (lon, lat[, alt])
-        """
-
-        return self.packets[-1].coordinates
-
-    @ascent_rate.getter
-    def ascent_rate(self) -> float:
-        """
-        most recent ascent rate of this track, in m/s
-
-        :return: ascent rate in meters per second
-        """
-
-        if len(self.packets) > 1:
-            # TODO implement filtering
-            return (self.packets[-1] - self.packets[-2]).ascent_rate
-        else:
-            return 0.0
-
-    @ground_speed.getter
-    def ground_speed(self) -> float:
-        """
-        most recent speed over the ground of this track, in m/s
-
-        :return: ground speed in meters per second
-        """
-
-        if len(self.packets) > 1:
-            # TODO implement filtering
-            return (self.packets[-1] - self.packets[-2]).ground_speed
-        else:
-            return 0.0
-
-    @seconds_to_impact.getter
     def seconds_to_impact(self) -> float:
-        """
-        seconds until to reach the ground at the current ascent rate
+        """ seconds to reach the ground at the current ascent rate """
 
-        :return: seconds to impact
-        """
-
-        current_ascent_rate = self.ascent_rate
+        current_ascent_rate = self.ascent_rate[-1]
 
         if current_ascent_rate < 0:
             # TODO implement landing location as the intersection of the predicted descent track with a local DEM
@@ -139,7 +63,7 @@ class LocationPacketTrack:
 
     def downrange_distance(self, longitude, latitude) -> float:
         """
-        Calculate overground distance from the most recent packet to a given point.
+        overground distance from the most recent packet to a given point
 
         :return: distance to point in meters
         """
@@ -150,13 +74,6 @@ class LocationPacketTrack:
             return 0.0
 
     def __getitem__(self, index: Union[int, slice]) -> LocationPacket:
-        """
-        Indexing function (for integer indexing of packets).
-
-        :param index: index
-        :return: packet at index
-        """
-
         return self.packets[index]
 
     def __iter__(self):
@@ -176,9 +93,11 @@ class LocationPacketTrack:
 
 
 class APRSTrack(LocationPacketTrack):
-    def __init__(self, callsign: str, packets=None):
+    """ collection of APRS location packets """
+
+    def __init__(self, callsign: str, packets: [APRSLocationPacket] = None):
         """
-        APRS packet track.
+        APRS packet track
 
         :param callsign: callsign of APRS packets
         :param packets: iterable of packets

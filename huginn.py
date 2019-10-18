@@ -4,12 +4,8 @@ import tkinter
 from datetime import datetime
 from tkinter import filedialog, messagebox
 
-import geojson
-import numpy
-import simplekml
-from geojson import Point, FeatureCollection, Feature, LineString
-
 from huginn import radio, tracks, BALLOON_CALLSIGNS
+from huginn.writer import write_aprs_packet_tracks
 
 
 class HuginnGUI:
@@ -182,44 +178,17 @@ class HuginnGUI:
                 message = f'{message} ascent_rate={packet_track.ascent_rate} ground_speed={packet_track.ground_speed} seconds_to_impact={packet_track.seconds_to_impact}'
 
                 if callsign in BALLOON_CALLSIGNS:
-                    self.replace_text(self.elements['longitude'], packet_track.longitude)
+                    self.replace_text(self.elements['longitude'], packet_track.longitudes)
                     self.replace_text(self.elements['latitude'], packet_track.latitude)
                     self.replace_text(self.elements['altitude'], packet_track.altitude)
                     self.replace_text(self.elements['ground_speed'], packet_track.ground_speed)
                     self.replace_text(self.elements['ascent_rate'], packet_track.ascent_rate)
 
-                    packet_deltas = numpy.diff(numpy.array(packet_track.packets))
-                    ascent_rates = [0] + [packet_delta.ascent_rate for packet_delta in packet_deltas]
-                    ground_speeds = [0] + [packet_delta.ground_speed for packet_delta in packet_deltas]
-
-                    output_filename = self.elements['output_file'].get()
-                    extension = os.path.splitext(output_filename)[1]
-
-                    if extension == '.kml':
-                        kml = simplekml.Kml()
-                        for packet in packet_track.packets:
-                            kml.newpoint(name=f'{packet.time:%Y%m%d%H%M%S}', coords=packet.coordinates)
-                        kml.newlinestring(name=callsign,
-                                          coords=[packet.coordinates for packet in packet_track.packets])
-                        kml.save(output_filename)
-                    elif extension == '.geojson':
-                        features = FeatureCollection([Feature(geometry=Point(packet.coordinates),
-                                                              properties={'time': f'{packet.time:%Y%m%d%H%M%S}',
-                                                                          'callsign': callsign,
-                                                                          'altitude': packet.altitude,
-                                                                          'ascent_rate': ascent_rates[packet_index],
-                                                                          'ground_speed': ground_speeds[packet_index]})
-                                                      for packet_index, packet in enumerate(packet_track.packets)] + [
-                                                         Feature(geometry=LineString([packet.coordinates for packet in
-                                                                                      packet_track.packets]),
-                                                                 properties={'callsign': callsign,
-                                                                             'altitude': packet_track.altitude,
-                                                                             'ascent_rate': packet_track.ascent_rate,
-                                                                             'ground_speed': packet_track.ground_speed,
-                                                                             'seconds_to_impact': packet_track.seconds_to_impact})])
-                        geojson.dump(features, output_filename)
-
             logging.info(message)
+
+        output_filename = self.elements['output_file'].get()
+        if output_filename != '':
+            write_aprs_packet_tracks(self.packet_tracks.values(), output_filename)
 
         if self.running:
             self.main_window.after(1000, self.run)

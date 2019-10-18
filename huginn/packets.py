@@ -13,9 +13,7 @@ from huginn.parsing import parse_aprs_packet
 
 
 class LocationPacket:
-    """
-    4D location packet, containing longitude, latitude, altitude, and time.
-    """
+    """ 4D location packet, containing longitude, latitude, altitude, and time """
 
     def __init__(self, time: datetime, longitude: float, latitude: float, altitude: float = None):
         self.time = time
@@ -40,10 +38,6 @@ class LocationPacket:
             return f'{self.seconds} s, {self.vertical_distance:6.2f} m vertical, {self.horizontal_distance:6.2f} m horizontal'
 
     @property
-    def coordinates(self) -> (float, float, float):
-        return self.coordinates
-
-    @coordinates.getter
     def coordinates(self) -> (float, float, float):
         """
         geographic coordinates of this packet
@@ -86,13 +80,11 @@ class LocationPacket:
 
 
 class APRSLocationPacket(LocationPacket):
-    """
-    APRS packet containing parsed APRS fields, along with location and time.
-    """
+    """ APRS packet containing parsed APRS fields, along with location and time """
 
     def __init__(self, raw_aprs: str, time: datetime = None):
         """
-        Construct APRS packet object from raw packet and given datetime.
+        APRS packet object from raw packet and given datetime
 
         :param raw_aprs: string containing raw packet
         :param time: Time of packet, either as datetime object, seconds since Unix epoch, or ISO format date string.
@@ -118,13 +110,6 @@ class APRSLocationPacket(LocationPacket):
             raise ValueError(f'Input packet does not contain location data: {raw_aprs}')
 
     def __getitem__(self, field: str):
-        """
-        Indexing function (for string indexing of APRS fields).
-
-        :param field: APRS field name
-        :return: value of field
-        """
-
         if field == 'callsign':
             field = 'from'
 
@@ -135,7 +120,7 @@ class APRSLocationPacket(LocationPacket):
 
     def __contains__(self, field: str):
         """
-        Whether packet contains field.
+        whether packet contains the given APRS field
 
         :param field: APRS field name
         :return: whether field exists
@@ -148,7 +133,7 @@ class APRSLocationPacket(LocationPacket):
 
     def __eq__(self, other) -> bool:
         """
-        Whether this packet equals another packet, including callsign and comment.
+        whether this packet equals another packet, including callsign and comment
 
         :param other: packet to compare to this one
         :return: equality

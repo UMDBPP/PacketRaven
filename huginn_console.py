@@ -4,31 +4,31 @@ Balloon telemetry parsing, display, and logging.
 __authors__ = ['Quinn Kupec', 'Zachary Burnett']
 """
 
-import datetime
 import logging
 import os
 import sys
 import time
+from datetime import datetime
 
 from huginn import radio, tracks
+from huginn.writer import write_aprs_packet_tracks
 
 if __name__ == '__main__':
     if len(sys.argv) > 0 and '-h' not in sys.argv:
-        if len(sys.argv) > 1:
-            serial_port = sys.argv[1]
-        else:
-            serial_port = None
-
-        if len(sys.argv) > 2:
-            log_filename = sys.argv[2]
-        else:
-            log_filename = os.path.join(os.path.expanduser('~'), 'Desktop')
+        serial_port = sys.argv[1] if len(sys.argv) > 1 else None
+        log_filename = sys.argv[2] if len(sys.argv) > 2 else os.path.join(os.path.expanduser('~'), 'Desktop')
+        output_filename = sys.argv[3] if len(sys.argv) > 3 else None
 
         if os.path.isdir(log_filename):
             if not os.path.exists(log_filename):
                 os.mkdir(log_filename)
-            log_filename = os.path.join(log_filename,
-                                        f'{datetime.datetime.now().strftime("%Y%m%dT%H%M%S")}_huginn_log.txt')
+            log_filename = os.path.join(log_filename, f'{datetime.now():%Y%m%dT%H%M%S}_huginn_log.txt')
+
+        if output_filename is not None:
+            if not os.path.exists(output_filename):
+                raise EnvironmentError(f'output file does not exist: {output_filename}')
+            elif os.path.isfile(output_filename):
+                output_filename = os.path.dirname(output_filename)
 
         radio_connection = radio.Radio(serial_port)
 
@@ -63,6 +63,9 @@ if __name__ == '__main__':
 
                 logging.info(message)
 
+            if output_filename is not None:
+                write_aprs_packet_tracks(packet_tracks.values(), output_filename)
+
             time.sleep(1)
     else:
-        print('usage: huginn serial_port [log_path]')
+        print('usage: huginn serial_port [log_path] [output_file]')
