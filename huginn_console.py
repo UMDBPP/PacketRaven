@@ -30,7 +30,7 @@ if __name__ == '__main__':
             elif os.path.isfile(output_filename):
                 output_filename = os.path.dirname(output_filename)
 
-        radio_connection = radio.Radio(serial_port)
+        radio_connection = radio.APRSRadio(serial_port)
 
         logging.basicConfig(filename=log_filename, level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S',
                             format='[%(asctime)s] %(levelname)s: %(message)s')
@@ -43,7 +43,7 @@ if __name__ == '__main__':
         logging.info(f'Opening {radio_connection.serial_port}.')
 
         while True:
-            parsed_packets = radio_connection.read()
+            parsed_packets = radio_connection.packets
 
             for parsed_packet in parsed_packets:
                 callsign = parsed_packet['callsign']

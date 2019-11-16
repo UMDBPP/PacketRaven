@@ -6,13 +6,11 @@ __authors__ = []
 
 import logging
 from datetime import datetime
-from typing import List
 
 from serial import Serial
 from serial.tools import list_ports
 
 from huginn.packets import APRSLocationPacket
-from huginn.parsing import PartialPacketError
 
 
 def ports() -> str:
@@ -44,15 +42,11 @@ def port() -> str:
 def parse_packet(raw_packet: str, packet_time: datetime = None) -> APRSLocationPacket:
     try:
         return APRSLocationPacket(raw_packet, packet_time)
-    except PartialPacketError as error:
-        logging.error(f'PartialPacketError: {error} "{raw_packet}"')
-    except ValueError as error:
-        logging.error(f'ValueError: {error} "{raw_packet}"')
-    except UnicodeDecodeError as error:
-        logging.error(f'UnicodeDecodeError: {error} "{raw_packet}"')
+    except Exception as error:
+        logging.error(f'{error.__class__.__name__}: {error} for raw packet "{raw_packet}"')
 
 
-class Radio:
+class APRSRadio:
     def __init__(self, serial_port: str = None):
         """
         Connect to radio over given serial port.
@@ -73,7 +67,8 @@ class Radio:
         else:
             self.serial_connection = Serial(self.serial_port, baudrate=9600, timeout=1)
 
-    def read(self) -> List[APRSLocationPacket]:
+    @property
+    def packets(self) -> [APRSLocationPacket]:
         """
         Get potential packet strings from given serial connection.
 
@@ -102,5 +97,5 @@ class Radio:
 
 
 if __name__ == '__main__':
-    packet_candidates = Radio().read()
+    packet_candidates = APRSRadio().packets
     print(packet_candidates)

@@ -131,7 +131,7 @@ class HuginnGUI:
             try:
                 self.serial_port = self.elements['port'].get()
 
-                if self.serial_port is '':
+                if self.serial_port == '':
                     serial_port = radio.port()
                     self.replace_text(self.elements['port'], serial_port)
 
@@ -142,7 +142,7 @@ class HuginnGUI:
                 console.setLevel(logging.DEBUG)
                 logging.getLogger('').addHandler(console)
 
-                self.connections['radio'] = radio.Radio(self.serial_port)
+                self.connections['radio'] = radio.APRSRadio(self.serial_port)
                 self.serial_port = self.connections['radio'].serial_port
                 logging.info(f'Opened port {self.serial_port}')
 
@@ -154,10 +154,10 @@ class HuginnGUI:
 
                 self.run()
             except Exception as error:
-                messagebox.showerror('Initialization Error', error)
+                messagebox.showerror('Huginn Startup Error', f'{error.__class__.__name__}: {error}')
 
     def run(self):
-        parsed_packets = self.connections['radio'].read()
+        parsed_packets = self.connections['radio'].packets
 
         for parsed_packet in parsed_packets:
             callsign = parsed_packet['callsign']
