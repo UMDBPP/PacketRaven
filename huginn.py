@@ -15,7 +15,7 @@ class HuginnGUI:
 
         self.connections = {}
 
-        self.running = False
+        self.active = False
         self.packet_tracks = {}
 
         self.frames = {}
@@ -118,7 +118,7 @@ class HuginnGUI:
             self.replace_text(self.elements['output_file'], path)
 
     def toggle(self):
-        if self.running:
+        if self.active:
             self.connections['radio'].close()
             logging.info(f'Closed port {self.connections["radio"].serial_port}')
 
@@ -126,7 +126,7 @@ class HuginnGUI:
                 element.configure(state=tkinter.DISABLED)
 
             self.toggle_text.set('Start')
-            self.running = False
+            self.active = False
         else:
             try:
                 self.serial_port = self.elements['port'].get()
@@ -147,51 +147,52 @@ class HuginnGUI:
                 logging.info(f'Opened port {self.serial_port}')
 
                 for element in self.frames['bottom'].winfo_children():
-                    element.configure(state=tkinter.ACTIVE)
+                    element.configure(state=tkinter.NORMAL)
 
                 self.toggle_text.set('Stop')
-                self.running = True
+                self.active = True
 
                 self.run()
             except Exception as error:
                 messagebox.showerror('Huginn Startup Error', f'{error.__class__.__name__}: {error}')
 
     def run(self):
-        parsed_packets = self.connections['radio'].packets
+        if self.active:
+            parsed_packets = self.connections['radio'].packets
 
-        for parsed_packet in parsed_packets:
-            callsign = parsed_packet['callsign']
+            for parsed_packet in parsed_packets:
+                callsign = parsed_packet['callsign']
 
-            if callsign in self.packet_tracks:
-                if parsed_packet in self.packet_tracks[callsign]:
-                    logging.debug(f'Received duplicate packet: {parsed_packet}')
+                if callsign in self.packet_tracks:
+                    if parsed_packet in self.packet_tracks[callsign]:
+                        logging.debug(f'Received duplicate packet: {parsed_packet}')
+                    else:
+                        self.packet_tracks[callsign].append(parsed_packet)
                 else:
-                    self.packet_tracks[callsign].append(parsed_packet)
-            else:
-                logging.debug(f'Starting new packet track from current packet: {parsed_packet}')
-                self.packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
+                    logging.debug(f'Starting new packet track from current packet: {parsed_packet}')
+                    self.packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
 
-            message = f'{parsed_packet}'
-            packet_track = self.packet_tracks[callsign]
+                message = f'{parsed_packet}'
+                packet_track = self.packet_tracks[callsign]
 
-            if 'longitude' in parsed_packet and 'latitude' in parsed_packet:
-                message = f'{message} ascent_rate={packet_track.ascent_rate} ground_speed={packet_track.ground_speed} seconds_to_impact={packet_track.seconds_to_impact}'
+                if 'longitude' in parsed_packet and 'latitude' in parsed_packet:
+                    message = f'{message} ascent_rate={packet_track.ascent_rate} ground_speed={packet_track.ground_speed} seconds_to_impact={packet_track.seconds_to_impact}'
 
-                if callsign in BALLOON_CALLSIGNS:
-                    self.replace_text(self.elements['longitude'], packet_track.longitudes)
-                    self.replace_text(self.elements['latitude'], packet_track.latitude)
-                    self.replace_text(self.elements['altitude'], packet_track.altitude)
-                    self.replace_text(self.elements['ground_speed'], packet_track.ground_speed)
-                    self.replace_text(self.elements['ascent_rate'], packet_track.ascent_rate)
+                    if callsign in BALLOON_CALLSIGNS:
+                        self.replace_text(self.elements['longitude'], packet_track.longitudes)
+                        self.replace_text(self.elements['latitude'], packet_track.latitude)
+                        self.replace_text(self.elements['altitude'], packet_track.altitude)
+                        self.replace_text(self.elements['ground_speed'], packet_track.ground_speed)
+                        self.replace_text(self.elements['ascent_rate'], packet_track.ascent_rate)
 
-            logging.info(message)
+                logging.info(message)
 
-        output_filename = self.elements['output_file'].get()
-        if output_filename != '':
-            write_aprs_packet_tracks(self.packet_tracks.values(), output_filename)
+            output_filename = self.elements['output_file'].get()
+            if output_filename != '':
+                write_aprs_packet_tracks(self.packet_tracks.values(), output_filename)
 
-        if self.running:
-            self.main_window.after(1000, self.run)
+            if self.active:
+                self.main_window.after(1000, self.run)
 
     @staticmethod
     def replace_text(element, value):
