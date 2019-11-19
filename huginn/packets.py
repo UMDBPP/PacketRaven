@@ -6,10 +6,11 @@ __authors__ = ['Quinn Kupec', 'Zachary Burnett']
 
 import math
 from datetime import datetime
+from typing import Union
 
 from haversine import haversine
 
-from huginn.parsing import parse_aprs_packet
+from huginn.parsing import parse_raw_aprs
 
 
 class LocationPacket:
@@ -82,7 +83,7 @@ class LocationPacket:
 class APRSLocationPacket(LocationPacket):
     """ APRS packet containing parsed APRS fields, along with location and time """
 
-    def __init__(self, raw_aprs: str, time: datetime = None):
+    def __init__(self, raw_aprs: Union[str, bytes, dict], time: datetime = None):
         """
         APRS packet object from raw packet and given datetime
 
@@ -90,8 +91,8 @@ class APRSLocationPacket(LocationPacket):
         :param time: Time of packet, either as datetime object, seconds since Unix epoch, or ISO format date string.
         """
 
-        # parse packet, units are metric
-        parsed_packet = parse_aprs_packet(raw_aprs)
+        # parse packet with metric units
+        parsed_packet = parse_raw_aprs(raw_aprs)
 
         if 'longitude' in parsed_packet and 'latitude' in parsed_packet:
             if time is None:

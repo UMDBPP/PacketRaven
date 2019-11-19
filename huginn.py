@@ -4,7 +4,8 @@ import tkinter
 from datetime import datetime
 from tkinter import filedialog, messagebox
 
-from huginn import radio, tracks, BALLOON_CALLSIGNS
+from huginn import connections, tracks, BALLOON_CALLSIGNS
+from huginn.connections import Radio
 from huginn.writer import write_aprs_packet_tracks
 
 
@@ -13,7 +14,7 @@ class HuginnGUI:
         self.main_window = tkinter.Tk()
         self.main_window.title('huginn main')
 
-        self.connections = {}
+        self.connections = []
 
         self.active = False
         self.packet_tracks = {}
@@ -39,7 +40,7 @@ class HuginnGUI:
         log_file_button.grid(row=self.last_row, column=2)
 
         self.__add_entry_box(self.frames['top'], title='output_file', width=45)
-        self.elements['output_file'].insert(0, f'huginn_output_{datetime.now():%Y%m%dT%H%M%S}.kml')
+        self.elements['output_file'].insert(0, f'huginn_output_{datetime.now():%Y%m%dT%H%M%S}.geojson')
         output_file_button = tkinter.Button(self.frames['top'], text='...', command=self.__select_output_file)
         output_file_button.grid(row=self.last_row, column=2)
 
@@ -59,7 +60,7 @@ class HuginnGUI:
             element.configure(state=tkinter.DISABLED)
 
         try:
-            radio_port = radio.port()
+            radio_port = connections.port()
         except OSError:
             radio_port = ''
 
@@ -112,28 +113,34 @@ class HuginnGUI:
     def __select_output_file(self):
         filename = os.path.splitext(self.elements['output_file'].get())[0]
         path = filedialog.asksaveasfilename(title='Huginn output location...', initialfile=filename,
-                                            defaultextension='.kml', filetypes=[('Keyhole Markup Language', '*.kml'),
-                                                                                ('GeoJSON', '*.geojson')])
+                                            defaultextension='.kml', filetypes=[('GeoJSON', '*.geojson'), ('Keyhole Markup Language', '*.kml')])
         if path != '':
             self.replace_text(self.elements['output_file'], path)
 
     def toggle(self):
         if self.active:
-            self.connections['radio'].close()
-            logging.info(f'Closed port {self.connections["radio"].serial_port}')
+            for connection in self.connections:
+                connection.close()
+
+                if type(connection) is Radio:
+                    logging.info(f'Closed port {connection.serial_port}')
 
             for element in self.frames['bottom'].winfo_children():
                 element.configure(state=tkinter.DISABLED)
 
             self.toggle_text.set('Start')
             self.active = False
+            self.connections = []
         else:
             try:
-                self.serial_port = self.elements['port'].get()
+                serial_port = self.elements['port'].get()
 
-                if self.serial_port == '':
-                    serial_port = radio.port()
-                    self.replace_text(self.elements['port'], serial_port)
+                if serial_port == '':
+                    try:
+                        serial_port = connections.port()
+                        self.replace_text(self.elements['port'], serial_port)
+                    except Exception as error:
+                        logging.warning(f'{error.__class__.__name__}: {error}')
 
                 log_filename = self.elements['log_file'].get()
                 logging.basicConfig(filename=log_filename, level=logging.INFO,
@@ -142,23 +149,48 @@ class HuginnGUI:
                 console.setLevel(logging.DEBUG)
                 logging.getLogger('').addHandler(console)
 
-                self.connections['radio'] = radio.APRSRadio(self.serial_port)
-                self.serial_port = self.connections['radio'].serial_port
-                logging.info(f'Opened port {self.serial_port}')
+                if serial_port != '':
+                    if 'txt' in serial_port:
+                        try:
+                            text_file = connections.TextFile(serial_port)
+                            self.connections.append(text_file)
+                        except Exception as error:
+                            logging.warning(f'{error.__class__.__name__}: {error}')
+                    else:
+                        try:
+                            radio = connections.Radio(serial_port)
+                            serial_port = radio.serial_port
+                            logging.info(f'Opened port {serial_port}')
+                            self.connections.append(radio)
+                        except Exception as error:
+                            logging.warning(f'{error.__class__.__name__}: {error}')
 
-                for element in self.frames['bottom'].winfo_children():
-                    element.configure(state=tkinter.NORMAL)
+                try:
+                    aprs_api = connections.APRS_fi(BALLOON_CALLSIGNS)
+                    logging.info(f'Established connection to {aprs_api.api_url}')
+                    self.connections.append(aprs_api)
+                except Exception as error:
+                    logging.warning(f'{error.__class__.__name__}: {error}')
 
-                self.toggle_text.set('Stop')
-                self.active = True
+                if len(self.connections) > 0:
+                    for element in self.frames['bottom'].winfo_children():
+                        element.configure(state=tkinter.NORMAL)
 
-                self.run()
+                    self.toggle_text.set('Stop')
+                    self.active = True
+                else:
+                    raise RuntimeError('Connection could not be established to an APRS packet receiver.')
             except Exception as error:
-                messagebox.showerror('Huginn Startup Error', f'{error.__class__.__name__}: {error}')
+                messagebox.showerror('Huginn Error', f'{error.__class__.__name__}: {error}')
+                self.active = False
+
+            self.run()
 
     def run(self):
         if self.active:
-            parsed_packets = self.connections['radio'].packets
+            parsed_packets = []
+            for connection in self.connections:
+                parsed_packets.extend(connection.packets)
 
             for parsed_packet in parsed_packets:
                 callsign = parsed_packet['callsign']
@@ -179,9 +211,9 @@ class HuginnGUI:
                     message = f'{message} ascent_rate={packet_track.ascent_rate} ground_speed={packet_track.ground_speed} seconds_to_impact={packet_track.seconds_to_impact}'
 
                     if callsign in BALLOON_CALLSIGNS:
-                        self.replace_text(self.elements['longitude'], packet_track.longitudes)
-                        self.replace_text(self.elements['latitude'], packet_track.latitude)
-                        self.replace_text(self.elements['altitude'], packet_track.altitude)
+                        self.replace_text(self.elements['longitude'], packet_track.coordinates[-1, 0])
+                        self.replace_text(self.elements['latitude'], packet_track.coordinates[-1, 1])
+                        self.replace_text(self.elements['altitude'], packet_track.coordinates[-1, 2])
                         self.replace_text(self.elements['ground_speed'], packet_track.ground_speed)
                         self.replace_text(self.elements['ascent_rate'], packet_track.ascent_rate)
 

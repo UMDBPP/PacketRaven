@@ -3,13 +3,14 @@ Unit tests for balloon telemetry package.
 
 __authors__ = ['Zachary Burnett']
 """
+
 import os
 import unittest
 from datetime import datetime
 from tempfile import TemporaryDirectory
 
 from huginn.packets import APRSLocationPacket
-from huginn.parsing import parse_aprs_packet, PartialPacketError
+from huginn.parsing import parse_raw_aprs, PartialPacketError
 from huginn.structures import DoublyLinkedList
 from huginn.tracks import APRSTrack
 from huginn.writer import write_aprs_packet_tracks
@@ -176,7 +177,7 @@ class TestPacketTracks(unittest.TestCase):
 
 class TestParser(unittest.TestCase):
     def test_parse_aprs_packet(self):
-        parsed_packet = parse_aprs_packet(
+        parsed_packet = parse_raw_aprs(
             'W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18\'C,http://www.umd.edu')
 
         assert parsed_packet['from'] == 'W3EAX-8'
@@ -187,10 +188,10 @@ class TestParser(unittest.TestCase):
 
     def test_partial_packets(self):
         with self.assertRaises(PartialPacketError):
-            parse_aprs_packet('W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,KM4LKM')
+            parse_raw_aprs('W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,KM4LKM')
 
         with self.assertRaises(PartialPacketError):
-            parse_aprs_packet('W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:')
+            parse_raw_aprs('W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:')
 
 
 class TestWriter(unittest.TestCase):
@@ -207,11 +208,10 @@ class TestWriter(unittest.TestCase):
         track.append(packet_1)
         track.append(packet_2)
 
-        temporary_directory = TemporaryDirectory()
-        output_filename = os.path.join(temporary_directory.name, 'test_output.kml')
-        write_aprs_packet_tracks([track], os.path.join(output_filename))
-        assert os.path.exists(output_filename)
-        del temporary_directory
+        with TemporaryDirectory() as temporary_directory:
+            output_filename = os.path.join(temporary_directory.name, 'test_output.kml')
+            write_aprs_packet_tracks([track], os.path.join(output_filename))
+            assert os.path.exists(output_filename)
 
     def test_write_geojson(self):
         packet_1 = APRSLocationPacket(
@@ -226,11 +226,10 @@ class TestWriter(unittest.TestCase):
         track.append(packet_1)
         track.append(packet_2)
 
-        temporary_directory = TemporaryDirectory()
-        output_filename = os.path.join(temporary_directory.name, 'test_output.geojson')
-        write_aprs_packet_tracks([track], os.path.join(output_filename))
-        assert os.path.exists(output_filename)
-        del temporary_directory
+        with TemporaryDirectory() as temporary_directory:
+            output_filename = os.path.join(temporary_directory.name, 'test_output.geojson')
+            write_aprs_packet_tracks([track], os.path.join(output_filename))
+            assert os.path.exists(output_filename)
 
 
 if __name__ == '__main__':

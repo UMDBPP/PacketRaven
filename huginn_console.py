@@ -10,7 +10,7 @@ import sys
 import time
 from datetime import datetime
 
-from huginn import radio, tracks
+from huginn import connections, tracks
 from huginn.writer import write_aprs_packet_tracks
 
 if __name__ == '__main__':
@@ -25,12 +25,11 @@ if __name__ == '__main__':
             log_filename = os.path.join(log_filename, f'{datetime.now():%Y%m%dT%H%M%S}_huginn_log.txt')
 
         if output_filename is not None:
-            if not os.path.exists(output_filename):
-                raise EnvironmentError(f'output file does not exist: {output_filename}')
-            elif os.path.isfile(output_filename):
-                output_filename = os.path.dirname(output_filename)
+            output_directory = os.path.dirname(output_filename)
+            if not os.path.exists(output_directory):
+                os.makedirs(output_directory)
 
-        radio_connection = radio.APRSRadio(serial_port)
+        radio_connection = connections.Radio(serial_port)
 
         logging.basicConfig(filename=log_filename, level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S',
                             format='[%(asctime)s] %(levelname)s: %(message)s')
