@@ -250,6 +250,13 @@ class DoublyLinkedList:
             yield current_node.value
             current_node = current_node.previous_node
 
+    def __contains__(self, item) -> bool:
+        for value in self:
+            if item == value:
+                return True
+        else:
+            return False
+
     def __len__(self) -> int:
         length = 0
         current_node = self.head

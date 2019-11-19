@@ -4,9 +4,12 @@ import tkinter
 from datetime import datetime
 from tkinter import filedialog, messagebox
 
-from huginn import connections, tracks, BALLOON_CALLSIGNS
+from huginn import connections, tracks
 from huginn.connections import Radio
 from huginn.writer import write_aprs_packet_tracks
+
+BALLOON_CALLSIGNS = ['W3EAX-8', 'W3EAX-12', 'W3EAX-13', 'W3EAX-14']
+INTERVAL_SECONDS = 10
 
 
 class HuginnGUI:
@@ -192,39 +195,48 @@ class HuginnGUI:
             for connection in self.connections:
                 parsed_packets.extend(connection.packets)
 
-            for parsed_packet in parsed_packets:
-                callsign = parsed_packet['callsign']
+            if len(parsed_packets) > 0:
+                for parsed_packet in parsed_packets:
+                    callsign = parsed_packet['callsign']
 
-                if callsign in self.packet_tracks:
-                    if parsed_packet in self.packet_tracks[callsign]:
-                        logging.debug(f'Received duplicate packet: {parsed_packet}')
+                    if callsign in self.packet_tracks:
+                        if parsed_packet not in self.packet_tracks[callsign]:
+                            self.packet_tracks[callsign].append(parsed_packet)
+                        else:
+                            logging.debug(f'received duplicate packet: {parsed_packet}')
+                            continue
                     else:
-                        self.packet_tracks[callsign].append(parsed_packet)
-                else:
-                    logging.debug(f'Starting new packet track from current packet: {parsed_packet}')
-                    self.packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
+                        logging.debug(f'Starting new packet track from current packet: {parsed_packet}')
+                        self.packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
 
-                message = f'{parsed_packet}'
-                packet_track = self.packet_tracks[callsign]
+                    message = f'{parsed_packet}'
+                    packet_track = self.packet_tracks[callsign]
 
-                if 'longitude' in parsed_packet and 'latitude' in parsed_packet:
-                    message = f'{message} ascent_rate={packet_track.ascent_rate} ground_speed={packet_track.ground_speed} seconds_to_impact={packet_track.seconds_to_impact}'
+                    if 'longitude' in parsed_packet and 'latitude' in parsed_packet:
+                        coordinates = packet_track.coordinates[-1]
+                        ascent_rate = packet_track.ascent_rate[-1]
+                        ground_speed = packet_track.ground_speed[-1]
+                        seconds_to_impact = packet_track.seconds_to_impact
 
-                    if callsign in BALLOON_CALLSIGNS:
-                        self.replace_text(self.elements['longitude'], packet_track.coordinates[-1, 0])
-                        self.replace_text(self.elements['latitude'], packet_track.coordinates[-1, 1])
-                        self.replace_text(self.elements['altitude'], packet_track.coordinates[-1, 2])
-                        self.replace_text(self.elements['ground_speed'], packet_track.ground_speed)
-                        self.replace_text(self.elements['ascent_rate'], packet_track.ascent_rate)
+                        message = f'{message} ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}'
 
-                logging.info(message)
+                        if callsign in BALLOON_CALLSIGNS:
+                            self.replace_text(self.elements['longitude'], coordinates[0])
+                            self.replace_text(self.elements['latitude'], coordinates[1])
+                            self.replace_text(self.elements['altitude'], coordinates[2])
+                            self.replace_text(self.elements['ground_speed'], ground_speed)
+                            self.replace_text(self.elements['ascent_rate'], ascent_rate)
 
-            output_filename = self.elements['output_file'].get()
-            if output_filename != '':
-                write_aprs_packet_tracks(self.packet_tracks.values(), output_filename)
+                    logging.info(message)
+
+                output_filename = self.elements['output_file'].get()
+                if output_filename != '':
+                    write_aprs_packet_tracks(self.packet_tracks.values(), output_filename)
+            else:
+                logging.info('no packets received')
 
             if self.active:
-                self.main_window.after(1000, self.run)
+                self.main_window.after(INTERVAL_SECONDS * 1000, self.run)
 
     @staticmethod
     def replace_text(element, value):

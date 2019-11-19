@@ -132,7 +132,15 @@ class APRS_fi(APRSConnection):
     @property
     def packets(self) -> [APRSLocationPacket]:
         query = f'{self.api_url}?name={",".join(self.callsigns)}&what=loc&apikey={self.api_key}&format=json'
-        return [parse_packet(packet_candidate) for packet_candidate in requests.get(query).json()['entries']]
+
+        response = requests.get(query).json()
+        if response['result'] != 'fail':
+            packets = [parse_packet(packet_candidate) for packet_candidate in response['entries']]
+        else:
+            logging.warning(f'query failure "{response["code"]}: {response["description"]}"')
+            packets = []
+
+        return packets
 
     def has_network_connection(self) -> bool:
         """

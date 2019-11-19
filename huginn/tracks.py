@@ -26,7 +26,8 @@ class LocationPacketTrack:
         self.packets = DoublyLinkedList(packets)
 
     def append(self, packet: LocationPacket):
-        self.packets.append(packet)
+        if packet not in self.packets:
+            self.packets.append(packet)
 
     @property
     def time(self) -> numpy.array:
@@ -81,6 +82,9 @@ class LocationPacketTrack:
 
     def __reversed__(self):
         return reversed(self.packets)
+
+    def __contains__(self, item) -> bool:
+        return item in self.packets
 
     def __len__(self) -> int:
         return len(self.packets)
