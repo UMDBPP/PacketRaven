@@ -10,6 +10,7 @@ from huginn.writer import write_aprs_packet_tracks
 
 BALLOON_CALLSIGNS = ['W3EAX-8', 'W3EAX-12', 'W3EAX-13', 'W3EAX-14']
 INTERVAL_SECONDS = 10
+DESKTOP_PATH = os.path.join(os.path.expanduser('~'), 'Desktop')
 
 
 class HuginnGUI:
@@ -38,12 +39,12 @@ class HuginnGUI:
         self.__add_entry_box(self.frames['top'], 'port')
 
         self.__add_entry_box(self.frames['top'], title='log_file', width=45)
-        self.elements['log_file'].insert(0, f'huginn_log_{datetime.now():%Y%m%dT%H%M%S}.txt')
+        self.elements['log_file'].insert(0, os.path.join(DESKTOP_PATH, f'huginn_log_{datetime.now():%Y%m%dT%H%M%S}.txt'))
         log_file_button = tkinter.Button(self.frames['top'], text='...', command=self.__select_log_file)
         log_file_button.grid(row=self.last_row, column=2)
 
         self.__add_entry_box(self.frames['top'], title='output_file', width=45)
-        self.elements['output_file'].insert(0, f'huginn_output_{datetime.now():%Y%m%dT%H%M%S}.geojson')
+        self.elements['output_file'].insert(0, os.path.join(DESKTOP_PATH, f'huginn_output_{datetime.now():%Y%m%dT%H%M%S}.geojson'))
         output_file_button = tkinter.Button(self.frames['top'], text='...', command=self.__select_output_file)
         output_file_button.grid(row=self.last_row, column=2)
 

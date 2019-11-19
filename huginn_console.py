@@ -15,11 +15,12 @@ from huginn.writer import write_aprs_packet_tracks
 
 BALLOON_CALLSIGNS = ['W3EAX-8', 'W3EAX-12', 'W3EAX-13', 'W3EAX-14']
 INTERVAL_SECONDS = 1
+DESKTOP_PATH = os.path.join(os.path.expanduser('~'), 'Desktop')
 
 if __name__ == '__main__':
     if len(sys.argv) > 0 and '-h' not in sys.argv:
         serial_port = sys.argv[1] if len(sys.argv) > 1 else None
-        log_filename = sys.argv[2] if len(sys.argv) > 2 else os.path.join(os.path.expanduser('~'), 'Desktop')
+        log_filename = sys.argv[2] if len(sys.argv) > 2 else DESKTOP_PATH
         output_filename = sys.argv[3] if len(sys.argv) > 3 else None
 
         if os.path.isdir(log_filename):
