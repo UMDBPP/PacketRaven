@@ -84,7 +84,7 @@ if __name__ == '__main__':
                             continue
                     else:
                         packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
-                        logging.debug(f'{callsign:8} - started tracking callsign')
+                        logging.debug(f'{callsign:8} - started tracking')
 
                     logging.info(f'{callsign:8} - received new packet: {parsed_packet}')
 

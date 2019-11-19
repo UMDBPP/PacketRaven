@@ -138,14 +138,17 @@ class HuginnGUI:
 
             logging.info('stopping')
             logging.shutdown()
+
         else:
             log_filename = self.elements['log_file'].get()
             log_format = '[%(asctime)s] %(levelname)-8s: %(message)s'
             logging.basicConfig(filename=log_filename, level=logging.DEBUG, datefmt='%Y-%m-%d %H:%M:%S', format=log_format)
-            console = logging.StreamHandler()
-            console.setLevel(logging.INFO)
-            console.setFormatter(logging.Formatter(log_format))
-            logging.getLogger('').addHandler(console)
+
+            if len(logging._handlerList) <= 4:
+                console = logging.StreamHandler()
+                console.setLevel(logging.INFO)
+                console.setFormatter(logging.Formatter(log_format))
+                logging.getLogger('').addHandler(console)
 
             logging.info('starting')
 
@@ -218,7 +221,7 @@ class HuginnGUI:
                             continue
                     else:
                         self.packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
-                        logging.debug(f'{callsign:8} - started tracking callsign')
+                        logging.debug(f'{callsign:8} - started tracking')
 
                     logging.info(f'{callsign:8} - received new packet: {parsed_packet}')
                     packet_track = self.packet_tracks[callsign]
