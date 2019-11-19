@@ -54,7 +54,10 @@ class Radio(APRSConnection):
         """
 
         if serial_port is None:
-            self.serial_port = port()
+            try:
+                self.serial_port = port()
+            except ConnectionError:
+                raise ConnectionError('could not find radio over serial connection')
         else:
             self.serial_port = serial_port.strip('"')
 
@@ -193,7 +196,7 @@ def port() -> str:
     try:
         return next(ports())
     except StopIteration:
-        raise OSError('No open serial ports.')
+        raise ConnectionError('No open serial ports.')
 
 
 def parse_packet(raw_packet: Union[str, bytes, dict], packet_time: datetime = None) -> APRSLocationPacket:

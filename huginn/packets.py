@@ -110,6 +110,10 @@ class APRSLocationPacket(LocationPacket):
         else:
             raise ValueError(f'Input packet does not contain location data: {raw_aprs}')
 
+    @property
+    def callsign(self) -> str:
+        return self['callsign']
+
     def __getitem__(self, field: str):
         if field == 'callsign':
             field = 'from'

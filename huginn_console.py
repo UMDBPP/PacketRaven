@@ -14,7 +14,7 @@ from huginn import connections, tracks
 from huginn.writer import write_aprs_packet_tracks
 
 BALLOON_CALLSIGNS = ['W3EAX-8', 'W3EAX-12', 'W3EAX-13', 'W3EAX-14']
-INTERVAL_SECONDS = 1
+INTERVAL_SECONDS = 5
 DESKTOP_PATH = os.path.join(os.path.expanduser('~'), 'Desktop')
 
 if __name__ == '__main__':
@@ -33,10 +33,11 @@ if __name__ == '__main__':
             if not os.path.exists(output_directory):
                 os.makedirs(output_directory)
 
-        logging.basicConfig(filename=log_filename, level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S',
-                            format='[%(asctime)s] %(levelname)s: %(message)s')
+        log_format = '[%(asctime)s] %(levelname)-8s: %(message)s'
+        logging.basicConfig(filename=log_filename, level=logging.DEBUG, datefmt='%Y-%m-%d %H:%M:%S', format=log_format)
         console = logging.StreamHandler()
-        console.setLevel(logging.DEBUG)
+        console.setLevel(logging.INFO)
+        console.setFormatter(logging.Formatter(log_format))
         logging.getLogger('').addHandler(console)
 
         aprs_connections = []
@@ -50,22 +51,26 @@ if __name__ == '__main__':
             try:
                 radio = connections.Radio(serial_port)
                 serial_port = radio.serial_port
-                logging.info(f'Opened port {serial_port}')
+                logging.info(f'opened port {serial_port}')
                 aprs_connections.append(radio)
             except Exception as error:
                 logging.warning(f'{error.__class__.__name__}: {error}')
         try:
             aprs_api = connections.APRS_fi(BALLOON_CALLSIGNS)
-            logging.info(f'Established connection to {aprs_api.api_url}')
+            logging.info(f'established connection to API')
             aprs_connections.append(aprs_api)
         except Exception as error:
             logging.warning(f'{error.__class__.__name__}: {error}')
 
         packet_tracks = {}
         while True:
+            logging.debug(f'receiving packets from {len(aprs_connections)} source(s)')
+
             parsed_packets = []
             for aprs_connection in aprs_connections:
                 parsed_packets.extend(aprs_connection.packets)
+
+            logging.debug(f'received {len(parsed_packets)} packets')
 
             if len(parsed_packets) > 0:
                 for parsed_packet in parsed_packets:
@@ -75,25 +80,25 @@ if __name__ == '__main__':
                         if parsed_packet not in packet_tracks[callsign]:
                             packet_tracks[callsign].append(parsed_packet)
                         else:
-                            logging.debug(f'received duplicate packet: {parsed_packet}')
+                            logging.debug(f'{callsign:8} - received duplicate packet: {parsed_packet}')
                             continue
                     else:
                         packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
+                        logging.debug(f'{callsign:8} - started tracking callsign')
 
-                    message = f'{parsed_packet}'
+                    logging.info(f'{callsign:8} - received new packet: {parsed_packet}')
 
                     if 'longitude' in parsed_packet and 'latitude' in parsed_packet:
                         ascent_rate = packet_tracks[callsign].ascent_rate[-1]
                         ground_speed = packet_tracks[callsign].ground_speed[-1]
                         seconds_to_impact = packet_tracks[callsign].seconds_to_impact
-                        message += f'ascent_rate={ascent_rate} ground_speed={ground_speed} seconds_to_impact={seconds_to_impact}'
-
-                    logging.info(message)
+                        logging.info(f'{callsign:8} - Ascent rate (m/s): {ascent_rate}')
+                        logging.info(f'{callsign:8} - Ground speed (m/s): {ground_speed}')
+                        if seconds_to_impact >= 0:
+                            logging.info(f'{callsign:8} - Estimated time until landing (s): {seconds_to_impact}')
 
                 if output_filename is not None:
                     write_aprs_packet_tracks(packet_tracks.values(), output_filename)
-            else:
-                logging.info('no packets received')
 
             time.sleep(INTERVAL_SECONDS)
     else:
