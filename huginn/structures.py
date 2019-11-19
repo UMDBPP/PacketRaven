@@ -221,8 +221,8 @@ class DoublyLinkedList:
 
         return self._node_at_index(index).value
 
-    def __delitem__(self, key):
-        self._remove_node(self._node_at_index(key))
+    def __delitem__(self, index: int):
+        self._remove_node(self._node_at_index(index))
 
     def __iter__(self):
         """
