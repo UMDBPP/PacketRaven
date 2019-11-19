@@ -209,7 +209,7 @@ class TestWriter(unittest.TestCase):
         track.append(packet_2)
 
         with TemporaryDirectory() as temporary_directory:
-            output_filename = os.path.join(temporary_directory.name, 'test_output.kml')
+            output_filename = os.path.join(temporary_directory, 'test_output.kml')
             write_aprs_packet_tracks([track], os.path.join(output_filename))
             assert os.path.exists(output_filename)
 
@@ -227,7 +227,7 @@ class TestWriter(unittest.TestCase):
         track.append(packet_2)
 
         with TemporaryDirectory() as temporary_directory:
-            output_filename = os.path.join(temporary_directory.name, 'test_output.geojson')
+            output_filename = os.path.join(temporary_directory, 'test_output.geojson')
             write_aprs_packet_tracks([track], os.path.join(output_filename))
             assert os.path.exists(output_filename)
 
