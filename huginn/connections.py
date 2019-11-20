@@ -207,7 +207,7 @@ def parse_packet(raw_packet: Union[str, bytes, dict], packet_time: datetime = No
 
 
 if __name__ == '__main__':
-    from huginn import BALLOON_CALLSIGNS
+    BALLOON_CALLSIGNS = ['W3EAX-10', 'W3EAX-11', 'W3EAX-14']
 
     with open('../secret.txt') as secret_file:
         api_key = secret_file.read().strip()

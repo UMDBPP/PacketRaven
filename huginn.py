@@ -8,10 +8,9 @@ from huginn import connections, tracks
 from huginn.connections import Radio
 from huginn.writer import write_aprs_packet_tracks
 
-BALLOON_CALLSIGNS = ['W3EAX-8', 'W3EAX-12', 'W3EAX-13', 'W3EAX-14']
+BALLOON_CALLSIGNS = ['W3EAX-10', 'W3EAX-11', 'W3EAX-14']
 INTERVAL_SECONDS = 5
 DESKTOP_PATH = os.path.join(os.path.expanduser('~'), 'Desktop')
-
 
 class HuginnGUI:
     def __init__(self):
