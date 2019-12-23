@@ -6,11 +6,13 @@ from tkinter import filedialog, messagebox
 
 from huginn import connections, tracks
 from huginn.connections import Radio
+from huginn.logger import HuginnLogger
 from huginn.writer import write_aprs_packet_tracks
 
 BALLOON_CALLSIGNS = ['W3EAX-10', 'W3EAX-11', 'W3EAX-14']
 INTERVAL_SECONDS = 5
 DESKTOP_PATH = os.path.join(os.path.expanduser('~'), 'Desktop')
+
 
 class HuginnGUI:
     def __init__(self):
@@ -63,11 +65,12 @@ class HuginnGUI:
             element.configure(state=tkinter.DISABLED)
 
         try:
-            radio_port = connections.port()
+            self.serial_port = connections.port()
+            self.replace_text(self.elements['port'], self.serial_port)
         except OSError:
-            radio_port = ''
+            self.serial_port = None
 
-        self.replace_text(self.elements['port'], radio_port)
+        self.logger = HuginnLogger('huginn')
 
         self.main_window.mainloop()
 
@@ -126,7 +129,7 @@ class HuginnGUI:
                 connection.close()
 
                 if type(connection) is Radio:
-                    logging.info(f'closing port {connection.serial_port}')
+                    self.logger.info(f'closing port {connection.serial_port}')
 
             for element in self.frames['bottom'].winfo_children():
                 element.configure(state=tkinter.DISABLED)
@@ -135,54 +138,47 @@ class HuginnGUI:
             self.active = False
             self.connections = []
 
-            logging.info('stopping')
+            self.logger.info('stopping')
             logging.shutdown()
-
         else:
             log_filename = self.elements['log_file'].get()
-            log_format = '[%(asctime)s] %(levelname)-8s: %(message)s'
-            logging.basicConfig(filename=log_filename, level=logging.DEBUG, datefmt='%Y-%m-%d %H:%M:%S', format=log_format)
-
-            if len(logging._handlerList) <= 4:
-                console = logging.StreamHandler()
-                console.setLevel(logging.INFO)
-                console.setFormatter(logging.Formatter(log_format))
-                logging.getLogger('').addHandler(console)
-
-            logging.info('starting')
+            self.logger.filename = log_filename
+            self.logger.info('starting')
 
             try:
-                serial_port = self.elements['port'].get()
+                if self.serial_port is None:
+                    self.serial_port = self.elements['port'].get()
 
-                if serial_port == '':
-                    try:
-                        serial_port = connections.port()
-                        self.replace_text(self.elements['port'], serial_port)
-                    except Exception as error:
-                        logging.warning(f'{error.__class__.__name__}: {error}')
-
-                if serial_port != '':
-                    if 'txt' in serial_port:
+                    if self.serial_port == '':
                         try:
-                            text_file = connections.TextFile(serial_port)
+                            self.serial_port = connections.port()
+                            self.replace_text(self.elements['port'], self.serial_port)
+                        except Exception as error:
+                            self.logger.error(f'{error.__class__.__name__}: {error}')
+                            self.serial_port = None
+
+                if self.serial_port is not None:
+                    if 'txt' in self.serial_port:
+                        try:
+                            text_file = connections.TextFile(self.serial_port)
                             self.connections.append(text_file)
                         except Exception as error:
-                            logging.warning(f'{error.__class__.__name__}: {error}')
+                            self.logger.error(f'{error.__class__.__name__}: {error}')
                     else:
                         try:
-                            radio = connections.Radio(serial_port)
-                            serial_port = radio.serial_port
-                            logging.info(f'opened port {serial_port}')
+                            radio = connections.Radio(self.serial_port)
+                            self.serial_port = radio.serial_port
+                            self.logger.info(f'opened port {self.serial_port}')
                             self.connections.append(radio)
                         except Exception as error:
-                            logging.warning(f'{error.__class__.__name__}: {error}')
+                            self.logger.error(f'{error.__class__.__name__}: {error}')
 
                 try:
                     aprs_api = connections.APRS_fi(BALLOON_CALLSIGNS)
-                    logging.info(f'established connection to API')
+                    self.logger.info(f'established connection to API')
                     self.connections.append(aprs_api)
                 except Exception as error:
-                    logging.warning(f'{error.__class__.__name__}: {error}')
+                    self.logger.error(f'{error.__class__.__name__}: {error}')
 
                 if len(self.connections) == 0:
                     raise ConnectionError('Could not establish connection to APRS packet source.')
@@ -200,13 +196,13 @@ class HuginnGUI:
 
     def run(self):
         if self.active:
-            logging.debug(f'receiving packets from {len(self.connections)} source(s)')
+            self.logger.debug(f'receiving packets from {len(self.connections)} source(s)')
 
             parsed_packets = []
             for connection in self.connections:
                 parsed_packets.extend(connection.packets)
 
-            logging.debug(f'received {len(parsed_packets)} packets')
+            self.logger.debug(f'received {len(parsed_packets)} packets')
 
             if len(parsed_packets) > 0:
                 for parsed_packet in parsed_packets:
@@ -216,13 +212,13 @@ class HuginnGUI:
                         if parsed_packet not in self.packet_tracks[callsign]:
                             self.packet_tracks[callsign].append(parsed_packet)
                         else:
-                            logging.debug(f'{callsign:8} - received duplicate packet: {parsed_packet}')
+                            self.logger.debug(f'{callsign:8} - received duplicate packet: {parsed_packet}')
                             continue
                     else:
                         self.packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
-                        logging.debug(f'{callsign:8} - started tracking')
+                        self.logger.debug(f'{callsign:8} - started tracking')
 
-                    logging.info(f'{callsign:8} - received new packet: {parsed_packet}')
+                    self.logger.info(f'{callsign:8} - received new packet: {parsed_packet}')
                     packet_track = self.packet_tracks[callsign]
 
                     if 'longitude' in parsed_packet and 'latitude' in parsed_packet:
@@ -231,10 +227,10 @@ class HuginnGUI:
                         ground_speed = packet_track.ground_speed[-1]
                         seconds_to_impact = packet_track.seconds_to_impact
 
-                        logging.info(f'{callsign:8} - Ascent rate (m/s): {ascent_rate}')
-                        logging.info(f'{callsign:8} - Ground speed (m/s): {ground_speed}')
+                        self.logger.info(f'{callsign:8} - Ascent rate (m/s): {ascent_rate}')
+                        self.logger.info(f'{callsign:8} - Ground speed (m/s): {ground_speed}')
                         if seconds_to_impact >= 0:
-                            logging.info(f'{callsign:8} - Estimated time until landing (s): {seconds_to_impact}')
+                            self.logger.info(f'{callsign:8} - Estimated time until landing (s): {seconds_to_impact}')
 
                         if callsign in BALLOON_CALLSIGNS:
                             self.replace_text(self.elements['longitude'], coordinates[0])
