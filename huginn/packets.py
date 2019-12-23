@@ -76,6 +76,26 @@ class LocationPacket:
 
         return self.longitude == other.longitude and self.latitude == other.latitude and self.altitude == other.altitude
 
+    def __gt__(self, other) -> bool:
+        """
+        Whether this packet is after another packet in time.
+
+        :param other: packet to compare to this one
+        :return: whether this packet occurred after the other
+        """
+
+        return self.time > other.time
+
+    def __lt__(self, other) -> bool:
+        """
+        Whether this packet is after another packet in time.
+
+        :param other: packet to compare to this one
+        :return: whether this packet occurred before the other
+        """
+
+        return self.time < other.time
+
     def __str__(self) -> str:
         return f'{self.time} ({self.longitude:.3f}, {self.latitude:.3f}, {self.altitude:.2f})'
 

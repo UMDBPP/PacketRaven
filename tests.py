@@ -9,6 +9,8 @@ import unittest
 from datetime import datetime
 from tempfile import TemporaryDirectory
 
+import numpy
+
 from huginn.packets import APRSLocationPacket
 from huginn.parsing import parse_raw_aprs, PartialPacketError
 from huginn.structures import DoublyLinkedList
@@ -155,11 +157,9 @@ class TestPacketTracks(unittest.TestCase):
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
             time=datetime(2018, 11, 11, 10, 20, 13))
 
-        track = APRSTrack('W3EAX-8')
+        track = APRSTrack('W3EAX-8', [packet_1])
 
-        track.append(packet_1)
-
-        assert all(track.coordinates[-1] == packet_1.coordinates)
+        assert numpy.all(track.coordinates[-1] == packet_1.coordinates)
 
     def test_rates(self):
         packet_1 = APRSLocationPacket(
@@ -173,6 +173,17 @@ class TestPacketTracks(unittest.TestCase):
 
         assert track.ascent_rate[-1] == (packet_2 - packet_1).ascent_rate
         assert track.ground_speed[-1] == (packet_2 - packet_1).ground_speed
+
+    def test_sorting(self):
+        packet_1 = APRSLocationPacket(
+            "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
+            time=datetime(2018, 11, 11, 10, 20, 13))
+        packet_2 = APRSLocationPacket(
+            "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
+            time=datetime(2018, 11, 11, 10, 21, 24))
+        track = APRSTrack('W3EAX-8', [packet_2, packet_1])
+
+        assert sorted(track) == [packet_1, packet_2]
 
 
 class TestParser(unittest.TestCase):
@@ -203,10 +214,7 @@ class TestWriter(unittest.TestCase):
             "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
             time=datetime(2018, 11, 11, 10, 21, 24))
 
-        track = APRSTrack('W3EAX-8')
-
-        track.append(packet_1)
-        track.append(packet_2)
+        track = APRSTrack('W3EAX-8', [packet_1, packet_2])
 
         with TemporaryDirectory() as temporary_directory:
             output_filename = os.path.join(temporary_directory, 'test_output.kml')
@@ -221,10 +229,7 @@ class TestWriter(unittest.TestCase):
             "W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
             time=datetime(2018, 11, 11, 10, 21, 24))
 
-        track = APRSTrack('W3EAX-8')
-
-        track.append(packet_1)
-        track.append(packet_2)
+        track = APRSTrack('W3EAX-8', [packet_1, packet_2])
 
         with TemporaryDirectory() as temporary_directory:
             output_filename = os.path.join(temporary_directory, 'test_output.geojson')
