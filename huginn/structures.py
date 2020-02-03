@@ -42,13 +42,13 @@ class DoublyLinkedList:
             self.next_node = next_node
 
         def __eq__(self, other) -> bool:
-            return self.value == other.value
+            return self.value is other.value or self.value == other.value
 
         def __str__(self) -> str:
             return str(self.value)
 
         def __repr__(self) -> str:
-            return str(self)
+            return f'{self.previous_node} -> [{self.value}] -> {self.next_node}'
 
     def append(self, value):
         """

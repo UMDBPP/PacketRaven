@@ -88,7 +88,7 @@ class LocationPacket:
 
     def __lt__(self, other) -> bool:
         """
-        Whether this packet is after another packet in time.
+        Whether this packet is before another packet in time.
 
         :param other: packet to compare to this one
         :return: whether this packet occurred before the other
