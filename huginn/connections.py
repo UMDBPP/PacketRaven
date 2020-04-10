@@ -4,9 +4,9 @@ Read serial connection from radio and extract APRS packets.
 __authors__ = []
 """
 
-import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
+import logging
 from typing import Union
 
 import requests

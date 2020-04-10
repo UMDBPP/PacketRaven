@@ -9,7 +9,7 @@ from typing import Union
 
 import numpy
 
-from huginn.packets import LocationPacket, APRSLocationPacket
+from huginn.packets import APRSLocationPacket, LocationPacket
 from huginn.structures import DoublyLinkedList
 
 

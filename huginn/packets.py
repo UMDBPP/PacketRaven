@@ -4,8 +4,8 @@ APRS packet class for packet operations.
 __authors__ = ['Quinn Kupec', 'Zachary Burnett']
 """
 
-import math
 from datetime import datetime
+import math
 from typing import Union
 
 from haversine import haversine

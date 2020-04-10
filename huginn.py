@@ -1,7 +1,7 @@
+from datetime import datetime
 import logging
 import os
 import tkinter
-from datetime import datetime
 from tkinter import filedialog, messagebox
 
 from huginn import connections, tracks

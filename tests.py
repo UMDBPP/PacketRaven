@@ -4,15 +4,15 @@ Unit tests for balloon telemetry package.
 __authors__ = ['Zachary Burnett']
 """
 
-import os
-import unittest
 from datetime import datetime
+import os
 from tempfile import TemporaryDirectory
+import unittest
 
 import numpy
 
 from huginn.packets import APRSLocationPacket
-from huginn.parsing import parse_raw_aprs, PartialPacketError
+from huginn.parsing import PartialPacketError, parse_raw_aprs
 from huginn.structures import DoublyLinkedList
 from huginn.tracks import APRSTrack
 from huginn.writer import write_aprs_packet_tracks

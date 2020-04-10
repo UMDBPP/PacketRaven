@@ -4,10 +4,10 @@ Balloon telemetry parsing, display, and logging.
 __authors__ = ['Quinn Kupec', 'Zachary Burnett']
 """
 
+from datetime import datetime
 import os
 import sys
 import time
-from datetime import datetime
 
 from huginn import connections, tracks
 from huginn.logger import HuginnLogger

@@ -5,7 +5,7 @@ __authors__ = ['Zachary Burnett', 'Nick Rossomando']
 """
 from typing import Union
 
-from aprslib import parse, ParseError
+from aprslib import ParseError, parse
 
 
 class PartialPacketError(Exception):
