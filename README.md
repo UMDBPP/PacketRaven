@@ -1,6 +1,6 @@
 # Huginn 
 
-[![Build Status](https://travis-ci.org/UMDBPP/huginn.svg?branch=master)](https://travis-ci.org/UMDBPP/huginn)
+![Python package](https://github.com/UMDBPP/huginn/workflows/Python%20package/badge.svg)
 
 ### Balloon payload telemetry over APRS
 
