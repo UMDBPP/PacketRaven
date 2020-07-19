@@ -241,9 +241,9 @@ class TestConnections(unittest.TestCase):
                                                     time=datetime(2018, 11, 11, 10, 21, 24))
 
         credentials = read_configuration(CREDENTIALS_FILENAME)
-        credentials['table'] = 'test_table'
+        credentials['DATABASE']['table'] = 'test_table'
 
-        packet_table = APRSPacketDatabaseTable(**credentials['DATABASE'])
+        packet_table = APRSPacketDatabaseTable(**credentials['DATABASE'], fields={field: str for field in packet_1})
 
         packet_table.insert([packet_1, packet_2])
 

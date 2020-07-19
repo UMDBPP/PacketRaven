@@ -195,7 +195,8 @@ class PacketDatabaseTable(PacketConnection, DatabaseTable):
 
     def __init__(self, hostname: str, database: str, table: str, fields: {str: type} = None, crs: CRS = None, username: str = None, password: str = None, users: [str] = None):
         if fields is None:
-            fields = self.__default_fields
+            fields = {}
+        fields = {**self.__default_fields, **fields}
         super().__init__(hostname, database, table, fields, 'time', crs, username, password, users)
 
     @property
@@ -238,12 +239,16 @@ class APRSPacketDatabaseTable(PacketDatabaseTable):
 
     def __init__(self, hostname: str, database: str, table: str, fields: {str, type} = None, crs: CRS = None, username: str = None, password: str = None, users: [str] = None):
         if fields is None:
-            fields = self.__default_fields
+            fields = {}
+        else:
+            fields = {f'packet_{field}': field_type for field, field_type in fields.items()}
+        fields = {**self.__default_fields, **fields}
         super().__init__(hostname, database, table, fields, crs, username, password, users)
 
     @property
     def packets(self) -> [APRSLocationPacket]:
-        return [APRSLocationPacket(**{key: value for key, value in record.items() if key != 'point'}) for record in self.records]
+        return [APRSLocationPacket(**{field if field in ['time', 'x', 'y', 'z'] else field.replace('packet_', ''): value
+                                      for field, value in record.items() if field not in ['point']}) for record in self.records]
 
     def __getitem__(self, time: datetime) -> APRSLocationPacket:
         packet = super().__getitem__(time)
@@ -263,11 +268,11 @@ class APRSPacketDatabaseTable(PacketDatabaseTable):
     def insert(self, packets: [{str: Any}]):
         records = [{
             'time': packet.time,
-            'callsign': packet.callsign,
             'x': packet.x,
             'y': packet.y,
             'z': packet.z,
-            'point': Point(*packet.coordinates)
+            'point': Point(*packet.coordinates),
+            **{f'packet_{field}': value for field, value in packet.parsed_packet.items()}
         } for packet in packets]
         super(self.__class__, self).insert(records)
 
