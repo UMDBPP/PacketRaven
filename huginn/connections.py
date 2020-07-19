@@ -7,18 +7,22 @@ __authors__ = []
 from abc import ABC, abstractmethod
 from datetime import datetime
 import logging
-from typing import Union
+from typing import Any, Union
 
+from pyproj import CRS
 import requests
 from serial import Serial
 from serial.tools import list_ports
+from shapely.geometry import Point
 
-from huginn.packets import APRSLocationPacket
+from huginn import CREDENTIALS_FILENAME, get_logger
+from huginn.database import DatabaseTable
+from huginn.packets import APRSLocationPacket, LocationPacket
 
-APRS_FI_API_FILENAME = 'secret.txt'
+LOGGER = get_logger('huginn.connection')
 
 
-class APRSConnection(ABC):
+class PacketConnection(ABC):
     address: str
 
     @property
@@ -45,7 +49,7 @@ class APRSConnection(ABC):
         raise NotImplementedError
 
 
-class Radio(APRSConnection):
+class PacketRadio(PacketConnection):
     def __init__(self, serial_port: str = None):
         """
         Connect to radio over given serial port.
@@ -55,32 +59,32 @@ class Radio(APRSConnection):
 
         if serial_port is None:
             try:
-                self.serial_port = port()
+                self.serial_port = next_available_port()
             except ConnectionError:
                 raise ConnectionError('could not find radio over serial connection')
         else:
             self.serial_port = serial_port.strip('"')
 
-        self.serial_connection = Serial(self.serial_port, baudrate=9600, timeout=1)
+        self.connection = Serial(self.serial_port, baudrate=9600, timeout=1)
 
     @property
     def packets(self) -> [APRSLocationPacket]:
-        return [parse_packet(line) for line in self.serial_connection.readlines()]
+        return [parse_packet(line) for line in self.connection.readlines()]
 
     def __enter__(self):
-        return self.serial_connection
+        return self.connection
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
     def close(self):
-        self.serial_connection.close()
+        self.connection.close()
 
     def __repr__(self):
         return f'{self.__class__.__name__}("{self.serial_port}")'
 
 
-class TextFile(APRSConnection):
+class PacketTextFile(PacketConnection):
     def __init__(self, filename: str = None):
         """
         Read APRS packets from a given text file.
@@ -90,28 +94,28 @@ class TextFile(APRSConnection):
 
         self.filename = filename.strip('"')
 
-        # open text file as dummy serial connection
-        self.file = open(self.filename)
+        # open text file
+        self.connection = open(self.filename)
 
     @property
     def packets(self) -> [APRSLocationPacket]:
         return [parse_packet(line[25:].strip('\n'), datetime.strptime(line[:19], '%Y-%m-%d %H:%M:%S'))
-                for line in self.file.readlines() if len(line) > 0]
+                for line in self.connection.readlines() if len(line) > 0]
 
     def __enter__(self):
-        return self.file
+        return self.connection
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
     def close(self):
-        self.file.close()
+        self.connection.close()
 
     def __repr__(self):
         return f'{self.__class__.__name__}("{self.filename}")'
 
 
-class APRS_fi(APRSConnection):
+class APRS_fi(PacketConnection):
     api_url = 'https://api.aprs.fi/api/get'
 
     def __init__(self, callsigns: [str], api_key: str = None):
@@ -123,7 +127,7 @@ class APRS_fi(APRSConnection):
         """
 
         if api_key is None:
-            with open(APRS_FI_API_FILENAME) as secret_file:
+            with open(CREDENTIALS_FILENAME) as secret_file:
                 api_key = secret_file.read().strip()
 
         self.callsigns = callsigns
@@ -134,9 +138,16 @@ class APRS_fi(APRSConnection):
 
     @property
     def packets(self) -> [APRSLocationPacket]:
-        query = f'{self.api_url}?name={",".join(self.callsigns)}&what=loc&apikey={self.api_key}&format=json'
+        query = {
+            'name': ','.join(self.callsigns),
+            'what': 'loc',
+            'apikey': self.api_key,
+            'format': 'json'
+        }
 
-        response = requests.get(query).json()
+        query = '&'.join(f'{key}={value}' for key, value in query.items())
+
+        response = requests.get(f'{self.api_url}?{query}').json()
         if response['result'] != 'fail':
             packets = [parse_packet(packet_candidate) for packet_candidate in response['entries']]
         else:
@@ -173,7 +184,95 @@ class APRS_fi(APRSConnection):
         return f'{self.__class__.__name__}([{callsigns_string}], r"{self.api_key}")'
 
 
-def ports() -> str:
+class PacketDatabaseTable(PacketConnection, DatabaseTable):
+    __default_fields = {
+        'time': datetime,
+        'x': float,
+        'y': float,
+        'z': float,
+        'point': Point
+    }
+
+    def __init__(self, hostname: str, database: str, table: str, fields: {str: type} = None, crs: CRS = None, username: str = None, password: str = None, users: [str] = None):
+        if fields is None:
+            fields = self.__default_fields
+        super().__init__(hostname, database, table, fields, 'time', crs, username, password, users)
+
+    @property
+    def packets(self) -> [LocationPacket]:
+        return [LocationPacket(**{key: value for key, value in record.items() if key != 'point'}) for record in self.records]
+
+    def __getitem__(self, time: datetime) -> LocationPacket:
+        record = super().__getitem__(time)
+        return LocationPacket(record['time'], record['x'], record['y'], record['z'], record['crs'])
+
+    def __setitem__(self, time: datetime, packet: LocationPacket):
+        record = {
+            'time': packet.time,
+            'x': packet.x,
+            'y': packet.y,
+            'z': packet.z,
+            'point': Point(*packet.coordinates)
+        }
+        super().__setitem__(time, record)
+
+    def __enter__(self):
+        return self.connection
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def close(self):
+        self.connection.close()
+
+
+class APRSPacketDatabaseTable(PacketDatabaseTable):
+    __default_fields = {
+        'time': datetime,
+        'callsign': str,
+        'x': float,
+        'y': float,
+        'z': float,
+        'point': Point
+    }
+
+    def __init__(self, hostname: str, database: str, table: str, fields: {str, type} = None, crs: CRS = None, username: str = None, password: str = None, users: [str] = None):
+        if fields is None:
+            fields = self.__default_fields
+        super().__init__(hostname, database, table, fields, crs, username, password, users)
+
+    @property
+    def packets(self) -> [APRSLocationPacket]:
+        return [APRSLocationPacket(**{key: value for key, value in record.items() if key != 'point'}) for record in self.records]
+
+    def __getitem__(self, time: datetime) -> APRSLocationPacket:
+        packet = super().__getitem__(time)
+        return APRSLocationPacket(packet.time, *packet.coordinates, packet.crs)
+
+    def __setitem__(self, time: datetime, packet: APRSLocationPacket):
+        record = {
+            'time': packet.time,
+            'callsign': packet.callsign,
+            'x': packet.x,
+            'y': packet.y,
+            'z': packet.z,
+            'point': Point(*packet.coordinates)
+        }
+        super(super()).__setitem__(time, record)
+
+    def insert(self, packets: [{str: Any}]):
+        records = [{
+            'time': packet.time,
+            'callsign': packet.callsign,
+            'x': packet.x,
+            'y': packet.y,
+            'z': packet.z,
+            'point': Point(*packet.coordinates)
+        } for packet in packets]
+        super(self.__class__, self).insert(records)
+
+
+def available_ports() -> str:
     """
     Iterate over available serial ports.
 
@@ -186,7 +285,7 @@ def ports() -> str:
         return None
 
 
-def port() -> str:
+def next_available_port() -> str:
     """
     Get next port in ports list.
 
@@ -194,27 +293,13 @@ def port() -> str:
     """
 
     try:
-        return next(ports())
+        return next(available_ports())
     except StopIteration:
         raise ConnectionError('No open serial ports.')
 
 
 def parse_packet(raw_packet: Union[str, bytes, dict], packet_time: datetime = None) -> APRSLocationPacket:
     try:
-        return APRSLocationPacket(raw_packet, packet_time)
+        return APRSLocationPacket.from_raw_aprs(raw_packet, packet_time)
     except Exception as error:
-        logging.error(f'{error.__class__.__name__}: {error} for raw packet "{raw_packet}"')
-
-
-if __name__ == '__main__':
-    BALLOON_CALLSIGNS = ['W3EAX-10', 'W3EAX-11', 'W3EAX-14']
-
-    with open('../secret.txt') as secret_file:
-        api_key = secret_file.read().strip()
-
-    aprs_api = APRS_fi(BALLOON_CALLSIGNS, api_key)
-
-    with aprs_api:
-        packet_candidates = aprs_api.packets
-
-    print(packet_candidates)
+        logging.exception(f'{error.__class__.__name__} - {error} for raw packet "{raw_packet}"')

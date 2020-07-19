@@ -11,6 +11,9 @@ pyserial = "*"
 geojson = "*"
 fastkml = "*"
 requests = "*"
+pyproj = "*"
+psycopg2 = "*"
+shapely = "*"
 
 [requires]
-python_version = "3.7"
+python_version = "3.8"
