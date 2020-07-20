@@ -4,7 +4,6 @@ Ground track class for packet operations.
 __authors__ = ['Quinn Kupec', 'Zachary Burnett']
 """
 
-import logging
 from typing import Union
 
 import numpy
@@ -32,7 +31,7 @@ class LocationPacketTrack:
     @property
     def time(self) -> numpy.array:
         """ 1D array of packet date times """
-        return numpy.array(packet.time for packet in self.packets)
+        return numpy.array([packet.time for packet in self.packets], dtype=numpy.datetime64)
 
     @property
     def coordinates(self) -> numpy.array:
@@ -58,7 +57,7 @@ class LocationPacketTrack:
         if current_ascent_rate < 0:
             # TODO implement landing location as the intersection of the predicted descent track with a local DEM
             # TODO implement a time to impact calc based off of standard atmo
-            return self.packets[-1].altitude / current_ascent_rate
+            return self.packets[-1].z / current_ascent_rate
         else:
             return -1
 
@@ -70,7 +69,7 @@ class LocationPacketTrack:
         """
 
         if len(self.packets) > 0:
-            return self.packets[-1].distance_to_point(longitude, latitude)
+            return self.packets[-1].horizontal_distance_to_point(longitude, latitude)
         else:
             return 0.0
 
@@ -116,7 +115,7 @@ class APRSTrack(LocationPacketTrack):
         if packet_callsign == self.callsign:
             super().append(packet)
         else:
-            logging.warning(f'Packet callsign {packet_callsign} does not match ground track callsign {self.callsign}.')
+            raise ValueError(f'Packet callsign {packet_callsign} does not match ground track callsign {self.callsign}.')
 
     def __eq__(self, other) -> bool:
         return self.callsign == other.callsign and super().__eq__(other)

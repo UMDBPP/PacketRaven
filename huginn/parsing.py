@@ -3,13 +3,10 @@ Parse a APRS packets from raw strings.
 
 __authors__ = ['Zachary Burnett', 'Nick Rossomando']
 """
+
 from typing import Union
 
-from aprslib import ParseError, parse
-
-
-class PartialPacketError(Exception):
-    pass
+import aprslib
 
 
 def parse_raw_aprs(raw_aprs: Union[str, dict]) -> dict:
@@ -24,8 +21,8 @@ def parse_raw_aprs(raw_aprs: Union[str, dict]) -> dict:
 
     if type(raw_aprs) is not dict:
         try:
-            parsed_packet = parse(raw_aprs)
-        except ParseError as error:
+            parsed_packet = aprslib.parse(raw_aprs)
+        except aprslib.ParseError as error:
             raise PartialPacketError(str(error))
     else:
         parsed_packet = {
@@ -74,6 +71,10 @@ def parse_raw_aprs(raw_aprs: Union[str, dict]) -> dict:
     #     raise PartialPacketError('packet terminated unexpectedly')
 
     return parsed_packet
+
+
+class PartialPacketError(Exception):
+    pass
 
 
 def decompress_aprs_lon(compressed_lon: str) -> float:

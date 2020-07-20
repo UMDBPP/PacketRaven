@@ -9,8 +9,7 @@ import os
 import sys
 import time
 
-from huginn import connections, tracks
-from huginn.logger import HuginnLogger
+from huginn import connections, get_logger, tracks
 from huginn.writer import write_aprs_packet_tracks
 
 BALLOON_CALLSIGNS = ['W3EAX-10', 'W3EAX-11', 'W3EAX-14']
@@ -33,29 +32,30 @@ if __name__ == '__main__':
             if not os.path.exists(output_directory):
                 os.makedirs(output_directory)
 
-        logger = HuginnLogger('huginn', log_filename)
+        logger = get_logger('huginn', log_filename)
 
         aprs_connections = []
         if serial_port is not None and 'txt' in serial_port:
             try:
-                text_file = connections.TextFile(serial_port)
+                text_file = connections.PacketTextFile(serial_port)
                 aprs_connections.append(text_file)
             except Exception as error:
-                logger.error(f'{error.__class__.__name__}: {error}')
+                logger.exception(f'{error.__class__.__name__} - {error}')
         else:
             try:
-                radio = connections.Radio(serial_port)
+                radio = connections.PacketRadio(serial_port)
                 serial_port = radio.serial_port
                 logger.info(f'opened port {serial_port}')
                 aprs_connections.append(radio)
             except Exception as error:
-                logger.error(f'{error.__class__.__name__}: {error}')
+                logger.exception(f'{error.__class__.__name__} - {error}')
+
         try:
             aprs_api = connections.APRS_fi(BALLOON_CALLSIGNS)
             logger.info(f'established connection to API')
             aprs_connections.append(aprs_api)
         except Exception as error:
-            logger.error(f'{error.__class__.__name__}: {error}')
+            logger.exception(f'{error.__class__.__name__} - {error}')
 
         packet_tracks = {}
         while True:
