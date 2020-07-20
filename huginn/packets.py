@@ -184,7 +184,7 @@ class APRSLocationPacket(LocationPacket):
     def __iter__(self):
         yield from self.parsed_packet
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: 'APRSLocationPacket') -> bool:
         """
         whether this packet equals another packet, including callsign and comment
 
