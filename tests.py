@@ -240,12 +240,14 @@ class TestConnections(unittest.TestCase):
         packet_2 = APRSLocationPacket.from_raw_aprs("W3EAX-8>APRS,N3TJJ-12,WIDE1*,WIDE2-1,qAR,N3FYI-2:!/:GiD:jcwO   /A=028365|!R|  /W3EAX,267,0,18'C,http://www.umd.edu",
                                                     time=datetime(2018, 11, 11, 10, 21, 24))
 
+        input_packets = [packet_1, packet_2]
+
         credentials = read_configuration(CREDENTIALS_FILENAME)
         credentials['DATABASE']['table'] = 'test_table'
 
         packet_table = APRSPacketDatabaseTable(**credentials['DATABASE'], fields={field: str for field in packet_1})
 
-        packet_table.insert([packet_1, packet_2])
+        packet_table.insert(input_packets)
 
         packets = packet_table.packets
 
@@ -254,7 +256,7 @@ class TestConnections(unittest.TestCase):
                 assert database_has_table(cursor, packet_table.table)
                 cursor.execute(f'DROP TABLE {packet_table.table};')
 
-        assert len(packets) > 0 and all(type(packet) is APRSLocationPacket for packet in packets)
+        assert len(packets) > 0 and all(packets[packet_index] == input_packets[packet_index] for packet_index in range(len(packets)))
 
 
 if __name__ == '__main__':

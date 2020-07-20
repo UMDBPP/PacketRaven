@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 import math
 from typing import Union
 
+import numpy
 from pyproj import CRS, Geod, Transformer
 
 from huginn.parsing import parse_raw_aprs
@@ -35,12 +36,12 @@ class LocationPacket:
 
         return self.x, self.y, self.z
 
-    def horizontal_distance_to_point(self, x, y) -> float:
+    def horizontal_distance_to_point(self, x: float, y: float) -> float:
         datum_json = self.crs.datum.to_json_dict()
         ellipsoid = Geod(a=datum_json['ellipsoid']['semi_major_axis'], rf=datum_json['ellipsoid']['inverse_flattening'])
         return ellipsoid.inv(self.x, self.y, x, y)[2]
 
-    def __sub__(self, other) -> 'LocationPacketDelta':
+    def __sub__(self, other: 'LocationPacket') -> 'LocationPacketDelta':
         """
         Return subtraction of packets in the form of Delta object.
 
@@ -60,7 +61,7 @@ class LocationPacket:
 
         return LocationPacketDelta(seconds, horizontal_distance, vertical_distance)
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: 'LocationPacket') -> bool:
         """
         Whether this packet equals another packet, ignoring datetime (because of possible staggered duplicate packets).
 
@@ -68,9 +69,9 @@ class LocationPacket:
         :return: equality
         """
 
-        return self.x == other.x and self.y == other.y and self.z == other.z
+        return numpy.allclose(self.coordinates, other.coordinates)
 
-    def __gt__(self, other) -> bool:
+    def __gt__(self, other: 'LocationPacket') -> bool:
         """
         Whether this packet is after another packet in time.
 
@@ -80,7 +81,7 @@ class LocationPacket:
 
         return self.time > other.time
 
-    def __lt__(self, other) -> bool:
+    def __lt__(self, other: 'LocationPacket') -> bool:
         """
         Whether this packet is before another packet in time.
 
@@ -191,7 +192,7 @@ class APRSLocationPacket(LocationPacket):
         :return: equality
         """
 
-        return super().__eq__(other) and self['callsign'] == other['callsign'] and self['comment'] == other['comment']
+        return super().__eq__(other) and self.callsign == other.callsign and self['comment'] == other['comment']
 
     def __str__(self) -> str:
         return f'{self["callsign"]} {super().__str__()} "{self["comment"]}"'
