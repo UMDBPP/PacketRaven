@@ -3,7 +3,6 @@
 <a href="https://github.com/UMDBPP/huginn/actions"><img src="https://github.com/UMDBPP/huginn/workflows/tests/badge.svg" /></a>
 
 ### Balloon payload telemetry over APRS
-
 Huginn is a new version of Link-TLM written in Python
 
 Features:
@@ -12,28 +11,26 @@ Features:
 - plotting
 
 #### Installation
-
-Make sure you have [Python](https://www.python.org/downloads/) installed with pipenv (`pip install pipenv`), as well as [GitHub Desktop](https://desktop.github.com/) or [command-line Git](https://git-scm.com/download).
-
-1. `git clone https://github.com/UMDBPP/huginn.git`
-2. `cd huginn`
-3. `pipenv install --dev`
-
-##### Starting the GUI
-
+```bash
+pip install pipenv
+git clone https://github.com/UMDBPP/huginn.git
+cd huginn
+pipenv install --dev
 ```
+
+#### Starting GUI
+```bash
 pipenv run huginn.py
 ```
- 
-##### Building executable
 
-To build a binary executable, you can use PyInstaller (`pipenv install pyinstaller`).
-
-1. `cd huginn`
-2. `pyinstaller --paths=C:\Windows\System32\downlevel --onefile huginn_console.py`
+#### Building Windows executable
+```cmd
+pipenv install pyinstaller
+cd huginn
+pyinstaller --paths=C:\Windows\System32\downlevel --onefile huginn_console.py
+```
 
 #### In-progress features
-
 - altitude plot with `matplotlib`
 - flight track plot with `cartopy`
 - live track prediction
