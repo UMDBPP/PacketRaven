@@ -18,4 +18,3 @@ shapely = "*"
 [dev-packages]
 nose = "*"
 coverage = "*"
-flake8 = "*"
