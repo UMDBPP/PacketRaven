@@ -1,6 +1,6 @@
 # Huginn 
 
-[![Actions Status](https://xxx.execute-api.us-west-2.amazonaws.com/production/badge/umdbpp/huginn)](https://xxx.execute-api.us-west-2.amazonaws.com/production/results/umdbpp/huginn)
+<a href="https://github.com/UMDBPP/huginn/actions"><img src="https://github.com/UMDBPP/huginn/workflows/Python%20package/badge.svg" /></a>
 
 ### Balloon payload telemetry over APRS
 
