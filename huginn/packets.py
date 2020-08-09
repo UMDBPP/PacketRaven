@@ -5,7 +5,6 @@ __authors__ = ['Quinn Kupec', 'Zachary Burnett']
 """
 
 from datetime import datetime, timedelta
-from functools import lru_cache
 import math
 from typing import Union
 
@@ -92,17 +91,14 @@ class LocationPacketDelta:
         self.horizontal_distance = horizontal_distance
 
     @property
-    @lru_cache
     def distance(self):
         return numpy.hypot(self.horizontal_distance, self.vertical_distance)
 
     @property
-    @lru_cache
     def ascent_rate(self):
         return self.vertical_distance / self.seconds if self.seconds > 0 else math.inf
 
     @property
-    @lru_cache
     def ground_speed(self):
         return self.horizontal_distance / self.seconds if self.seconds > 0 else math.inf
 
