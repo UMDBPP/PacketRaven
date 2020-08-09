@@ -36,17 +36,17 @@ class LocationPacketTrack:
     @property
     def coordinates(self) -> numpy.array:
         """ N x 3 array of geographic coordinates and meter altitude """
-        return numpy.stack((packet.coordinates for packet in self.packets), axis=0)
+        return numpy.stack([packet.coordinates for packet in self.packets], axis=0)
 
     @property
     def ascent_rate(self) -> numpy.array:
         """ 1D array of ascent rate (m/s) """
-        return numpy.insert(numpy.array([packet_delta.ascent_rate for packet_delta in numpy.diff(self.packets)]), 0, 0)
+        return numpy.concatenate([[0], numpy.array([packet_delta.ascent_rate for packet_delta in numpy.diff(self.packets)])])
 
     @property
     def ground_speed(self) -> numpy.array:
         """ 1D array of ground speed (m/s) """
-        return numpy.insert(numpy.array([packet_delta.ground_speed for packet_delta in numpy.diff(self.packets)]), 0, 0)
+        return numpy.concatenate([[0], numpy.array([packet_delta.ground_speed for packet_delta in numpy.diff(self.packets)])])
 
     @property
     def seconds_to_impact(self) -> float:
@@ -57,7 +57,7 @@ class LocationPacketTrack:
         if current_ascent_rate < 0:
             # TODO implement landing location as the intersection of the predicted descent track with a local DEM
             # TODO implement a time to impact calc based off of standard atmo
-            return self.packets[-1].z / current_ascent_rate
+            return self.packets[-1].coordinates[2] / current_ascent_rate
         else:
             return -1
 

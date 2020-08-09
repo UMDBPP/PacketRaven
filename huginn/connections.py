@@ -210,9 +210,9 @@ class PacketDatabaseTable(PacketConnection, DatabaseTable):
     def __setitem__(self, time: datetime, packet: LocationPacket):
         record = {
             'time': packet.time,
-            'x': packet.x,
-            'y': packet.y,
-            'z': packet.z,
+            'x': packet.coordinates[0],
+            'y': packet.coordinates[1],
+            'z': packet.coordinates[2],
             'point': Point(*packet.coordinates)
         }
         super().__setitem__(time, record)
@@ -258,9 +258,9 @@ class APRSPacketDatabaseTable(PacketDatabaseTable):
         record = {
             'time': packet.time,
             'callsign': packet.callsign,
-            'x': packet.x,
-            'y': packet.y,
-            'z': packet.z,
+            'x': packet.coordinates[0],
+            'y': packet.coordinates[1],
+            'z': packet.coordinates[2],
             'point': Point(*packet.coordinates)
         }
         super(super()).__setitem__(time, record)
