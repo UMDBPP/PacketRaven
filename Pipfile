@@ -19,5 +19,6 @@ psycopg2 = "*"
 shapely = "*"
 
 [dev-packages]
-nose = '*'
+nose = "*"
 coverage = "*"
+flake8 = "*"
