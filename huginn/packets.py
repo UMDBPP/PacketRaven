@@ -5,6 +5,7 @@ __authors__ = ['Quinn Kupec', 'Zachary Burnett']
 """
 
 from datetime import datetime, timedelta
+from functools import lru_cache
 import math
 from typing import Union
 
@@ -17,29 +18,22 @@ DEFAULT_CRS = CRS.from_epsg(4326)
 
 
 class LocationPacket:
-    """ 4D location packet encoding (x, y, z, t) """
+    """ location packet encoding (x, y, z) and time """
 
     def __init__(self, time: datetime, x: float, y: float, z: float = None, crs: CRS = None):
         self.time = time
-        self.x = x
-        self.y = y
-        self.z = z if z is not None else 0
+        self.coordinates = numpy.array((x, y, z if z is not None else 0))
         self.crs = crs if crs is not None else DEFAULT_CRS
 
-    @property
-    def coordinates(self) -> (float, float, float):
-        """
-        geographic coordinates of this packet
-
-        :return: tuple of coordinates (lon, lat, alt)
-        """
-
-        return self.x, self.y, self.z
-
-    def horizontal_distance_to_point(self, x: float, y: float) -> float:
-        datum_json = self.crs.datum.to_json_dict()
-        ellipsoid = Geod(a=datum_json['ellipsoid']['semi_major_axis'], rf=datum_json['ellipsoid']['inverse_flattening'])
-        return ellipsoid.inv(self.x, self.y, x, y)[2]
+    def horizontal_distance_to_point(self, point: (float, float)) -> float:
+        if not isinstance(point, numpy.ndarray):
+            point = numpy.array(point)
+        if self.crs.is_projected:
+            return numpy.hypot(*(self.coordinates[:2] - point))
+        else:
+            datum_json = self.crs.datum.to_json_dict()
+            ellipsoid = Geod(a=datum_json['ellipsoid']['semi_major_axis'], rf=datum_json['ellipsoid']['inverse_flattening'])
+            return ellipsoid.inv(*self.coordinates[:2], *point)[2]
 
     def __sub__(self, other: 'LocationPacket') -> 'LocationPacketDelta':
         """
@@ -49,15 +43,11 @@ class LocationPacket:
         :return: Delta object
         """
 
-        if other.crs != self.crs:
-            transformer = Transformer.from_crs(other.crs, self.crs)
-            other_x, other_y, other_z = transformer.transform(other.x, other.y, other.z)
-        else:
-            other_x, other_y, other_z = other.coordinates
+        other_coordinates = Transformer.from_crs(other.crs, self.crs).transform(*other.coordinates) if other.crs != self.crs else other.coordinates
 
         seconds = (self.time - other.time) / timedelta(seconds=1)
-        horizontal_distance = self.horizontal_distance_to_point(other_x, other_y)
-        vertical_distance = self.z - other_z
+        horizontal_distance = self.horizontal_distance_to_point(other_coordinates[:2])
+        vertical_distance = self.coordinates[2] - other_coordinates[2]
 
         return LocationPacketDelta(seconds, horizontal_distance, vertical_distance)
 
@@ -92,7 +82,7 @@ class LocationPacket:
         return self.time < other.time
 
     def __str__(self) -> str:
-        return f'{self.time} ({self.x:.3f}, {self.y:.3f}, {self.z:.2f})'
+        return f'{self.time} {self.coordinates}'
 
 
 class LocationPacketDelta:
@@ -101,12 +91,20 @@ class LocationPacketDelta:
         self.vertical_distance = vertical_distance
         self.horizontal_distance = horizontal_distance
 
-        if seconds > 0:
-            self.ascent_rate = self.vertical_distance / self.seconds
-            self.ground_speed = self.horizontal_distance / self.seconds
-        else:
-            self.ascent_rate = math.inf
-            self.ground_speed = math.inf
+    @property
+    @lru_cache
+    def distance(self):
+        return numpy.hypot(self.horizontal_distance, self.vertical_distance)
+
+    @property
+    @lru_cache
+    def ascent_rate(self):
+        return self.vertical_distance / self.seconds if self.seconds > 0 else math.inf
+
+    @property
+    @lru_cache
+    def ground_speed(self):
+        return self.horizontal_distance / self.seconds if self.seconds > 0 else math.inf
 
     def __str__(self) -> str:
         return f'{self.seconds} s, {self.vertical_distance:6.2f} m vertical, {self.horizontal_distance:6.2f} m horizontal'

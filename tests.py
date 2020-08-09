@@ -94,11 +94,11 @@ class TestDoublyLinkedList(unittest.TestCase):
 
 
 class TestPackets(unittest.TestCase):
-    def test_aprs_init(self):
+    def test_from_raw_aprs(self):
         packet_1 = APRSLocationPacket.from_raw_aprs("W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,nearspace.umd.edu",
                                                     time=datetime(2019, 2, 3, 14, 36, 16))
 
-        assert packet_1.coordinates == (-77.48778502911327, 39.64903419561805, 16341.5472)
+        assert numpy.all(packet_1.coordinates == (-77.48778502911327, 39.64903419561805, 16341.5472))
         assert packet_1['callsign'] is packet_1['from']
         assert packet_1['callsign'] == 'W3EAX-13'
         assert packet_1['comment'] == "|!g|  /W3EAX,313,0,21'C,nearspace.umd.edu"

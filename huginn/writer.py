@@ -15,7 +15,7 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: str):
 
         features = []
         for packet_track in packet_tracks:
-            features.extend(geojson.Feature(geometry=geojson.Point(packet.coordinates),
+            features.extend(geojson.Feature(geometry=geojson.Point(packet.coordinates.tolist()),
                                             properties={
                                                 'time': f'{packet.time:%Y%m%d%H%M%S}',
                                                 'callsign': packet.callsign,
@@ -25,7 +25,7 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: str):
                                             })
                             for packet_index, packet in enumerate(packet_track))
 
-            features.append(geojson.Feature(geometry=geojson.LineString([packet.coordinates for packet in packet_track.packets]),
+            features.append(geojson.Feature(geometry=geojson.LineString([packet.coordinates.tolist() for packet in packet_track.packets]),
                                             properties={
                                                 'time': f'{packet_track.packets[-1].time:%Y%m%d%H%M%S}',
                                                 'callsign': packet_track.callsign,
@@ -50,8 +50,8 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: str):
             for packet_index, packet in enumerate(packet_track):
                 placemark = kml.Placemark(KML_STANDARD, f'1 {packet_track_index} {packet_index}',
                                           f'{packet_track.callsign} {packet.time:%Y%m%d%H%M%S}',
-                                          f'altitude={packet.z} ascent_rate={packet_track.ascent_rate[packet_index]} ground_speed={packet_track.ground_speed[packet_index]}')
-                placemark.geometry = Point(packet.coordinates)
+                                          f'altitude={packet.coordinates[2]} ascent_rate={packet_track.ascent_rate[packet_index]} ground_speed={packet_track.ground_speed[packet_index]}')
+                placemark.geometry = Point(packet.coordinates.tolist())
                 document.append(placemark)
 
             placemark = kml.Placemark(KML_STANDARD, f'1 {packet_track_index}', packet_track.callsign,

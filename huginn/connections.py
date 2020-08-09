@@ -268,9 +268,9 @@ class APRSPacketDatabaseTable(PacketDatabaseTable):
     def insert(self, packets: [{str: Any}]):
         records = [{
             'time': packet.time,
-            'x': packet.x,
-            'y': packet.y,
-            'z': packet.z,
+            'x': packet.coordinates[0],
+            'y': packet.coordinates[1],
+            'z': packet.coordinates[2],
             'point': Point(*packet.coordinates),
             **{f'packet_{field}': value for field, value in packet.parsed_packet.items()}
         } for packet in packets]
