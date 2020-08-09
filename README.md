@@ -4,7 +4,7 @@
 
 ### Balloon payload telemetry over APRS
 
-Huginn is a new version of Link-TLM written in Python 3.7
+Huginn is a new version of Link-TLM written in Python
 
 Features:
 - APRS packet parsing over serial
@@ -13,15 +13,19 @@ Features:
 
 #### Installation
 
-##### Running with Python
-
 Make sure you have [Python](https://www.python.org/downloads/) installed with pipenv (`pip install pipenv`), as well as [GitHub Desktop](https://desktop.github.com/) or [command-line Git](https://git-scm.com/download).
 
 1. `git clone https://github.com/UMDBPP/huginn.git`
 2. `cd huginn`
-3. `pipenv install`
+3. `pipenv install --dev`
+
+##### Starting the GUI
+
+```
+pipenv run huginn.py
+```
  
-##### Building from source
+##### Building executable
 
 To build a binary executable, you can use PyInstaller (`pipenv install pyinstaller`).
 
@@ -35,7 +39,3 @@ To build a binary executable, you can use PyInstaller (`pipenv install pyinstall
 - live track prediction
 - Iridium telemetry and commands
 - live chase navigation
-
-#### Testing
-
-`python tests.py`
