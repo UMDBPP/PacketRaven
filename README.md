@@ -5,12 +5,12 @@
 ### Balloon payload telemetry over APRS
 Huginn is a new version of Link-TLM written in Python
 
-Features:
+#### Features:
 - APRS packet parsing over serial
 - log to file
 - plotting
 
-#### Installation
+#### Installation:
 ```bash
 pip install pipenv
 git clone https://github.com/UMDBPP/huginn.git
@@ -18,19 +18,19 @@ cd huginn
 pipenv install --dev
 ```
 
-#### Starting GUI
+#### Starting GUI:
 ```bash
 pipenv run huginn.py
 ```
 
-#### Building Windows executable
+#### Building Windows executable:
 ```cmd
 pipenv install pyinstaller
 cd huginn
 pyinstaller --paths=C:\Windows\System32\downlevel --onefile huginn_console.py
 ```
 
-#### In-progress features
+#### In-progress Features
 - altitude plot with `matplotlib`
 - flight track plot with `cartopy`
 - live track prediction
