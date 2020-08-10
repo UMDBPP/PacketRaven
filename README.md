@@ -1,6 +1,6 @@
 # Huginn 
 
-<a href="https://github.com/UMDBPP/huginn/actions"><img src="https://github.com/UMDBPP/huginn/workflows/tests/badge.svg" /></a>
+[![unittests](https://github.com/UMDBPP/huginn/workflows/tests/badge.svg)](https://github.com/UMDBPP/huginn/actions)
 
 ### Balloon payload telemetry over APRS
 Huginn is a new version of Link-TLM written in Python

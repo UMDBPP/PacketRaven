@@ -15,7 +15,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Setup Python ${{ matrix.python-version }}
+      - name: Install Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
@@ -25,7 +25,9 @@ jobs:
           python -m pip install pipenv
           pipenv install --dev
 
-      - name: Test with unittest
-        run: |
-          pipenv run coverage run --source huginn -m nose
-          pipenv run coverage report -m
+      - name: Run tests with coverage
+        run: pipenv run coverage run --source huginn -m nose
+
+      - name: Generate coverage report
+        run: pipenv run coverage report -m
+
