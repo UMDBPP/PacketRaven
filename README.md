@@ -15,7 +15,7 @@ Huginn is a new version of Link-TLM written in Python
 pip install pipenv
 git clone https://github.com/UMDBPP/huginn.git
 cd huginn
-pipenv install --dev
+pipenv install
 ```
 
 #### Starting GUI:
