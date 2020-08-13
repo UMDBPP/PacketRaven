@@ -26,7 +26,7 @@ jobs:
           pipenv install --dev
 
       - name: Run tests with coverage
-        run: pipenv run coverage run --source huginn -m nose
+        run: pipenv run coverage run --source huginn -m nose  --verbose --ignore-files="test_connections\.py"
 
       - name: Generate coverage report
         run: pipenv run coverage report -m
