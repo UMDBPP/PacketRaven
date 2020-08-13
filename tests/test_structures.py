@@ -85,7 +85,7 @@ class TestPackets(unittest.TestCase):
         packet_1 = APRSLocationPacket.from_raw_aprs("W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,nearspace.umd.edu",
                                                     time=datetime(2019, 2, 3, 14, 36, 16))
 
-        assert numpy.all(packet_1.coordinates == (-77.48778502911327, 39.64903419561805, 16341.5472))
+        assert numpy.allclose(packet_1.coordinates, (-77.48778502911327, 39.64903419561805, 16341.5472))
         assert packet_1['callsign'] is packet_1['from']
         assert packet_1['callsign'] == 'W3EAX-13'
         assert packet_1['comment'] == "|!g|  /W3EAX,313,0,21'C,nearspace.umd.edu"
@@ -113,8 +113,8 @@ class TestPackets(unittest.TestCase):
         packet_delta = packet_2 - packet_1
 
         assert packet_delta.seconds == 127
-        assert packet_delta.vertical_distance == -2243.0231999999996
-        assert packet_delta.horizontal_distance == 4019.3334763155167
+        assert numpy.allclose(packet_delta.vertical_distance, -2243.0231999999996)
+        assert numpy.allclose(packet_delta.horizontal_distance, 4019.3334763155167)
 
 
 class TestPacketTracks(unittest.TestCase):
