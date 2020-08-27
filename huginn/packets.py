@@ -27,12 +27,13 @@ class LocationPacket:
     def horizontal_distance_to_point(self, point: (float, float)) -> float:
         if not isinstance(point, numpy.ndarray):
             point = numpy.array(point)
+        coordinates = numpy.stack([self.coordinates[:2], point], axis=0)
         if self.crs.is_projected:
-            return numpy.hypot(*(self.coordinates[:2] - point))
+            return numpy.hypot(*numpy.diff(coordinates, axis=0)[0])
         else:
             datum_json = self.crs.datum.to_json_dict()
-            ellipsoid = Geod(a=datum_json['ellipsoid']['semi_major_axis'], rf=datum_json['ellipsoid']['inverse_flattening'])
-            return ellipsoid.inv(*self.coordinates[:2], *point)[2]
+            geodetic = Geod(a=datum_json['ellipsoid']['semi_major_axis'], rf=datum_json['ellipsoid']['inverse_flattening'])
+            return geodetic.line_length(coordinates[:, 0], coordinates[:, 1])
 
     def __sub__(self, other: 'LocationPacket') -> 'LocationPacketDelta':
         """
