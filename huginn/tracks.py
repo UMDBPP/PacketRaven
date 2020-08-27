@@ -7,25 +7,30 @@ __authors__ = ['Quinn Kupec', 'Zachary Burnett']
 from typing import Union
 
 import numpy
+from pyproj import CRS, Geod
 
-from huginn.packets import APRSLocationPacket, LocationPacket
+from huginn.packets import APRSLocationPacket, DEFAULT_CRS, LocationPacket
 from huginn.structures import DoublyLinkedList
 
 
 class LocationPacketTrack:
     """ collection of location packets """
 
-    def __init__(self, packets: [LocationPacket] = None):
+    def __init__(self, packets: [LocationPacket] = None, crs: CRS = None):
         """
         location packet track
 
+        :param crs: coordinate reference system to use
         :param packets: iterable of packets
         """
 
         self.packets = DoublyLinkedList(packets)
+        self.crs = crs if crs is not None else DEFAULT_CRS
 
     def append(self, packet: LocationPacket):
         if packet not in self.packets:
+            if packet.crs != self.crs:
+                packet.transform_to(self.crs)
             self.packets.append(packet)
 
     @property
@@ -69,9 +74,25 @@ class LocationPacketTrack:
         """
 
         if len(self.packets) > 0:
-            return self.packets[-1].horizontal_distance_to_point(longitude, latitude)
+            return self.packets[-1].distance(longitude, latitude)
         else:
             return 0.0
+
+    @property
+    def length(self) -> float:
+        """
+        total length of the packet track over the ground
+
+        :return: horizontal length
+        """
+
+        coordinates = self.coordinates[:2]
+        if self.crs.is_projected:
+            return sum(self.packets.difference)
+        else:
+            ellipsoid = self.crs.datum.to_json_dict()['ellipsoid']
+            geodetic = Geod(a=ellipsoid['semi_major_axis'], rf=ellipsoid['inverse_flattening'])
+            return geodetic.line_length(coordinates[:, 0], coordinates[:, 1])
 
     def __getitem__(self, index: Union[int, slice]) -> LocationPacket:
         return self.packets[index]
@@ -98,16 +119,17 @@ class LocationPacketTrack:
 class APRSTrack(LocationPacketTrack):
     """ collection of APRS location packets """
 
-    def __init__(self, callsign: str, packets: [APRSLocationPacket] = None):
+    def __init__(self, callsign: str, packets: [APRSLocationPacket] = None, crs: CRS = None):
         """
         APRS packet track
 
         :param callsign: callsign of APRS packets
         :param packets: iterable of packets
+        :param crs: coordinate reference system to use
         """
 
         self.callsign = callsign
-        super().__init__(packets)
+        super().__init__(packets, crs)
 
     def append(self, packet: APRSLocationPacket):
         packet_callsign = packet['callsign']

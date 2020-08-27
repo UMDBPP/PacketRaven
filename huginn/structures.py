@@ -20,7 +20,7 @@ class DoublyLinkedList:
 
     def __init__(self, sequence=None):
         """
-        Instantiate new doubly-linked list.
+        instantiate new doubly-linked list
 
         :param sequence: iterable sequence to populate list
         """
@@ -31,9 +31,9 @@ class DoublyLinkedList:
         if sequence is not None:
             self.extend(sequence)
 
-    class Entry:
+    class Node:
         """
-        Entry within doubly-linked list with three attributes: value, previous node, and next node.
+        entry within doubly-linked list with three attributes: value, previous node, and next node
         """
 
         def __init__(self, value, previous_node, next_node):
@@ -52,12 +52,12 @@ class DoublyLinkedList:
 
     def append(self, value):
         """
-        Append given value as new tail.
+        append given value as new tail
 
         :param value: value to append
         """
 
-        new_node = self.Entry(value, self.tail, None)
+        new_node = self.Node(value, self.tail, None)
 
         if self.tail is not None:
             self.tail.next_node = new_node
@@ -69,20 +69,20 @@ class DoublyLinkedList:
 
     def extend(self, sequence):
         """
-        Append all values in given iterable to end of list.
+        append all values in given iterable to end of list
 
         :param sequence: iterable sequence with which to extend
         """
 
         for entry in sequence:
-            if type(entry) is self.Entry:
+            if type(entry) is self.Node:
                 entry = entry.value
 
             self.append(entry)
 
     def insert(self, value, index: int):
         """
-        Insert value at given index.
+        insert value at given index
 
         :param value: value to insert
         :param index: index at which to insert value
@@ -91,7 +91,7 @@ class DoublyLinkedList:
         node_at_index = self._node_at_index(index)
 
         if node_at_index is not None:
-            new_node = self.Entry(value, node_at_index.previous_node, node_at_index)
+            new_node = self.Node(value, node_at_index.previous_node, node_at_index)
 
             if node_at_index.previous_node is not None:
                 node_at_index.previous_node.next_node = new_node
@@ -101,16 +101,16 @@ class DoublyLinkedList:
             node_at_index.previous_node = new_node
         else:
             if index == 0:
-                self.head = self.Entry(value, None, None)
+                self.head = self.Node(value, None, None)
                 self.tail = self.head
             elif index > 0:
-                self.tail = self.Entry(value, self.tail, None)
+                self.tail = self.Node(value, self.tail, None)
             else:
-                self.head = self.Entry(value, None, self.head)
+                self.head = self.Node(value, None, self.head)
 
     def remove(self, value):
         """
-        Remove all instances of given value.
+        remove all instances of given value
 
         :param value: value to remove
         """
@@ -125,7 +125,7 @@ class DoublyLinkedList:
 
     def index(self, value) -> int:
         """
-        First index of given value.
+        first index of given value
 
         :param value: value to find
         :return: value index
@@ -145,24 +145,30 @@ class DoublyLinkedList:
 
     def count(self, value) -> int:
         """
-        Number of instances of given value.
+        number of instances of given value
 
         :param value: value to count
         :return: value count
         """
 
-        num_nodes_with_value = 0
+        return sum([1 for node_value in self if node_value == value])
+
+    @property
+    def difference(self) -> []:
+        """
+        differences between each value
+
+        :return: list of differences
+        """
+
+        differences = []
         current_node = self.head
 
         while current_node is not None:
-            if current_node.value == value:
-                num_nodes_with_value += 1
-
+            differences.append(current_node.next_node.value - current_node.value)
             current_node = current_node.next_node
 
-        return num_nodes_with_value
-
-    def _node_at_index(self, index: int) -> Entry:
+    def _node_at_index(self, index: int) -> Node:
         """
         Node indexing function.
 
@@ -200,7 +206,7 @@ class DoublyLinkedList:
 
         return node_at_index
 
-    def _remove_node(self, node):
+    def _remove_node(self, node: Node):
         if node.next_node is not None:
             node.next_node.previous_node = node.previous_node
         else:
@@ -212,25 +218,15 @@ class DoublyLinkedList:
             self.head = node.next_node
 
     def __getitem__(self, index: int):
-        """
-        Indexing function (for integer indexing of list contents).
-
-        :param index: index
-        :return: value at index
-        """
-
         return self._node_at_index(index).value
+
+    def __setitem__(self, index: int, value):
+        self._node_at_index(index).value = value
 
     def __delitem__(self, index: int):
         self._remove_node(self._node_at_index(index))
 
     def __iter__(self):
-        """
-        Generator function iterating over list values, starting at head.
-
-        :return: next value
-        """
-
         current_node = self.head
 
         while current_node is not None:
@@ -238,12 +234,6 @@ class DoublyLinkedList:
             current_node = current_node.next_node
 
     def __reversed__(self):
-        """
-        Generator function iterating over list values in reverse order, starting at tail.
-
-        :return: previous value
-        """
-
         current_node = self.tail
 
         while current_node is not None:

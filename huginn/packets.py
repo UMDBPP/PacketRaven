@@ -24,16 +24,27 @@ class LocationPacket:
         self.coordinates = numpy.array((x, y, z if z is not None else 0))
         self.crs = crs if crs is not None else DEFAULT_CRS
 
-    def horizontal_distance_to_point(self, point: (float, float)) -> float:
+    def distance(self, point: (float, float)) -> float:
+        """
+        horizontal distance over ellipsoid
+
+        :param point: (x, y) point
+        :return: distance in ellipsodal units
+        """
+
         if not isinstance(point, numpy.ndarray):
             point = numpy.array(point)
         coordinates = numpy.stack([self.coordinates[:2], point], axis=0)
         if self.crs.is_projected:
-            return numpy.hypot(*numpy.diff(coordinates, axis=0)[0])
+            return numpy.hypot(*numpy.sum(numpy.diff(coordinates, axis=0), axis=0))
         else:
-            datum_json = self.crs.datum.to_json_dict()
-            geodetic = Geod(a=datum_json['ellipsoid']['semi_major_axis'], rf=datum_json['ellipsoid']['inverse_flattening'])
+            ellipsoid = self.crs.datum.to_json_dict()['ellipsoid']
+            geodetic = Geod(a=ellipsoid['semi_major_axis'], rf=ellipsoid['inverse_flattening'])
             return geodetic.line_length(coordinates[:, 0], coordinates[:, 1])
+
+    def transform_to(self, crs: CRS):
+        transformer = Transformer.from_crs(self.crs, crs)
+        self.coordinates = transformer.transform(self.coordinates)
 
     def __sub__(self, other: 'LocationPacket') -> 'LocationPacketDelta':
         """
@@ -46,7 +57,7 @@ class LocationPacket:
         other_coordinates = Transformer.from_crs(other.crs, self.crs).transform(*other.coordinates) if other.crs != self.crs else other.coordinates
 
         seconds = (self.time - other.time) / timedelta(seconds=1)
-        horizontal_distance = self.horizontal_distance_to_point(other_coordinates[:2])
+        horizontal_distance = self.distance(other_coordinates[:2])
         vertical_distance = self.coordinates[2] - other_coordinates[2]
 
         return LocationPacketDelta(seconds, horizontal_distance, vertical_distance)
@@ -93,6 +104,7 @@ class LocationPacketDelta:
 
     @property
     def distance(self):
+        # TODO account for ellipsoid
         return numpy.hypot(self.horizontal_distance, self.vertical_distance)
 
     @property
@@ -125,7 +137,7 @@ class APRSLocationPacket(LocationPacket):
         self.parsed_packet = kwargs
 
     @classmethod
-    def from_raw_aprs(cls, raw_aprs: Union[str, bytes, dict], time: datetime = None):
+    def from_raw_aprs(cls, raw_aprs: Union[str, bytes, dict], time: datetime = None) -> 'APRSLocationPacket':
         """
         APRS packet object from raw packet and given datetime
 
