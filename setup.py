@@ -27,7 +27,8 @@ setup(
         'requests',
         'pyproj',
         'psycopg2',
-        'shapely'
+        'shapely',
+        'sshtunnel'
     ],
     extras_require={'dev': ['coverage', 'dunamai', 'flake8', 'nose']},
     entry_points={

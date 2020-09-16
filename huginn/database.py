@@ -1,5 +1,6 @@
 from ast import literal_eval
 from datetime import date, datetime
+from functools import partial
 from typing import Any, Union
 
 import psycopg2
@@ -8,28 +9,30 @@ from shapely import wkb, wkt
 from shapely.errors import WKBReadingError, WKTReadingError
 from shapely.geometry import LineString, LinearRing, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon, shape as shapely_shape
 from shapely.geometry.base import BaseGeometry
+from sshtunnel import SSHTunnelForwarder
 
 from huginn import get_logger
 
 LOGGER = get_logger('huginn.connection')
 
 POSTGRES_DEFAULT_PORT = 5432
+SSH_DEFAULT_PORT = 22
 
 POSTGRES_TYPES = {
-    'NoneType': 'NULL',
-    'bool': 'BOOL',
-    'float': 'REAL',
-    'int': 'INTEGER',
-    'str': 'VARCHAR',
-    'bytes': 'BYTEA',
-    'date': 'DATE',
-    'time': 'TIME',
-    'datetime': 'TIMESTAMP',
+    'NoneType' : 'NULL',
+    'bool'     : 'BOOL',
+    'float'    : 'REAL',
+    'int'      : 'INTEGER',
+    'str'      : 'VARCHAR',
+    'bytes'    : 'BYTEA',
+    'date'     : 'DATE',
+    'time'     : 'TIME',
+    'datetime' : 'TIMESTAMP',
     'timedelta': 'INTERVAL',
-    'list': 'VARCHAR[]',
-    'dict': 'HSTORE',
+    'list'     : 'VARCHAR[]',
+    'dict'     : 'HSTORE',
     'ipaddress': 'INET',
-    'Point': 'GEOMETRY'
+    'Point'    : 'GEOMETRY'
 }
 
 DEFAULT_CRS = CRS.from_epsg(4326)
@@ -41,7 +44,8 @@ class InheritedTableError(Exception):
 
 
 class DatabaseTable:
-    def __init__(self, hostname: str, database: str, table: str, fields: {str: type}, primary_key: str = None, crs: CRS = None, username: str = None, password: str = None, users: [str] = None):
+    def __init__(self, hostname: str, database: str, table: str, fields: {str: type}, primary_key: str = None, crs: CRS = None, username: str = None, password: str = None, users: [str] = None,
+                 **kwargs):
         self.hostname = hostname
         self.database = database
         self.table = table
@@ -60,7 +64,16 @@ class DatabaseTable:
         if self.port is None:
             self.port = POSTGRES_DEFAULT_PORT
 
-        self.connection = psycopg2.connect(database=self.database, user=self.username, password=self.password, host=self.hostname, port=self.port)
+        connector = partial(psycopg2.connect, database=self.database, user=self.username, password=self.password, port=self.port)
+        if 'ssh_hostname' in kwargs or 'ssh_port' in kwargs:
+            with SSHTunnelForwarder((int(kwargs['ssh_hostname']) if 'ssh_hostname' in kwargs else self.hostname,
+                                     int(kwargs['ssh_port']) if 'ssh_port' in kwargs else SSH_DEFAULT_PORT),
+                                    ssh_username=kwargs['ssh_username'] if 'ssh_username' in kwargs else None,
+                                    ssh_password=kwargs['ssh_password'] if 'ssh_password' in kwargs else None,
+                                    remote_bind_address=('localhost', self.port)):
+                self.connection = connector(host='localhost')
+        else:
+            self.connection = connector(host=self.hostname)
 
         with self.connection:
             with self.connection.cursor() as cursor:

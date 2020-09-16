@@ -9,7 +9,6 @@ from datetime import datetime
 import logging
 from typing import Any, Union
 
-from pyproj import CRS
 import requests
 from serial import Serial
 from serial.tools import list_ports
@@ -139,8 +138,8 @@ class APRS_fi(PacketConnection):
     @property
     def packets(self) -> [APRSLocationPacket]:
         query = {
-            'name': ','.join(self.callsigns),
-            'what': 'loc',
+            'name'  : ','.join(self.callsigns),
+            'what'  : 'loc',
             'apikey': self.api_key,
             'format': 'json'
         }
@@ -186,18 +185,18 @@ class APRS_fi(PacketConnection):
 
 class PacketDatabaseTable(PacketConnection, DatabaseTable):
     __default_fields = {
-        'time': datetime,
-        'x': float,
-        'y': float,
-        'z': float,
+        'time' : datetime,
+        'x'    : float,
+        'y'    : float,
+        'z'    : float,
         'point': Point
     }
 
-    def __init__(self, hostname: str, database: str, table: str, fields: {str: type} = None, crs: CRS = None, username: str = None, password: str = None, users: [str] = None):
+    def __init__(self, hostname: str, database: str, table: str, fields: {str: type} = None, **kwargs):
         if fields is None:
             fields = {}
         fields = {**self.__default_fields, **fields}
-        super().__init__(hostname, database, table, fields, 'time', crs, username, password, users)
+        super().__init__(hostname, database, table, fields, 'time', **kwargs)
 
     @property
     def packets(self) -> [LocationPacket]:
@@ -209,10 +208,10 @@ class PacketDatabaseTable(PacketConnection, DatabaseTable):
 
     def __setitem__(self, time: datetime, packet: LocationPacket):
         record = {
-            'time': packet.time,
-            'x': packet.coordinates[0],
-            'y': packet.coordinates[1],
-            'z': packet.coordinates[2],
+            'time' : packet.time,
+            'x'    : packet.coordinates[0],
+            'y'    : packet.coordinates[1],
+            'z'    : packet.coordinates[2],
             'point': Point(*packet.coordinates)
         }
         super().__setitem__(time, record)
@@ -229,21 +228,21 @@ class PacketDatabaseTable(PacketConnection, DatabaseTable):
 
 class APRSPacketDatabaseTable(PacketDatabaseTable):
     __default_fields = {
-        'time': datetime,
+        'time'    : datetime,
         'callsign': str,
-        'x': float,
-        'y': float,
-        'z': float,
-        'point': Point
+        'x'       : float,
+        'y'       : float,
+        'z'       : float,
+        'point'   : Point
     }
 
-    def __init__(self, hostname: str, database: str, table: str, fields: {str, type} = None, crs: CRS = None, username: str = None, password: str = None, users: [str] = None):
+    def __init__(self, hostname: str, database: str, table: str, fields: {str, type} = None, **kwargs):
         if fields is None:
             fields = {}
         else:
             fields = {f'packet_{field}': field_type for field, field_type in fields.items()}
         fields = {**self.__default_fields, **fields}
-        super().__init__(hostname, database, table, fields, crs, username, password, users)
+        super().__init__(hostname, database, table, fields, **kwargs)
 
     @property
     def packets(self) -> [APRSLocationPacket]:
@@ -256,21 +255,21 @@ class APRSPacketDatabaseTable(PacketDatabaseTable):
 
     def __setitem__(self, time: datetime, packet: APRSLocationPacket):
         record = {
-            'time': packet.time,
+            'time'    : packet.time,
             'callsign': packet.callsign,
-            'x': packet.coordinates[0],
-            'y': packet.coordinates[1],
-            'z': packet.coordinates[2],
-            'point': Point(*packet.coordinates)
+            'x'       : packet.coordinates[0],
+            'y'       : packet.coordinates[1],
+            'z'       : packet.coordinates[2],
+            'point'   : Point(*packet.coordinates)
         }
         super(super()).__setitem__(time, record)
 
     def insert(self, packets: [{str: Any}]):
         records = [{
-            'time': packet.time,
-            'x': packet.coordinates[0],
-            'y': packet.coordinates[1],
-            'z': packet.coordinates[2],
+            'time' : packet.time,
+            'x'    : packet.coordinates[0],
+            'y'    : packet.coordinates[1],
+            'z'    : packet.coordinates[2],
             'point': Point(*packet.coordinates),
             **{f'packet_{field}': value for field, value in packet.parsed_packet.items()}
         } for packet in packets]
