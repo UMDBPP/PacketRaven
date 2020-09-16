@@ -14,9 +14,9 @@ from serial import Serial
 from serial.tools import list_ports
 from shapely.geometry import Point
 
-from huginn import CREDENTIALS_FILENAME, get_logger
 from huginn.database import DatabaseTable
 from huginn.packets import APRSLocationPacket, LocationPacket
+from huginn.utilities import CREDENTIALS_FILENAME, get_logger
 
 LOGGER = get_logger('huginn.connection')
 

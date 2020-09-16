@@ -9,7 +9,8 @@ import os
 import sys
 import time
 
-from huginn import connections, get_logger, tracks
+from huginn import connections, tracks
+from huginn.utilities import get_logger
 from huginn.writer import write_aprs_packet_tracks
 
 BALLOON_CALLSIGNS = ['W3EAX-10', 'W3EAX-11', 'W3EAX-14']

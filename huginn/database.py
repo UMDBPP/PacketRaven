@@ -11,7 +11,7 @@ from shapely.geometry import LineString, LinearRing, MultiLineString, MultiPoint
 from shapely.geometry.base import BaseGeometry
 from sshtunnel import SSHTunnelForwarder
 
-from huginn import get_logger
+from huginn.utilities import get_logger
 
 LOGGER = get_logger('huginn.connection')
 

@@ -32,7 +32,7 @@ setup(
     ],
     extras_require={'dev': ['coverage', 'dunamai', 'flake8', 'nose']},
     entry_points={
-        'console_scripts': ['huginn=huginn_cli:main'],
+        'console_scripts': ['huginn_cli=huginn_cli:main'],
         'gui_scripts'    : ['huginn=huginn:main']
     },
     test_suite='nose.collector'

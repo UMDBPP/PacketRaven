@@ -4,8 +4,9 @@ import os
 import tkinter
 from tkinter import filedialog, messagebox
 
-from huginn import connections, get_logger, tracks
+from huginn import connections, tracks
 from huginn.connections import PacketRadio
+from huginn.utilities import get_logger
 from huginn.writer import write_aprs_packet_tracks
 
 BALLOON_CALLSIGNS = ['W3EAX-10', 'W3EAX-11', 'W3EAX-14']
@@ -257,7 +258,7 @@ class HuginnGUI:
 
 
 def main():
-    huginn_gui = HuginnGUI()
+    HuginnGUI()
 
 
 if __name__ == '__main__':
