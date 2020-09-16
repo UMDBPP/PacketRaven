@@ -256,5 +256,9 @@ class HuginnGUI:
         element.insert(start_index, value)
 
 
-if __name__ == '__main__':
+def main():
     huginn_gui = HuginnGUI()
+
+
+if __name__ == '__main__':
+    main()

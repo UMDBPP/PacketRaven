@@ -16,7 +16,8 @@ BALLOON_CALLSIGNS = ['W3EAX-10', 'W3EAX-11', 'W3EAX-14']
 INTERVAL_SECONDS = 5
 DESKTOP_PATH = os.path.join(os.path.expanduser('~'), 'Desktop')
 
-if __name__ == '__main__':
+
+def main():
     if len(sys.argv) > 0 and '-h' not in sys.argv:
         serial_port = sys.argv[1] if len(sys.argv) > 1 else None
         log_filename = sys.argv[2] if len(sys.argv) > 2 else DESKTOP_PATH
@@ -98,3 +99,7 @@ if __name__ == '__main__':
             time.sleep(INTERVAL_SECONDS)
     else:
         print('usage: huginn serial_port [log_path] [output_file]')
+
+
+if __name__ == '__main__':
+    main()

@@ -1,4 +1,5 @@
 from datetime import datetime
+import os
 import unittest
 
 from huginn import CREDENTIALS_FILENAME, read_configuration
@@ -12,9 +13,10 @@ class TestConnections(unittest.TestCase):
         balloon_callsigns = ['W3EAX-10', 'W3EAX-11', 'W3EAX-13', 'W3EAX-14']
 
         credentials = read_configuration(CREDENTIALS_FILENAME)
-        api_key = credentials['APRS_FI']['api_key']
+        if 'APRS_FI' not in credentials:
+            credentials['APRS_FI'] = {'api_key': os.environ['APRS_FI_API_KEY']}
 
-        aprs_api = APRS_fi(balloon_callsigns, api_key)
+        aprs_api = APRS_fi(balloon_callsigns, credentials['APRS_FI']['api_key'])
 
         with aprs_api:
             packets = aprs_api.packets
@@ -32,6 +34,23 @@ class TestConnections(unittest.TestCase):
         input_packets = [packet_1, packet_2, packet_3]
 
         credentials = read_configuration(CREDENTIALS_FILENAME)
+
+        if 'DATABASE' not in credentials:
+            credentials['DATABASE'] = {
+                'hostname': os.environ['POSTGRES_HOSTNAME'],
+                'database': os.environ['POSTGRES_DATABASE'],
+                'username': os.environ['POSTGRES_USERNAME'],
+                'password': os.environ['POSTGRES_PASSWORD']
+            }
+            if 'ssh_hostname' in os.environ:
+                credentials['DATABASE']['ssh_hostname'] = os.environ['ssh_hostname']
+            if 'ssh_port' in os.environ:
+                credentials['DATABASE']['ssh_port'] = os.environ['ssh_port']
+            if 'ssh_username' in os.environ:
+                credentials['DATABASE']['ssh_username'] = os.environ['ssh_username']
+            if 'ssh_password' in os.environ:
+                credentials['DATABASE']['ssh_password'] = os.environ['ssh_password']
+
         credentials['DATABASE']['table'] = 'test_table'
 
         packet_table = APRSPacketDatabaseTable(**credentials['DATABASE'], fields={field: str for field in packet_1})
