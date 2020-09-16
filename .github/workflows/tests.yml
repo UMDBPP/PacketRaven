@@ -35,18 +35,18 @@ jobs:
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: Install PostGreSQL with PostGIS
-        uses: nyaruka/postgis-action@v1
+        uses: huaxk/postgis-action@v1
         with:
           postgresql db: test_database
           postgresql user: postgres
-          postgresql password: test_password
+          postgresql password: password
       - name: Test with coverage
         env:
           APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
           POSTGRES_HOSTNAME: localhost
           POSTGRES_DATABASE: test_database
-          POSTGRES_USERNAME: postgres
-          POSTGRES_PASSWORD: test_password
+          POSTGRES_USERNAME: potgres
+          POSTGRES_PASSWORD: password
         run: coverage run --source huginn -m nose --nologcapture --verbose
       - name: Generate coverage report
         run: coverage report -m
