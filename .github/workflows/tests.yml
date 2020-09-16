@@ -37,9 +37,9 @@ jobs:
       - name: Install PostGreSQL
         uses: harmon758/postgresql-action@v1
         with:
-          db: test_database
-          user: test_user
-          password: test_password
+          postgresql db: test_database
+          postgresql user: test_user
+          postgresql password: test_password
       - name: Test with coverage
         env:
           APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
