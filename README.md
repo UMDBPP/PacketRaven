@@ -1,6 +1,7 @@
 # Huginn 
 
-[![unittests](https://github.com/UMDBPP/huginn/workflows/tests/badge.svg)](https://github.com/UMDBPP/huginn/actions)
+[![tests](https://github.com/UMDBPP/huginn/workflows/tests/badge.svg)](https://github.com/UMDBPP/huginn/actions?query=workflow%3Atests)
+[![build](https://github.com/UMDBPP/huginn/workflows/build/badge.svg)](https://github.com/UMDBPP/huginn/actions?query=workflow%3Abuild)
 
 ### Balloon payload telemetry over APRS
 Huginn is a new version of Link-TLM written in Python
@@ -12,22 +13,17 @@ Huginn is a new version of Link-TLM written in Python
 
 #### Installation:
 ```bash
-pip install pipenv
-git clone https://github.com/UMDBPP/huginn.git
-cd huginn
-pipenv install
+pip install huginn
 ```
 
 #### Starting GUI:
 ```bash
-pipenv run huginn.py
+huginn
 ```
 
-#### Building Windows executable:
-```cmd
-pipenv install pyinstaller
-cd huginn
-pyinstaller --paths=C:\Windows\System32\downlevel --onefile huginn_console.py
+#### Starting CLI:
+```bash
+huginn_cli
 ```
 
 #### In-progress Features
