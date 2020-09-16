@@ -37,16 +37,17 @@ jobs:
       - name: Install PostGreSQL with PostGIS
         uses: huaxk/postgis-action@v1
         with:
+          postgresql version: '11'
           postgresql db: test_database
-          postgresql user: postgres
-          postgresql password: password
+          postgresql user: test_user
+          postgresql password: test_password
       - name: Test with coverage
         env:
           APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
           POSTGRES_HOSTNAME: localhost
           POSTGRES_DATABASE: test_database
-          POSTGRES_USERNAME: potgres
-          POSTGRES_PASSWORD: password
+          POSTGRES_USERNAME: test_user
+          POSTGRES_PASSWORD: test_password
         run: coverage run --source huginn -m nose --nologcapture --verbose
       - name: Generate coverage report
         run: coverage report -m
