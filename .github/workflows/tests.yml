@@ -35,20 +35,20 @@ jobs:
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       # TODO figure out why PostGIS container is broken
-      #      - name: Install PostGreSQL with PostGIS
-      #        uses: huaxk/postgis-action@v1
-      #        with:
-      #          postgresql version: '11'
-      #          postgresql db: test_database
-      #          postgresql user: test_user
-      #          postgresql password: test_password
+      #- name: Install PostGreSQL with PostGIS
+      #uses: huaxk/postgis-action@v1
+      #with:
+      #  postgresql version: '11'
+      #  postgresql db: test_database
+      #  postgresql user: test_user
+      #  postgresql password: test_password
       - name: Test with coverage
-        env:
-          APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
-        #          POSTGRES_HOSTNAME: localhost
-        #          POSTGRES_DATABASE: test_database
-        #          POSTGRES_USERNAME: test_user
-        #          POSTGRES_PASSWORD: test_password
+        #env:
+        #  APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
+        #  POSTGRES_HOSTNAME: localhost
+        #  POSTGRES_DATABASE: test_database
+        #  POSTGRES_USERNAME: test_user
+        #  POSTGRES_PASSWORD: test_password
         run: coverage run --source huginn -m nose --nologcapture --verbose --ignore-files="test_connections\.py"
       - name: Generate coverage report
         run: coverage report -m
