@@ -53,6 +53,8 @@ class TestConnections(unittest.TestCase):
 
         credentials['DATABASE']['table'] = 'test_table'
 
+        print(credentials['DATABASE'])
+
         packet_table = APRSPacketDatabaseTable(**credentials['DATABASE'], fields={field: str for field in packet_1})
 
         packet_table.insert(input_packets)
