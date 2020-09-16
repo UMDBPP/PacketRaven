@@ -66,7 +66,7 @@ class DatabaseTable:
 
         connector = partial(psycopg2.connect, database=self.database, user=self.username, password=self.password, port=self.port)
         if 'ssh_hostname' in kwargs or 'ssh_port' in kwargs:
-            with SSHTunnelForwarder((int(kwargs['ssh_hostname']) if 'ssh_hostname' in kwargs else self.hostname,
+            with SSHTunnelForwarder((kwargs['ssh_hostname'] if 'ssh_hostname' in kwargs else self.hostname,
                                      int(kwargs['ssh_port']) if 'ssh_port' in kwargs else SSH_DEFAULT_PORT),
                                     ssh_username=kwargs['ssh_username'] if 'ssh_username' in kwargs else None,
                                     ssh_password=kwargs['ssh_password'] if 'ssh_password' in kwargs else None,

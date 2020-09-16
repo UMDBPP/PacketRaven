@@ -34,18 +34,19 @@ jobs:
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Install PostGreSQL
+        uses: harmon758/postgresql-action@v1
+        with:
+          db: test_database
+          user: test_user
+          password: test_password
       - name: Test with coverage
         env:
           APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
-          POSTGRES_HOSTNAME: ${{ secrets.POSTGRES_HOSTNAME }}
-          POSTGRES_PORT: ${{ secrets.POSTGRES_PORT }}
-          POSTGRES_DATABASE: ${{ secrets.POSTGRES_DATABASE }}
-          POSTGRES_USERNAME: ${{ secrets.POSTGRES_USERNAME }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          SSH_HOSTANME: ${{ secrets.SSH_HOSTANME }}
-          SSH_PORT: ${{ secrets.SSH_PORT }}
-          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
-          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+          POSTGRES_HOSTNAME: localhost
+          POSTGRES_DATABASE: test_database
+          POSTGRES_USERNAME: test_user
+          POSTGRES_PASSWORD: test_password
         run: coverage run --source huginn -m nose --nologcapture --verbose
       - name: Generate coverage report
         run: coverage report -m
