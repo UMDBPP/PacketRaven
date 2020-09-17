@@ -1,9 +1,3 @@
-"""
-APRS packet class for packet operations.
-
-__authors__ = ['Quinn Kupec', 'Zachary Burnett']
-"""
-
 from datetime import datetime, timedelta
 import math
 from typing import Union

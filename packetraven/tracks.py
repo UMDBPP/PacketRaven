@@ -1,9 +1,3 @@
-"""
-Ground track class for packet operations.
-
-__authors__ = ['Quinn Kupec', 'Zachary Burnett']
-"""
-
 from typing import Union
 
 import numpy

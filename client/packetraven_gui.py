@@ -2,7 +2,7 @@ from datetime import datetime
 import logging
 from pathlib import Path
 import tkinter
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, simpledialog
 
 from packetraven import BALLOON_CALLSIGNS
 from packetraven.connections import APRS_fi, PacketRadio, PacketTextFile, next_available_port
@@ -10,10 +10,10 @@ from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
 from packetraven.writer import write_aprs_packet_tracks
 
-INTERVAL_SECONDS = 5
-DESKTOP_PATH = Path('~').resolve() / 'Desktop'
+LOGGER = get_logger('packetraven_gui')
 
-LOGGER = get_logger('packetraven')
+DEFAULT_INTERVAL_SECONDS = 5
+DESKTOP_PATH = Path('~').expanduser() / 'Desktop'
 
 
 class PacketRavenGUI:
@@ -129,7 +129,7 @@ class PacketRavenGUI:
                 connection.close()
 
                 if type(connection) is PacketRadio:
-                    LOGGER.info(f'closing port {connection.serial_port}')
+                    LOGGER.info(f'closing port {connection.location}')
 
             for element in self.frames['bottom'].winfo_children():
                 element.configure(state=tkinter.DISABLED)
@@ -167,14 +167,16 @@ class PacketRavenGUI:
                     else:
                         try:
                             radio = PacketRadio(self.serial_port)
-                            self.serial_port = radio.serial_port
+                            self.serial_port = radio.location
                             LOGGER.info(f'opened port {self.serial_port}')
                             self.connections.append(radio)
                         except Exception as error:
                             LOGGER.exception(f'{error.__class__.__name__} - {error}')
 
+                aprs_fi_api_key = simpledialog.askstring('APRS.fi API Key', 'enter API key for https://aprs.fi', parent=self.main_window)
+
                 try:
-                    aprs_api = APRS_fi(BALLOON_CALLSIGNS)
+                    aprs_api = APRS_fi(BALLOON_CALLSIGNS, api_key=aprs_fi_api_key)
                     LOGGER.info(f'established connection to API')
                     self.connections.append(aprs_api)
                 except Exception as error:
@@ -244,7 +246,7 @@ class PacketRavenGUI:
                     write_aprs_packet_tracks(self.packet_tracks.values(), output_filename)
 
             if self.active:
-                self.main_window.after(INTERVAL_SECONDS * 1000, self.run)
+                self.main_window.after(DEFAULT_INTERVAL_SECONDS * 1000, self.run)
 
     @staticmethod
     def replace_text(element, value):

@@ -12,9 +12,14 @@ pip install packetraven
 #### Usage:
 to start the client, run the following:
 ```bash
-packetraven <serial_port> [log_file] [output_file]
+packetraven
 ```
-or start the graphical interface:
+for usage, do
+```bash
+packetraven -h
+```
+
+there is also a Tkinter interface:
 ```bash
 packetraven_gui
 ```

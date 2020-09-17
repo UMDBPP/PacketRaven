@@ -7,7 +7,7 @@ import sys
 LOGGER_NAME_LENGTH = 17
 
 
-def repository_root(path: PathLike = None) -> str:
+def repository_root(path: PathLike = None) -> Path:
     if path is None:
         path = __file__
     if not isinstance(path, Path):

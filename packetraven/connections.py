@@ -18,13 +18,13 @@ from shapely.geometry import Point
 
 from packetraven.database import DatabaseTable
 from packetraven.packets import APRSLocationPacket, LocationPacket
-from packetraven.utilities import CREDENTIALS_FILENAME, get_logger
+from packetraven.utilities import CREDENTIALS_FILENAME, get_logger, read_configuration
 
 LOGGER = get_logger('packetraven.connection')
 
 
 class PacketConnection(ABC):
-    address: str
+    location: str
 
     @property
     @abstractmethod
@@ -60,13 +60,13 @@ class PacketRadio(PacketConnection):
 
         if serial_port is None:
             try:
-                self.serial_port = next_available_port()
+                self.location = next_available_port()
             except ConnectionError:
                 raise ConnectionError('could not find radio over serial connection')
         else:
-            self.serial_port = serial_port.strip('"')
+            self.location = serial_port.strip('"')
 
-        self.connection = Serial(self.serial_port, baudrate=9600, timeout=1)
+        self.connection = Serial(self.location, baudrate=9600, timeout=1)
 
     @property
     def packets(self) -> [APRSLocationPacket]:
@@ -82,7 +82,7 @@ class PacketRadio(PacketConnection):
         self.connection.close()
 
     def __repr__(self):
-        return f'{self.__class__.__name__}("{self.serial_port}")'
+        return f'{self.__class__.__name__}("{self.location}")'
 
 
 class PacketTextFile(PacketConnection):
@@ -98,10 +98,10 @@ class PacketTextFile(PacketConnection):
                 filename = filename.strip('"')
             filename = Path(filename)
 
-        self.filename = filename
+        self.location = filename
 
         # open text file
-        self.connection = open(self.filename)
+        self.connection = open(self.location)
 
     @property
     def packets(self) -> [APRSLocationPacket]:
@@ -118,11 +118,11 @@ class PacketTextFile(PacketConnection):
         self.connection.close()
 
     def __repr__(self):
-        return f'{self.__class__.__name__}("{self.filename}")'
+        return f'{self.__class__.__name__}("{self.location}")'
 
 
 class APRS_fi(PacketConnection):
-    api_url = 'https://api.aprs.fi/api/get'
+    location = 'https://api.aprs.fi/api/get'
 
     def __init__(self, callsigns: [str], api_key: str = None):
         """
@@ -132,15 +132,19 @@ class APRS_fi(PacketConnection):
         :param api_key: API key for aprs.fi
         """
 
-        if api_key is None:
-            with open(CREDENTIALS_FILENAME) as secret_file:
-                api_key = secret_file.read().strip()
+        if api_key is None or api_key == '':
+            configuration = read_configuration(CREDENTIALS_FILENAME)
 
-        self.callsigns = callsigns
+            if 'APRS_FI' in configuration:
+                api_key = configuration['APRS_FI']['api_key']
+            else:
+                raise ConnectionError(f'no APRS.fi API key specified')
+
         self.api_key = api_key
+        self.callsigns = callsigns
 
         if not self.has_network_connection():
-            raise ConnectionError(f'No network connection.')
+            raise ConnectionError(f'no network connection')
 
     @property
     def packets(self) -> [APRSLocationPacket]:
@@ -153,7 +157,7 @@ class APRS_fi(PacketConnection):
 
         query = '&'.join(f'{key}={value}' for key, value in query.items())
 
-        response = requests.get(f'{self.api_url}?{query}').json()
+        response = requests.get(f'{self.location}?{query}').json()
         if response['result'] != 'fail':
             packets = [parse_packet(packet_candidate) for packet_candidate in response['entries']]
         else:
@@ -170,7 +174,7 @@ class APRS_fi(PacketConnection):
         """
 
         try:
-            requests.get(self.api_url, timeout=2)
+            requests.get(self.location, timeout=2)
             return True
         except ConnectionError:
             return False
@@ -204,6 +208,7 @@ class PacketDatabaseTable(PacketConnection, DatabaseTable):
             fields = {}
         fields = {**self.__default_fields, **fields}
         super().__init__(hostname, database, table, fields, 'time', **kwargs)
+        self.location = f'{self.hostname}:{self.port}/{self.database}/{self.table}'
 
     @property
     def packets(self) -> [LocationPacket]:
