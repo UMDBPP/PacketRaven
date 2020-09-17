@@ -68,7 +68,7 @@ def main():
 
     try:
         aprs_api = APRS_fi(callsigns, api_key=aprs_fi_api_key)
-        LOGGER.info(f'established connection to {aprs_api.location} parsing selected callsigns ({", ".join(callsigns)})')
+        LOGGER.info(f'connected to {aprs_api.location} with selected callsigns: {", ".join(callsigns)}')
         aprs_connections.append(aprs_api)
     except ConnectionError as error:
         LOGGER.warning(f'{error.__class__.__name__} - {error}')
