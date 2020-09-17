@@ -15,9 +15,8 @@ setup(
     url=metadata['url'],
     packages=find_packages(),
     python_requires='>=3.6',
-    setup_requires=['dunamai', 'setuptools>=41.2'],
+    setup_requires=['dunamai', 'setuptools>=41.2', 'wheel'],
     install_requires=[
-        'dunamai',
         'aprslib',
         'haversine',
         'numpy',
@@ -30,7 +29,7 @@ setup(
         'shapely',
         'sshtunnel'
     ],
-    extras_require={'dev': ['coverage', 'dunamai', 'flake8', 'nose']},
+    extras_require={'dev': ['coverage', 'flake8', 'nose']},
     entry_points={
         'console_scripts': ['packetraven=client.packetraven_cli:main'],
         'gui_scripts'    : ['packetraven_gui=client.packetraven_gui:main']
