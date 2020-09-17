@@ -11,9 +11,9 @@ from shapely.geometry import LineString, LinearRing, MultiLineString, MultiPoint
 from shapely.geometry.base import BaseGeometry
 from sshtunnel import SSHTunnelForwarder
 
-from huginn.utilities import get_logger
+from packetraven.utilities import get_logger
 
-LOGGER = get_logger('huginn.connection')
+LOGGER = get_logger('packetraven.connection')
 
 POSTGRES_DEFAULT_PORT = 5432
 SSH_DEFAULT_PORT = 22

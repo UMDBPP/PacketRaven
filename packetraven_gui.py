@@ -4,22 +4,22 @@ import os
 import tkinter
 from tkinter import filedialog, messagebox
 
-from huginn import connections, tracks
-from huginn.connections import PacketRadio
-from huginn.utilities import get_logger
-from huginn.writer import write_aprs_packet_tracks
+from packetraven import connections, tracks
+from packetraven.connections import PacketRadio
+from packetraven.utilities import get_logger
+from packetraven.writer import write_aprs_packet_tracks
 
 BALLOON_CALLSIGNS = ['W3EAX-10', 'W3EAX-11', 'W3EAX-14']
 INTERVAL_SECONDS = 5
 DESKTOP_PATH = os.path.join(os.path.expanduser('~'), 'Desktop')
 
-LOGGER = get_logger('huginn')
+LOGGER = get_logger('packetraven')
 
 
-class HuginnGUI:
+class PacketRavenGUI:
     def __init__(self):
         self.main_window = tkinter.Tk()
-        self.main_window.title('huginn main')
+        self.main_window.title('packetraven main')
 
         self.connections = []
 
@@ -42,12 +42,12 @@ class HuginnGUI:
         self.__add_entry_box(self.frames['top'], 'port')
 
         self.__add_entry_box(self.frames['top'], title='log_file', width=45)
-        self.elements['log_file'].insert(0, os.path.join(DESKTOP_PATH, f'huginn_log_{datetime.now():%Y%m%dT%H%M%S}.txt'))
+        self.elements['log_file'].insert(0, os.path.join(DESKTOP_PATH, f'packetraven_log_{datetime.now():%Y%m%dT%H%M%S}.txt'))
         log_file_button = tkinter.Button(self.frames['top'], text='...', command=self.__select_log_file)
         log_file_button.grid(row=self.last_row, column=2)
 
         self.__add_entry_box(self.frames['top'], title='output_file', width=45)
-        self.elements['output_file'].insert(0, os.path.join(DESKTOP_PATH, f'huginn_output_{datetime.now():%Y%m%dT%H%M%S}.geojson'))
+        self.elements['output_file'].insert(0, os.path.join(DESKTOP_PATH, f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson'))
         output_file_button = tkinter.Button(self.frames['top'], text='...', command=self.__select_output_file)
         output_file_button.grid(row=self.last_row, column=2)
 
@@ -110,7 +110,7 @@ class HuginnGUI:
 
     def __select_log_file(self):
         filename = os.path.splitext(self.elements['log_file'].get())[0]
-        path = filedialog.asksaveasfilename(title='Huginn log location...', initialfile=filename,
+        path = filedialog.asksaveasfilename(title='PacketRaven log location...', initialfile=filename,
                                             defaultextension='.txt', filetypes=[('Text', '*.txt')])
 
         if path != '':
@@ -118,7 +118,7 @@ class HuginnGUI:
 
     def __select_output_file(self):
         filename = os.path.splitext(self.elements['output_file'].get())[0]
-        path = filedialog.asksaveasfilename(title='Huginn output location...', initialfile=filename,
+        path = filedialog.asksaveasfilename(title='PacketRaven output location...', initialfile=filename,
                                             defaultextension='.kml', filetypes=[('GeoJSON', '*.geojson'), ('Keyhole Markup Language', '*.kml')])
         if path != '':
             self.replace_text(self.elements['output_file'], path)
@@ -189,7 +189,7 @@ class HuginnGUI:
                 self.toggle_text.set('Stop')
                 self.active = True
             except Exception as error:
-                messagebox.showerror('Huginn Error', f'{error.__class__.__name__} - {error}')
+                messagebox.showerror('PacketRaven Error', f'{error.__class__.__name__} - {error}')
                 self.active = False
 
             self.run()
@@ -258,7 +258,7 @@ class HuginnGUI:
 
 
 def main():
-    HuginnGUI()
+    PacketRavenGUI()
 
 
 if __name__ == '__main__':

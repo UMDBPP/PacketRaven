@@ -1,10 +1,10 @@
-# Huginn 
+# PacketRaven 
 
-[![tests](https://github.com/UMDBPP/huginn/workflows/tests/badge.svg)](https://github.com/UMDBPP/huginn/actions?query=workflow%3Atests)
-[![build](https://github.com/UMDBPP/huginn/workflows/build/badge.svg)](https://github.com/UMDBPP/huginn/actions?query=workflow%3Abuild)
+[![tests](https://github.com/UMDBPP/packetraven/workflows/tests/badge.svg)](https://github.com/UMDBPP/packetraven/actions?query=workflow%3Atests)
+[![build](https://github.com/UMDBPP/packetraven/workflows/build/badge.svg)](https://github.com/UMDBPP/packetraven/actions?query=workflow%3Abuild)
 
 ### Balloon payload telemetry over APRS
-Huginn is a new version of Link-TLM written in Python
+PacketRaven is a new version of Link-TLM written in Python
 
 #### Features:
 - APRS packet parsing over serial
@@ -13,17 +13,17 @@ Huginn is a new version of Link-TLM written in Python
 
 #### Installation:
 ```bash
-pip install huginn
+pip install packetraven
 ```
 
-#### Starting GUI:
+###### starting CLI:
 ```bash
-huginn
+packetraven
 ```
 
-#### Starting CLI:
+###### starting GUI:
 ```bash
-huginn_cli
+packetraven_gui
 ```
 
 #### In-progress Features

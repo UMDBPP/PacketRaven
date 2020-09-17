@@ -3,7 +3,7 @@ import os
 from geojson import Point
 from shapely.geometry import LineString
 
-from huginn.tracks import APRSTrack
+from packetraven.tracks import APRSTrack
 
 KML_STANDARD = '{http://www.opengis.net/kml/2.2}'
 

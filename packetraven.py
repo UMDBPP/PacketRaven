@@ -9,9 +9,9 @@ import os
 import sys
 import time
 
-from huginn import connections, tracks
-from huginn.utilities import get_logger
-from huginn.writer import write_aprs_packet_tracks
+from packetraven import connections, tracks
+from packetraven.utilities import get_logger
+from packetraven.writer import write_aprs_packet_tracks
 
 BALLOON_CALLSIGNS = ['W3EAX-10', 'W3EAX-11', 'W3EAX-14']
 INTERVAL_SECONDS = 5
@@ -27,14 +27,14 @@ def main():
         if os.path.isdir(log_filename):
             if not os.path.exists(log_filename):
                 os.mkdir(log_filename)
-            log_filename = os.path.join(log_filename, f'{datetime.now():%Y%m%dT%H%M%S}_huginn_log.txt')
+            log_filename = os.path.join(log_filename, f'{datetime.now():%Y%m%dT%H%M%S}_packetraven_log.txt')
 
         if output_filename is not None:
             output_directory = os.path.dirname(output_filename)
             if not os.path.exists(output_directory):
                 os.makedirs(output_directory)
 
-        logger = get_logger('huginn', log_filename)
+        logger = get_logger('packetraven', log_filename)
 
         aprs_connections = []
         if serial_port is not None and 'txt' in serial_port:
@@ -99,7 +99,7 @@ def main():
 
             time.sleep(INTERVAL_SECONDS)
     else:
-        print('usage: huginn serial_port [log_path] [output_file]')
+        print('usage: packetraven serial_port [log_path] [output_file]')
 
 
 if __name__ == '__main__':

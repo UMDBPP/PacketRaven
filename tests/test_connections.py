@@ -2,10 +2,10 @@ from datetime import datetime
 import os
 import unittest
 
-from huginn.connections import APRSPacketDatabaseTable, APRS_fi
-from huginn.database import database_has_table
-from huginn.packets import APRSLocationPacket
-from huginn.utilities import CREDENTIALS_FILENAME, read_configuration
+from packetraven.connections import APRSPacketDatabaseTable, APRS_fi
+from packetraven.database import database_has_table
+from packetraven.packets import APRSLocationPacket
+from packetraven.utilities import CREDENTIALS_FILENAME, read_configuration
 
 
 class TestConnections(unittest.TestCase):

@@ -1,6 +1,6 @@
 import unittest
 
-from huginn.structures import DoublyLinkedList
+from packetraven.structures import DoublyLinkedList
 
 
 class TestDoublyLinkedList(unittest.TestCase):

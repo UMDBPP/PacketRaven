@@ -3,9 +3,9 @@ import os
 from tempfile import TemporaryDirectory
 import unittest
 
-from huginn.packets import APRSLocationPacket
-from huginn.tracks import APRSTrack
-from huginn.writer import write_aprs_packet_tracks
+from packetraven.packets import APRSLocationPacket
+from packetraven.tracks import APRSTrack
+from packetraven.writer import write_aprs_packet_tracks
 
 
 class TestWriter(unittest.TestCase):

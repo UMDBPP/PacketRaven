@@ -3,8 +3,8 @@ import unittest
 
 import numpy
 
-from huginn.packets import APRSLocationPacket
-from huginn.tracks import APRSTrack
+from packetraven.packets import APRSLocationPacket
+from packetraven.tracks import APRSTrack
 
 
 class TestPackets(unittest.TestCase):

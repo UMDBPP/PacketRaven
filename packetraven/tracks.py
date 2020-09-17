@@ -9,8 +9,8 @@ from typing import Union
 import numpy
 from pyproj import CRS, Geod
 
-from huginn.packets import APRSLocationPacket, DEFAULT_CRS, LocationPacket
-from huginn.structures import DoublyLinkedList
+from packetraven.packets import APRSLocationPacket, DEFAULT_CRS, LocationPacket
+from packetraven.structures import DoublyLinkedList
 
 
 class LocationPacketTrack:

@@ -11,7 +11,7 @@ from typing import Union
 import numpy
 from pyproj import CRS, Geod, Transformer
 
-from huginn.parsing import parse_raw_aprs
+from packetraven.parsing import parse_raw_aprs
 
 DEFAULT_CRS = CRS.from_epsg(4326)
 

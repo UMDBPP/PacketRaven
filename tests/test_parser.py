@@ -1,6 +1,6 @@
 import unittest
 
-from huginn.parsing import PartialPacketError, parse_raw_aprs
+from packetraven.parsing import PartialPacketError, parse_raw_aprs
 
 
 class TestParser(unittest.TestCase):

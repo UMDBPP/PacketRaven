@@ -14,11 +14,11 @@ from serial import Serial
 from serial.tools import list_ports
 from shapely.geometry import Point
 
-from huginn.database import DatabaseTable
-from huginn.packets import APRSLocationPacket, LocationPacket
-from huginn.utilities import CREDENTIALS_FILENAME, get_logger
+from packetraven.database import DatabaseTable
+from packetraven.packets import APRSLocationPacket, LocationPacket
+from packetraven.utilities import CREDENTIALS_FILENAME, get_logger
 
-LOGGER = get_logger('huginn.connection')
+LOGGER = get_logger('packetraven.connection')
 
 
 class PacketConnection(ABC):

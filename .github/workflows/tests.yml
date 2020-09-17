@@ -49,6 +49,6 @@ jobs:
         #  POSTGRES_DATABASE: test_database
         #  POSTGRES_USERNAME: test_user
         #  POSTGRES_PASSWORD: test_password
-        run: coverage run --source huginn -m nose --nologcapture --verbose --ignore-files="test_connections\.py"
+        run: coverage run --source packetraven -m nose --nologcapture --verbose --ignore-files="test_connections\.py"
       - name: Generate coverage report
         run: coverage report -m
