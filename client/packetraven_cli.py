@@ -19,6 +19,7 @@ DESKTOP_PATH = Path('~').expanduser() / 'Desktop'
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-k', '--key', help='API key from https://aprs.fi/page/api')
+    parser.add_argument('-r', '--noradio', action='store_true', help='skip attempting to connect to APRS packet radio')
     parser.add_argument('-p', '--port', help='name of serial port connected to APRS packet radio')
     parser.add_argument('-l', '--log', help='path to log file to save log messages')
     parser.add_argument('-o', '--output', help='path to output file to save packets')
@@ -45,20 +46,21 @@ def main():
         output_filename = None
 
     aprs_connections = []
-    if serial_port is not None and 'txt' in serial_port:
-        try:
-            text_file = PacketTextFile(serial_port)
-            aprs_connections.append(text_file)
-        except ConnectionError as error:
-            LOGGER.warning(f'{error.__class__.__name__} - {error}')
-    else:
-        try:
-            radio = PacketRadio(serial_port)
-            serial_port = radio.location
-            LOGGER.info(f'opened port {serial_port}')
-            aprs_connections.append(radio)
-        except ConnectionError as error:
-            LOGGER.warning(f'{error.__class__.__name__} - {error}')
+    if not args.noradio:
+        if serial_port is not None and 'txt' in serial_port:
+            try:
+                text_file = PacketTextFile(serial_port)
+                aprs_connections.append(text_file)
+            except ConnectionError as error:
+                LOGGER.warning(f'{error.__class__.__name__} - {error}')
+        else:
+            try:
+                radio = PacketRadio(serial_port)
+                serial_port = radio.location
+                LOGGER.info(f'opened port {serial_port}')
+                aprs_connections.append(radio)
+            except ConnectionError as error:
+                LOGGER.warning(f'{error.__class__.__name__} - {error}')
 
     try:
         aprs_api = APRS_fi(BALLOON_CALLSIGNS, api_key=aprs_fi_api_key)
