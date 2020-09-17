@@ -19,7 +19,7 @@ for usage, do
 packetraven -h
 ```
 
-there is also a Tkinter interface:
+there is also a graphical interface:
 ```bash
 packetraven_gui
 ```
