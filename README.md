@@ -35,7 +35,7 @@ or parse packets from a radio sending parsed APRS over a USB connection:
 ```python
 from packetraven import PacketRadio
  
-serial_port = None # leave as None to let PacketRaven guess which physical report the radio is connected to  
+serial_port = None # leave None to let PacketRaven guess the port name  
 
 radio = PacketRadio(serial_port)
 radio_packets = radio.packets
