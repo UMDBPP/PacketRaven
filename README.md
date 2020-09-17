@@ -24,7 +24,7 @@ to retrieve packets directly from https://aprs.fi:
 ```python
 from packetraven import BALLOON_CALLSIGNS, APRS_fi
 
-api_key = '' # enter your APRS.fi API key here - you can get a free API key here: https://aprs.fi/page/api
+api_key = '' # enter your APRS.fi API key here - you can get a free API key from https://aprs.fi/page/api
 
 aprs_fi = APRS_fi(BALLOON_CALLSIGNS, api_key)
 aprs_fi_packets = aprs_fi.packets
