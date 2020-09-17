@@ -32,8 +32,8 @@ setup(
     ],
     extras_require={'dev': ['coverage', 'dunamai', 'flake8', 'nose']},
     entry_points={
-        'console_scripts': ['packetraven=packetraven:main'],
-        'gui_scripts'    : ['packetraven_gui=packetraven_gui:main']
+        'console_scripts': ['packetraven=client/packetraven_cli:main'],
+        'gui_scripts'    : ['packetraven_gui=client/packetraven_gui:main']
     },
     test_suite='nose.collector'
 )

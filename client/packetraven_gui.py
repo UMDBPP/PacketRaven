@@ -1,17 +1,17 @@
 from datetime import datetime
 import logging
-import os
+from pathlib import Path
 import tkinter
 from tkinter import filedialog, messagebox
 
-from packetraven import connections, tracks
-from packetraven.connections import PacketRadio
+from packetraven import BALLOON_CALLSIGNS
+from packetraven.connections import APRS_fi, PacketRadio, PacketTextFile, next_available_port
+from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
 from packetraven.writer import write_aprs_packet_tracks
 
-BALLOON_CALLSIGNS = ['W3EAX-10', 'W3EAX-11', 'W3EAX-14']
 INTERVAL_SECONDS = 5
-DESKTOP_PATH = os.path.join(os.path.expanduser('~'), 'Desktop')
+DESKTOP_PATH = Path('~').resolve() / 'Desktop'
 
 LOGGER = get_logger('packetraven')
 
@@ -42,12 +42,12 @@ class PacketRavenGUI:
         self.__add_entry_box(self.frames['top'], 'port')
 
         self.__add_entry_box(self.frames['top'], title='log_file', width=45)
-        self.elements['log_file'].insert(0, os.path.join(DESKTOP_PATH, f'packetraven_log_{datetime.now():%Y%m%dT%H%M%S}.txt'))
+        self.elements['log_file'].insert(0, DESKTOP_PATH / f'packetraven_log_{datetime.now():%Y%m%dT%H%M%S}.txt')
         log_file_button = tkinter.Button(self.frames['top'], text='...', command=self.__select_log_file)
         log_file_button.grid(row=self.last_row, column=2)
 
         self.__add_entry_box(self.frames['top'], title='output_file', width=45)
-        self.elements['output_file'].insert(0, os.path.join(DESKTOP_PATH, f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson'))
+        self.elements['output_file'].insert(0, DESKTOP_PATH / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson')
         output_file_button = tkinter.Button(self.frames['top'], text='...', command=self.__select_output_file)
         output_file_button.grid(row=self.last_row, column=2)
 
@@ -67,7 +67,7 @@ class PacketRavenGUI:
             element.configure(state=tkinter.DISABLED)
 
         try:
-            self.serial_port = connections.next_available_port()
+            self.serial_port = next_available_port()
             self.replace_text(self.elements['port'], self.serial_port)
         except OSError:
             self.serial_port = None
@@ -109,7 +109,7 @@ class PacketRavenGUI:
         self.__add_text_box(frame, title, row=row, entry=True, width=width)
 
     def __select_log_file(self):
-        filename = os.path.splitext(self.elements['log_file'].get())[0]
+        filename = Path(self.elements['log_file'].get()).stem
         path = filedialog.asksaveasfilename(title='PacketRaven log location...', initialfile=filename,
                                             defaultextension='.txt', filetypes=[('Text', '*.txt')])
 
@@ -117,7 +117,7 @@ class PacketRavenGUI:
             self.replace_text(self.elements['log_file'], path)
 
     def __select_output_file(self):
-        filename = os.path.splitext(self.elements['output_file'].get())[0]
+        filename = Path(self.elements['output_file'].get()).stem
         path = filedialog.asksaveasfilename(title='PacketRaven output location...', initialfile=filename,
                                             defaultextension='.kml', filetypes=[('GeoJSON', '*.geojson'), ('Keyhole Markup Language', '*.kml')])
         if path != '':
@@ -151,7 +151,7 @@ class PacketRavenGUI:
 
                     if self.serial_port == '':
                         try:
-                            self.serial_port = connections.next_available_port()
+                            self.serial_port = next_available_port()
                             self.replace_text(self.elements['port'], self.serial_port)
                         except Exception as error:
                             LOGGER.exception(f'{error.__class__.__name__} - {error}')
@@ -160,13 +160,13 @@ class PacketRavenGUI:
                 if self.serial_port is not None:
                     if 'txt' in self.serial_port:
                         try:
-                            text_file = connections.PacketTextFile(self.serial_port)
+                            text_file = PacketTextFile(self.serial_port)
                             self.connections.append(text_file)
                         except Exception as error:
                             LOGGER.exception(f'{error.__class__.__name__} - {error}')
                     else:
                         try:
-                            radio = connections.PacketRadio(self.serial_port)
+                            radio = PacketRadio(self.serial_port)
                             self.serial_port = radio.serial_port
                             LOGGER.info(f'opened port {self.serial_port}')
                             self.connections.append(radio)
@@ -174,7 +174,7 @@ class PacketRavenGUI:
                             LOGGER.exception(f'{error.__class__.__name__} - {error}')
 
                 try:
-                    aprs_api = connections.APRS_fi(BALLOON_CALLSIGNS)
+                    aprs_api = APRS_fi(BALLOON_CALLSIGNS)
                     LOGGER.info(f'established connection to API')
                     self.connections.append(aprs_api)
                 except Exception as error:
@@ -215,7 +215,7 @@ class PacketRavenGUI:
                             LOGGER.debug(f'{callsign:8} - received duplicate packet: {parsed_packet}')
                             continue
                     else:
-                        self.packet_tracks[callsign] = tracks.APRSTrack(callsign, [parsed_packet])
+                        self.packet_tracks[callsign] = APRSTrack(callsign, [parsed_packet])
                         LOGGER.debug(f'{callsign:8} - started tracking')
 
                     LOGGER.info(f'{callsign:8} - received new packet: {parsed_packet}')

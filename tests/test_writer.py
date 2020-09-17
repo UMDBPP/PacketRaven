@@ -1,5 +1,5 @@
 from datetime import datetime
-import os
+from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
@@ -20,9 +20,9 @@ class TestWriter(unittest.TestCase):
         track = APRSTrack('W3EAX-13', [packet_1, packet_2, packet_3])
 
         with TemporaryDirectory() as temporary_directory:
-            output_filename = os.path.join(temporary_directory, 'test_output.kml')
-            write_aprs_packet_tracks([track], os.path.join(output_filename))
-            assert os.path.exists(output_filename)
+            output_filename = Path(temporary_directory) / 'test_output.kml'
+            write_aprs_packet_tracks([track], output_filename)
+            assert output_filename.exists()
 
     def test_write_geojson(self):
         packet_1 = APRSLocationPacket.from_raw_aprs("W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
@@ -35,9 +35,9 @@ class TestWriter(unittest.TestCase):
         track = APRSTrack('W3EAX-13', [packet_1, packet_2, packet_3])
 
         with TemporaryDirectory() as temporary_directory:
-            output_filename = os.path.join(temporary_directory, 'test_output.geojson')
-            write_aprs_packet_tracks([track], os.path.join(output_filename))
-            assert os.path.exists(output_filename)
+            output_filename = Path(temporary_directory) / 'test_output.geojson'
+            write_aprs_packet_tracks([track], output_filename)
+            assert output_filename.exists()
 
 
 if __name__ == '__main__':

@@ -1,4 +1,5 @@
-import os
+from os import PathLike
+from pathlib import Path
 
 from geojson import Point
 from shapely.geometry import LineString
@@ -8,8 +9,10 @@ from packetraven.tracks import APRSTrack
 KML_STANDARD = '{http://www.opengis.net/kml/2.2}'
 
 
-def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: str):
-    extension = os.path.splitext(output_filename)[1]
+def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLike):
+    if not isinstance(output_filename, Path):
+        output_filename = Path(output_filename)
+    extension = output_filename.suffix
     if extension == '.geojson':
         import geojson
 
@@ -17,9 +20,9 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: str):
         for packet_track in packet_tracks:
             features.extend(geojson.Feature(geometry=geojson.Point(packet.coordinates.tolist()),
                                             properties={
-                                                'time': f'{packet.time:%Y%m%d%H%M%S}',
-                                                'callsign': packet.callsign,
-                                                'altitude': packet.coordinates[2],
+                                                'time'        : f'{packet.time:%Y%m%d%H%M%S}',
+                                                'callsign'    : packet.callsign,
+                                                'altitude'    : packet.coordinates[2],
                                                 'ascent_rate': packet_track.ascent_rate[packet_index],
                                                 'ground_speed': packet_track.ground_speed[packet_index]
                                             })

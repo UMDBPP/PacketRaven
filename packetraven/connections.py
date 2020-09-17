@@ -7,6 +7,8 @@ __authors__ = []
 from abc import ABC, abstractmethod
 from datetime import datetime
 import logging
+from os import PathLike
+from pathlib import Path
 from typing import Any, Union
 
 import requests
@@ -84,14 +86,19 @@ class PacketRadio(PacketConnection):
 
 
 class PacketTextFile(PacketConnection):
-    def __init__(self, filename: str = None):
+    def __init__(self, filename: PathLike = None):
         """
         Read APRS packets from a given text file.
 
         :param filename: path to text file, where each line consists of the time sent (`%Y-%m-%d %H:%M:%S`) followed by the raw APRS string
         """
 
-        self.filename = filename.strip('"')
+        if not isinstance(filename, Path):
+            if isinstance(filename, str):
+                filename = filename.strip('"')
+            filename = Path(filename)
+
+        self.filename = filename
 
         # open text file
         self.connection = open(self.filename)
