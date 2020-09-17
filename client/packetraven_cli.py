@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 import time
 
-from packetraven import BALLOON_CALLSIGNS
+from packetraven import DEFAULT_CALLSIGNS
 from packetraven.connections import APRS_fi, PacketRadio, PacketTextFile
 from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
@@ -19,6 +19,7 @@ DESKTOP_PATH = Path('~').expanduser() / 'Desktop'
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-k', '--key', help='API key from https://aprs.fi/page/api')
+    parser.add_argument('-c', '--callsigns', help='comma-separated list of callsigns to track')
     parser.add_argument('-r', '--noradio', action='store_true', help='skip attempting to connect to APRS packet radio')
     parser.add_argument('-p', '--port', help='name of serial port connected to APRS packet radio')
     parser.add_argument('-l', '--log', help='path to log file to save log messages')
@@ -26,8 +27,9 @@ def main():
     parser.add_argument('-t', '--interval', help='seconds between each main loop')
     args = parser.parse_args()
 
-    serial_port = args.port
     aprs_fi_api_key = args.key
+
+    callsigns = args.callsigns.strip('"').split(',') if args.callsigns is not None else DEFAULT_CALLSIGNS
 
     if args.log is not None:
         log_filename = Path(args.log).expanduser()
@@ -44,6 +46,8 @@ def main():
             os.makedirs(output_directory, exist_ok=True)
     else:
         output_filename = None
+
+    serial_port = args.port
 
     aprs_connections = []
     if not args.noradio:
@@ -63,8 +67,8 @@ def main():
                 LOGGER.warning(f'{error.__class__.__name__} - {error}')
 
     try:
-        aprs_api = APRS_fi(BALLOON_CALLSIGNS, api_key=aprs_fi_api_key)
-        LOGGER.info(f'established connection to {aprs_api.location}')
+        aprs_api = APRS_fi(callsigns, api_key=aprs_fi_api_key)
+        LOGGER.info(f'established connection to {aprs_api.location} parsing selected callsigns ({", ".join(callsigns)})')
         aprs_connections.append(aprs_api)
     except ConnectionError as error:
         LOGGER.warning(f'{error.__class__.__name__} - {error}')

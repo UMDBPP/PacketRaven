@@ -4,7 +4,7 @@ from pathlib import Path
 import tkinter
 from tkinter import filedialog, messagebox, simpledialog
 
-from packetraven import BALLOON_CALLSIGNS
+from packetraven import DEFAULT_CALLSIGNS
 from packetraven.connections import APRS_fi, PacketRadio, PacketTextFile, next_available_port
 from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
@@ -176,7 +176,7 @@ class PacketRavenGUI:
                 aprs_fi_api_key = simpledialog.askstring('APRS.fi API Key', 'enter API key for https://aprs.fi', parent=self.main_window)
 
                 try:
-                    aprs_api = APRS_fi(BALLOON_CALLSIGNS, api_key=aprs_fi_api_key)
+                    aprs_api = APRS_fi(DEFAULT_CALLSIGNS, api_key=aprs_fi_api_key)
                     LOGGER.info(f'established connection to API')
                     self.connections.append(aprs_api)
                 except Exception as error:
@@ -234,7 +234,7 @@ class PacketRavenGUI:
                         if seconds_to_impact >= 0:
                             LOGGER.info(f'{callsign:8} - Estimated time until landing (s): {seconds_to_impact}')
 
-                        if callsign in BALLOON_CALLSIGNS:
+                        if callsign in DEFAULT_CALLSIGNS:
                             self.replace_text(self.elements['longitude'], coordinates[0])
                             self.replace_text(self.elements['latitude'], coordinates[1])
                             self.replace_text(self.elements['altitude'], coordinates[2])
