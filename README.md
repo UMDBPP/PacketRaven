@@ -1,7 +1,7 @@
 # PacketRaven 
 
-[![tests](https://github.com/UMDBPP/packetraven/workflows/tests/badge.svg)](https://github.com/UMDBPP/packetraven/actions?query=workflow%3Atests)
-[![build](https://github.com/UMDBPP/packetraven/workflows/build/badge.svg)](https://github.com/UMDBPP/packetraven/actions?query=workflow%3Abuild)
+[![tests](https://github.com/UMDBPP/PacketRaven/workflows/tests/badge.svg)](https://github.com/UMDBPP/PacketRaven/actions?query=workflow%3Atests)
+[![build](https://github.com/UMDBPP/PacketRaven/workflows/build/badge.svg)](https://github.com/UMDBPP/PacketRaven/actions?query=workflow%3Abuild)
 
 ### Balloon payload telemetry over APRS
 PacketRaven is a new version of Link-TLM written in Python
