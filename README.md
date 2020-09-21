@@ -14,14 +14,24 @@ to start the client, run the following:
 ```bash
 packetraven
 ```
-for usage, do
 ```bash
-packetraven -h
-```
+usage: packetraven [-h] [-k APIKEY] [-c CALLSIGNS] [-s] [-p PORT] [-l LOG] [-o OUTPUT] [-t INTERVAL] [-g]
 
-there is also a graphical interface:
-```bash
-packetraven_gui
+optional arguments:
+  -h, --help            show this help message and exit
+  -k APIKEY, --apikey APIKEY
+                        API key from https://aprs.fi/page/api
+  -c CALLSIGNS, --callsigns CALLSIGNS
+                        comma-separated list of callsigns to track
+  -s, --skipserial      skip attempting to connect to APRS packet radio
+  -p PORT, --port PORT  name of serial port connected to APRS packet radio
+  -l LOG, --log LOG     path to log file to save log messages
+  -o OUTPUT, --output OUTPUT
+                        path to output file to save packets
+  -t INTERVAL, --interval INTERVAL
+                        seconds between each main loop
+  -g, --gui             start the graphical interface
+
 ```
 
 #### Python API:
@@ -46,6 +56,22 @@ radio = PacketRadio(serial_port)
 radio_packets = radio.packets
 
 print(radio_packets)
+```
+or connect to a PostGreSQL database running PostGIS:
+```python
+from packetraven import APRSPacketDatabaseTable
+
+hostname = 'bpp.umd.edu:5432' 
+database = 'bpp'
+table = 'packets'
+
+username = 'username'
+password = '1234'
+
+table = APRSPacketDatabaseTable(hostname, database, table, username=username, password=password)
+table_packets = table.packets
+
+print(table_packets)
 ```
 
 #### Features:
