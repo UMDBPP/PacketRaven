@@ -5,7 +5,7 @@ from pathlib import Path
 import time
 
 from packetraven import DEFAULT_CALLSIGNS
-from packetraven.connections import APRS_fi, PacketRadio, PacketTextFile
+from packetraven.connections import APRSPacketRadio, APRSPacketTextFile, APRSfiConnection
 from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
 from packetraven.writer import write_aprs_packet_tracks
@@ -59,14 +59,14 @@ def main(args: [str] = None):
         if not skip_serial:
             if serial_port is not None and 'txt' in serial_port:
                 try:
-                    text_file = PacketTextFile(serial_port)
+                    text_file = APRSPacketTextFile(serial_port)
                     LOGGER.info(f'reading file {text_file.location}')
                     connections.append(text_file)
                 except ConnectionError as error:
                     LOGGER.warning(f'{error.__class__.__name__} - {error}')
             else:
                 try:
-                    radio = PacketRadio(serial_port)
+                    radio = APRSPacketRadio(serial_port)
                     LOGGER.info(f'opened port {radio.location}')
                     serial_port = radio.location
                     connections.append(radio)
@@ -74,7 +74,7 @@ def main(args: [str] = None):
                     LOGGER.warning(f'{error.__class__.__name__} - {error}')
 
         try:
-            aprs_api = APRS_fi(callsigns, api_key=aprs_fi_api_key)
+            aprs_api = APRSfiConnection(callsigns, api_key=aprs_fi_api_key)
             LOGGER.info(f'connected to {aprs_api.location} with selected callsigns: {", ".join(callsigns)}')
             connections.append(aprs_api)
         except ConnectionError as error:

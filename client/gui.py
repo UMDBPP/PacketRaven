@@ -5,7 +5,7 @@ import tkinter
 from tkinter import filedialog, messagebox, simpledialog
 
 from packetraven import DEFAULT_CALLSIGNS
-from packetraven.connections import APRS_fi, PacketRadio, PacketTextFile, next_available_port
+from packetraven.connections import APRSPacketRadio, APRSPacketTextFile, APRSfiConnection, next_available_port
 from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
 from packetraven.writer import write_aprs_packet_tracks
@@ -135,7 +135,7 @@ class PacketRavenGUI:
             for connection in self.connections:
                 connection.close()
 
-                if type(connection) is PacketRadio:
+                if type(connection) is APRSPacketRadio:
                     LOGGER.info(f'closing port {connection.location}')
 
             for element in self.frames['bottom'].winfo_children():
@@ -167,14 +167,14 @@ class PacketRavenGUI:
                 if not self.skip_serial and self.serial_port is not None:
                     if 'txt' in self.serial_port:
                         try:
-                            text_file = PacketTextFile(self.serial_port)
+                            text_file = APRSPacketTextFile(self.serial_port)
                             LOGGER.info(f'reading file {text_file.location}')
                             self.connections.append(text_file)
                         except Exception as error:
                             LOGGER.exception(f'{error.__class__.__name__} - {error}')
                     else:
                         try:
-                            radio = PacketRadio(self.serial_port)
+                            radio = APRSPacketRadio(self.serial_port)
                             LOGGER.info(f'opened port {radio.location}')
                             self.serial_port = radio.location
                             self.connections.append(radio)
@@ -185,7 +185,7 @@ class PacketRavenGUI:
                     self.aprs_fi_api_key = simpledialog.askstring('APRS.fi API Key', 'enter API key for https://aprs.fi', parent=self.main_window)
 
                 try:
-                    aprs_api = APRS_fi(self.callsigns, api_key=self.aprs_fi_api_key)
+                    aprs_api = APRSfiConnection(self.callsigns, api_key=self.aprs_fi_api_key)
                     LOGGER.info(f'established connection to {aprs_api.location}')
                     self.connections.append(aprs_api)
                 except Exception as error:

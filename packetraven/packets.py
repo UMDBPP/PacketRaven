@@ -152,7 +152,8 @@ class APRSLocationPacket(LocationPacket):
                     # otherwise default to time the packet was received (now)
                     time = datetime.now()
 
-            return cls(time, parsed_packet['longitude'], parsed_packet['latitude'], parsed_packet['altitude'] if 'altitude' in parsed_packet else None, crs=DEFAULT_CRS, **parsed_packet)
+            return cls(time, parsed_packet['longitude'], parsed_packet['latitude'],
+                       parsed_packet['altitude'] if 'altitude' in parsed_packet else None, crs=DEFAULT_CRS, **parsed_packet)
         else:
             raise ValueError(f'Input packet does not contain location data: {raw_aprs}')
 

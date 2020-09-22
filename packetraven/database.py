@@ -44,7 +44,8 @@ class InheritedTableError(Exception):
 
 
 class DatabaseTable:
-    def __init__(self, hostname: str, database: str, table: str, fields: {str: type}, primary_key: str = None, crs: CRS = None, username: str = None, password: str = None, users: [str] = None,
+    def __init__(self, hostname: str, database: str, table: str, fields: {str: type}, primary_key: str = None, crs: CRS = None, username: str = None,
+                 password: str = None, users: [str] = None,
                  **kwargs):
         self.hostname = hostname
         self.database = database
@@ -87,8 +88,11 @@ class DatabaseTable:
 
                         remote_fields_not_in_local_table = {field: value for field, value in remote_fields.items() if field not in self.fields}
                         if len(remote_fields_not_in_local_table) > 0:
-                            LOGGER.warning(f'remote table has {len(remote_fields_not_in_local_table)} fields not in local table: {list(remote_fields_not_in_local_table)}')
-                            LOGGER.warning(f'adding {len(remote_fields_not_in_local_table)} fields to local table: {list(remote_fields_not_in_local_table)}')
+                            LOGGER.warning(
+                                f'remote table has {len(remote_fields_not_in_local_table)} fields not in local table: '
+                                f'{list(remote_fields_not_in_local_table)}')
+                            LOGGER.warning(
+                                f'adding {len(remote_fields_not_in_local_table)} fields to local table: {list(remote_fields_not_in_local_table)}')
 
                             for field, field_type in remote_fields_not_in_local_table.items():
                                 previous_field = list(remote_fields)[list(remote_fields).index(field) - 1]
@@ -103,8 +107,11 @@ class DatabaseTable:
 
                         local_fields_not_in_remote_table = {field: value for field, value in self.fields.items() if field not in remote_fields}
                         if len(local_fields_not_in_remote_table) > 0:
-                            LOGGER.warning(f'local table has {len(local_fields_not_in_remote_table)} fields not in remote table: {list(local_fields_not_in_remote_table)}')
-                            LOGGER.warning(f'adding {len(local_fields_not_in_remote_table)} fields to remote table: {list(local_fields_not_in_remote_table)}')
+                            LOGGER.warning(
+                                f'local table has {len(local_fields_not_in_remote_table)} fields not in remote table: '
+                                f'{list(local_fields_not_in_remote_table)}')
+                            LOGGER.warning(
+                                f'adding {len(local_fields_not_in_remote_table)} fields to remote table: {list(local_fields_not_in_remote_table)}')
 
                         if list(remote_fields) != list(self.fields):
                             LOGGER.warning(f'altering schema of "{self.database}/{self.table}"')
@@ -236,7 +243,9 @@ class DatabaseTable:
                 for record in records:
                     record_fields_not_in_local_table = [field for field in record if field not in self.fields]
                     if len(record_fields_not_in_local_table) > 0:
-                        LOGGER.warning(f'record has {len(record_fields_not_in_local_table)} fields not in the local table that will not be inserted: {record_fields_not_in_local_table}')
+                        LOGGER.warning(
+                            f'record has {len(record_fields_not_in_local_table)} fields not in the local table that will not be inserted: '
+                            f'{record_fields_not_in_local_table}')
 
                     local_fields_in_record = [field for field in self.fields if field in record]
                     geometry_fields = [field for field in self.geometry_fields if field in record]
@@ -249,11 +258,13 @@ class DatabaseTable:
 
                         if len(record_without_primary_key) > 0:
                             if len(record_without_primary_key) > 1:
-                                cursor.execute(f'UPDATE {self.table} SET ({", ".join(record_without_primary_key.keys())}) = %s WHERE {self.primary_key} = %s;',
-                                               [tuple(record_without_primary_key.values()), record[self.primary_key]])
+                                cursor.execute(
+                                    f'UPDATE {self.table} SET ({", ".join(record_without_primary_key.keys())}) = %s WHERE {self.primary_key} = %s;',
+                                    [tuple(record_without_primary_key.values()), record[self.primary_key]])
                             else:
-                                cursor.execute(f'UPDATE {self.table} SET {tuple(record_without_primary_key.keys())[0]} = %s WHERE {self.primary_key} = %s;',
-                                               [tuple(record_without_primary_key.values())[0], record[self.primary_key]])
+                                cursor.execute(
+                                    f'UPDATE {self.table} SET {tuple(record_without_primary_key.keys())[0]} = %s WHERE {self.primary_key} = %s;',
+                                    [tuple(record_without_primary_key.values())[0], record[self.primary_key]])
                     else:
                         cursor.execute(f'INSERT INTO {self.table} ({", ".join(columns)}) VALUES %s;', [tuple(values)])
 
@@ -325,7 +336,8 @@ class DatabaseTable:
                 return database_table_has_record(cursor, self.table, {self.primary_key: key})
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}({self.hostname}, {self.database}, {self.table}, {self.fields}, {self.primary_key}, {self.crs}, {self.username}, {self.password})'
+        return f'{self.__class__.__name__}({self.hostname}, {self.database}, {self.table}, {self.fields}, {self.primary_key}, {self.crs}, ' \
+               f'{self.username}, {self.password})'
 
 
 def parse_record_values(record: {str: Any}, field_types: {str: type}) -> {str: Any}:

@@ -37,22 +37,23 @@ optional arguments:
 #### Python API:
 to retrieve packets directly from https://aprs.fi:
 ```python
-from packetraven import DEFAULT_CALLSIGNS, APRS_fi
+from packetraven import DEFAULT_CALLSIGNS, APRSfiConnection
 
+callsigns = ['W3EAX-8', 'W3EAX-12', 'KC3FXX', 'KC3ZRB']
 api_key = '' # enter your APRS.fi API key here - you can get a free API key from https://aprs.fi/page/api
 
-aprs_fi = APRS_fi(DEFAULT_CALLSIGNS, api_key)
+aprs_fi = APRSfiConnection(callsigns, api_key)
 aprs_fi_packets = aprs_fi.packets
 
 print(aprs_fi_packets)
 ```
 or parse packets from a radio sending parsed APRS over a USB connection:
 ```python
-from packetraven import PacketRadio
+from packetraven import APRSPacketRadio
  
 serial_port = None # leave None to let PacketRaven guess the port name  
 
-radio = PacketRadio(serial_port)
+radio = APRSPacketRadio(serial_port)
 radio_packets = radio.packets
 
 print(radio_packets)

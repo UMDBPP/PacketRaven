@@ -28,7 +28,7 @@ class PacketConnection(ABC):
 
     @property
     @abstractmethod
-    def packets(self) -> [APRSLocationPacket]:
+    def packets(self) -> [LocationPacket]:
         """
         List the most recent packets available from this connection.
 
@@ -50,7 +50,7 @@ class PacketConnection(ABC):
         raise NotImplementedError
 
 
-class PacketRadio(PacketConnection):
+class APRSPacketRadio(PacketConnection):
     def __init__(self, serial_port: str = None):
         """
         Connect to radio over given serial port.
@@ -85,12 +85,12 @@ class PacketRadio(PacketConnection):
         return f'{self.__class__.__name__}("{self.location}")'
 
 
-class PacketTextFile(PacketConnection):
+class APRSPacketTextFile(PacketConnection):
     def __init__(self, filename: PathLike = None):
         """
-        Read APRS packets from a given text file.
+        read APRS packets from a given text file where each line consists of the time sent (`%Y-%m-%d %H:%M:%S`) followed by the raw APRS string
 
-        :param filename: path to text file, where each line consists of the time sent (`%Y-%m-%d %H:%M:%S`) followed by the raw APRS string
+        :param filename: path to text file
         """
 
         if not isinstance(filename, Path):
@@ -121,12 +121,12 @@ class PacketTextFile(PacketConnection):
         return f'{self.__class__.__name__}("{self.location}")'
 
 
-class APRS_fi(PacketConnection):
+class APRSfiConnection(PacketConnection):
     location = 'https://api.aprs.fi/api/get'
 
     def __init__(self, callsigns: [str], api_key: str = None):
         """
-        Connect to https://aprs.fi over given serial port.
+        connect to https://aprs.fi
 
         :param callsigns: list of callsigns to watch
         :param api_key: API key for aprs.fi
@@ -143,7 +143,7 @@ class APRS_fi(PacketConnection):
         self.api_key = api_key
         self.callsigns = callsigns
 
-        if not self.has_network_connection():
+        if not self.connected:
             raise ConnectionError(f'no network connection')
 
     @property
@@ -166,11 +166,12 @@ class APRS_fi(PacketConnection):
 
         return packets
 
-    def has_network_connection(self) -> bool:
+    @property
+    def connected(self) -> bool:
         """
         test network connection
 
-        :return: whether current session has a network connection to APRS API
+        :return: whether current session has a network connection to https://api.aprs.fi/api/get
         """
 
         try:
@@ -180,7 +181,7 @@ class APRS_fi(PacketConnection):
             return False
 
     def __enter__(self):
-        if not self.has_network_connection():
+        if not self.connected:
             raise ConnectionError(f'No network connection.')
 
     def __exit__(self, exc_type, exc_val, exc_tb):
