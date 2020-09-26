@@ -13,7 +13,7 @@ from . import DEFAULT_INTERVAL_SECONDS, LOGGER
 from .gui import PacketRavenGUI
 
 
-def main(args: [str] = None):
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-k', '--apikey', help='API key from https://aprs.fi/page/api')
     parser.add_argument('-c', '--callsigns', help='comma-separated list of callsigns to track')
@@ -22,7 +22,7 @@ def main(args: [str] = None):
     parser.add_argument('-o', '--output', help='path to output file to save packets')
     parser.add_argument('-t', '--interval', type=float, help='seconds between each main loop')
     parser.add_argument('-g', '--gui', action='store_true', help='start the graphical interface')
-    args = parser.parse_args(args)
+    args = parser.parse_args()
 
     aprs_fi_api_key = args.apikey
     callsigns = args.callsigns.strip('"').split(',') if args.callsigns is not None else DEFAULT_CALLSIGNS
