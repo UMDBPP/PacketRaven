@@ -17,7 +17,6 @@ def main(args: [str] = None):
     parser = argparse.ArgumentParser()
     parser.add_argument('-k', '--apikey', help='API key from https://aprs.fi/page/api')
     parser.add_argument('-c', '--callsigns', help='comma-separated list of callsigns to track')
-    parser.add_argument('-s', '--skipserial', action='store_true', help='skip attempting to connect to APRS packet radio')
     parser.add_argument('-p', '--port', help='name of serial port connected to APRS packet radio')
     parser.add_argument('-l', '--log', help='path to log file to save log messages')
     parser.add_argument('-o', '--output', help='path to output file to save packets')
@@ -27,8 +26,6 @@ def main(args: [str] = None):
 
     aprs_fi_api_key = args.apikey
     callsigns = args.callsigns.strip('"').split(',') if args.callsigns is not None else DEFAULT_CALLSIGNS
-
-    skip_serial = args.skipserial
 
     interval_seconds = args.interval if args.interval is not None else DEFAULT_INTERVAL_SECONDS
 
@@ -53,25 +50,23 @@ def main(args: [str] = None):
     serial_port = args.port
 
     if args.gui:
-        PacketRavenGUI(aprs_fi_api_key, callsigns, skip_serial, serial_port, log_filename, output_filename, interval_seconds)
+        PacketRavenGUI(aprs_fi_api_key, callsigns, serial_port, log_filename, output_filename, interval_seconds)
     else:
         connections = []
-        if not skip_serial:
-            if serial_port is not None and 'txt' in serial_port:
-                try:
-                    text_file = APRSPacketTextFile(serial_port)
-                    LOGGER.info(f'reading file {text_file.location}')
-                    connections.append(text_file)
-                except ConnectionError as error:
-                    LOGGER.warning(f'{error.__class__.__name__} - {error}')
-            else:
-                try:
-                    radio = APRSPacketRadio(serial_port)
-                    LOGGER.info(f'opened port {radio.location}')
-                    serial_port = radio.location
-                    connections.append(radio)
-                except ConnectionError as error:
-                    LOGGER.warning(f'{error.__class__.__name__} - {error}')
+        if serial_port is not None and 'txt' in serial_port:
+            try:
+                text_file = APRSPacketTextFile(serial_port)
+                LOGGER.info(f'reading file {text_file.location}')
+                connections.append(text_file)
+            except ConnectionError as error:
+                LOGGER.warning(f'{error.__class__.__name__} - {error}')
+        else:
+            try:
+                radio = APRSPacketRadio(serial_port)
+                LOGGER.info(f'opened port {radio.location}')
+                connections.append(radio)
+            except ConnectionError as error:
+                LOGGER.warning(f'{error.__class__.__name__} - {error}')
 
         try:
             aprs_api = APRSfiConnection(callsigns, api_key=aprs_fi_api_key)

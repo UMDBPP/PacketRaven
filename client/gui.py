@@ -13,11 +13,10 @@ from . import DEFAULT_INTERVAL_SECONDS, DESKTOP_PATH, LOGGER
 
 
 class PacketRavenGUI:
-    def __init__(self, aprs_fi_api_key: str = None, callsigns: [str] = None, skip_serial: bool = False, serial_port: str = None,
+    def __init__(self, aprs_fi_api_key: str = None, callsigns: [str] = None, serial_port: str = None,
                  log_filename: str = None, output_filename: str = None, interval_seconds: int = None):
         self.aprs_fi_api_key = aprs_fi_api_key
         self.callsigns = callsigns if callsigns is not None else DEFAULT_CALLSIGNS
-        self.skip_serial = skip_serial
         self.serial_port = serial_port
         self.log_filename = log_filename if log_filename is not None else DESKTOP_PATH / f'packetraven_log_{datetime.now():%Y%m%dT%H%M%S}.txt'
         self.output_filename = output_filename if output_filename is not None else DESKTOP_PATH / f'packetraven_output_' \
@@ -164,7 +163,7 @@ class PacketRavenGUI:
                             LOGGER.exception(f'{error.__class__.__name__} - {error}')
                             self.serial_port = None
 
-                if not self.skip_serial and self.serial_port is not None:
+                if self.serial_port is not None:
                     if 'txt' in self.serial_port:
                         try:
                             text_file = APRSPacketTextFile(self.serial_port)
