@@ -1,10 +1,3 @@
-"""
-Doubly linked list for generic value types.
-
-__authors__ = ['Zachary Burnett']
-"""
-
-
 class DoublyLinkedList:
     """
     A linked list is a series of node objects, each with a link (object reference) to the next node in the series.

@@ -4,7 +4,7 @@ from pathlib import Path
 from geojson import Point
 from shapely.geometry import LineString
 
-from packetraven.tracks import APRSTrack
+from .tracks import APRSTrack
 
 KML_STANDARD = '{http://www.opengis.net/kml/2.2}'
 
