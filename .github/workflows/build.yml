@@ -35,12 +35,12 @@ jobs:
                 run: twine upload dist/* --verbose
     install:
         name: test wheel installation in Python ${{ matrix.python-version }} on ${{ matrix.os }}
+        runs-on: ${{ matrix.os }}
         needs: deploy
         strategy:
             matrix:
                 os: [ ubuntu-latest, windows-latest ]
                 python-version: [ 3.8 ]
-            runs-on: ${{ matrix.os }}
         steps:
             -   name: Checkout repository
                 uses: actions/checkout@v2
