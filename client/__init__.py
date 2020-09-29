@@ -1,7 +1,2 @@
-from pathlib import Path
-
-from packetraven.utilities import get_logger
-
-LOGGER = get_logger('packetraven')
+DEFAULT_CALLSIGNS = ['W3EAX-8', 'W3EAX-10', 'W3EAX-11', 'W3EAX-14']
 DEFAULT_INTERVAL_SECONDS = 5
-DESKTOP_PATH = Path('~').expanduser() / 'Desktop'

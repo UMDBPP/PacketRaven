@@ -4,31 +4,56 @@ from pathlib import Path
 import tkinter
 from tkinter import filedialog, messagebox, simpledialog
 
-from packetraven import DEFAULT_CALLSIGNS
+from client import DEFAULT_CALLSIGNS, DEFAULT_INTERVAL_SECONDS
 from packetraven.connections import APRSPacketRadio, APRSPacketTextFile, APRSfiConnection, next_available_port
 from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
 from packetraven.writer import write_aprs_packet_tracks
-from . import DEFAULT_INTERVAL_SECONDS, DESKTOP_PATH, LOGGER
+
+LOGGER = get_logger('packetraven')
+
+DESKTOP_PATH = Path('~').expanduser() / 'Desktop'
 
 
 class PacketRavenGUI:
-    def __init__(self, aprs_fi_api_key: str = None, callsigns: [str] = None, serial_port: str = None,
-                 log_filename: str = None, output_filename: str = None, interval_seconds: int = None):
-        self.aprs_fi_api_key = aprs_fi_api_key
+    def __init__(self, callsigns: [str] = None, log_filename: str = None, output_filename: str = None,
+                 interval_seconds: int = None, **kwargs):
         self.callsigns = callsigns if callsigns is not None else DEFAULT_CALLSIGNS
-        self.serial_port = serial_port
-        self.log_filename = log_filename if log_filename is not None else DESKTOP_PATH / f'packetraven_log_{datetime.now():%Y%m%dT%H%M%S}.txt'
+        self.log_filename = log_filename if log_filename is not None else DESKTOP_PATH / f'packetraven_log_' \
+                                                                                         f'{datetime.now():%Y%m%dT%H%M%S}.txt'
         self.output_filename = output_filename if output_filename is not None else DESKTOP_PATH / f'packetraven_output_' \
                                                                                                   f'{datetime.now():%Y%m%dT%H%M%S}.geojson'
         self.interval_seconds = interval_seconds if interval_seconds is not None else DEFAULT_INTERVAL_SECONDS
+
+        self.configuration = {
+            'aprs_fi' : {
+                'api_key': None
+            },
+            'radio'   : {
+                'serial_port': None
+            },
+            'database': {
+                'hostname': None,
+                'database': None,
+                'table'   : None,
+                'username': None,
+                'password': None
+            }
+        }
+
+        self.configuration['aprs_fi'].update({key: value
+                                              for key, value in kwargs.items() if key in self.configuration['aprs_fi']})
+        self.configuration['radio'].update({key: value
+                                            for key, value in kwargs.items() if key in self.configuration['radio']})
+        self.configuration['database'].update({key: value
+                                               for key, value in kwargs.items() if key in self.configuration['database']})
 
         self.main_window = tkinter.Tk()
         self.main_window.title('packetraven main')
 
         self.connections = []
 
-        self.active = False
+        self.__active = False
         self.packet_tracks = {}
 
         self.frames = {}
@@ -71,10 +96,12 @@ class PacketRavenGUI:
         for element in self.frames['bottom'].winfo_children():
             element.configure(state=tkinter.DISABLED)
 
-        if self.serial_port is None:
+        serial_port = self.configuration['radio']['port']
+        if serial_port is None:
             try:
-                self.serial_port = next_available_port()
-                self.replace_text(self.elements['port'], self.serial_port)
+                serial_port = next_available_port()
+                self.replace_text(self.elements['port'], serial_port)
+                self.configuration['radio']['port'] = serial_port
             except OSError:
                 LOGGER.debug(f'could not automatically determine radio serial port')
 
@@ -125,7 +152,8 @@ class PacketRavenGUI:
     def __select_output_file(self):
         filename = Path(self.elements['output_file'].get()).stem
         path = filedialog.asksaveasfilename(title='PacketRaven output location...', initialfile=filename,
-                                            defaultextension='.kml', filetypes=[('GeoJSON', '*.geojson'), ('Keyhole Markup Language', '*.kml')])
+                                            defaultextension='.kml',
+                                            filetypes=[('GeoJSON', '*.geojson'), ('Keyhole Markup Language', '*.kml')])
         if path != '':
             self.replace_text(self.elements['output_file'], path)
 
@@ -141,7 +169,7 @@ class PacketRavenGUI:
                 element.configure(state=tkinter.DISABLED)
 
             self.toggle_text.set('Start')
-            self.active = False
+            self.__active = False
             self.connections = []
 
             LOGGER.info('stopping')
@@ -152,39 +180,42 @@ class PacketRavenGUI:
             LOGGER.info('starting')
 
             try:
-                if self.serial_port is None:
-                    self.serial_port = self.elements['port'].get()
+                radio_port = self.configuration['radio']['port']
+                if radio_port is None:
+                    radio_port = self.elements['port'].get()
 
-                    if self.serial_port == '':
+                    if radio_port == '':
                         try:
-                            self.serial_port = next_available_port()
-                            self.replace_text(self.elements['port'], self.serial_port)
+                            radio_port = next_available_port()
+                            self.replace_text(self.elements['port'], radio_port)
                         except Exception as error:
                             LOGGER.exception(f'{error.__class__.__name__} - {error}')
-                            self.serial_port = None
+                            radio_port = None
 
-                if self.serial_port is not None:
-                    if 'txt' in self.serial_port:
+                if radio_port is not None:
+                    if 'txt' in radio_port:
                         try:
-                            text_file = APRSPacketTextFile(self.serial_port)
+                            text_file = APRSPacketTextFile(radio_port)
                             LOGGER.info(f'reading file {text_file.location}')
                             self.connections.append(text_file)
                         except Exception as error:
                             LOGGER.exception(f'{error.__class__.__name__} - {error}')
                     else:
                         try:
-                            radio = APRSPacketRadio(self.serial_port)
+                            radio = APRSPacketRadio(radio_port)
                             LOGGER.info(f'opened port {radio.location}')
-                            self.serial_port = radio.location
+                            radio_port = radio.location
                             self.connections.append(radio)
                         except Exception as error:
                             LOGGER.exception(f'{error.__class__.__name__} - {error}')
+                self.configuration['radio']['port'] = radio_port
 
-                if self.aprs_fi_api_key is None:
-                    self.aprs_fi_api_key = simpledialog.askstring('APRS.fi API Key', 'enter API key for https://aprs.fi', parent=self.main_window)
-
+                api_key = self.configuration['aprs_fi']['api_key']
+                if api_key is None:
+                    api_key = simpledialog.askstring('APRS.fi API Key', 'enter API key for https://aprs.fi',
+                                                     parent=self.main_window)
                 try:
-                    aprs_api = APRSfiConnection(self.callsigns, api_key=self.aprs_fi_api_key)
+                    aprs_api = APRSfiConnection(self.callsigns, api_key=api_key)
                     LOGGER.info(f'established connection to {aprs_api.location}')
                     self.connections.append(aprs_api)
                 except Exception as error:
@@ -197,12 +228,21 @@ class PacketRavenGUI:
                     element.configure(state=tkinter.NORMAL)
 
                 self.toggle_text.set('Stop')
-                self.active = True
+                self.__active = True
             except Exception as error:
                 messagebox.showerror('PacketRaven Error', f'{error.__class__.__name__} - {error}')
-                self.active = False
+                self.__active = False
 
             self.run()
+
+    @property
+    def active(self) -> bool:
+        return self.__active
+
+    @active.setter
+    def active(self, active: bool):
+        if active is not self.active:
+            self.toggle()
 
     def run(self):
         if self.active:

@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import math
-from typing import Union
+from typing import Any, Union
 
 import numpy
 from pyproj import CRS, Geod, Transformer
@@ -13,10 +13,13 @@ DEFAULT_CRS = CRS.from_epsg(4326)
 class LocationPacket:
     """ location packet encoding (x, y, z) and time """
 
-    def __init__(self, time: datetime, x: float, y: float, z: float = None, crs: CRS = None):
+    def __init__(self, time: datetime, x: float, y: float, z: float = None, crs: CRS = None, source: 'PacketConnection' = None,
+                 **kwargs):
         self.time = time
         self.coordinates = numpy.array((x, y, z if z is not None else 0))
         self.crs = crs if crs is not None else DEFAULT_CRS
+        self.source = source
+        self.attributes = kwargs
 
     def distance(self, point: (float, float)) -> float:
         """
@@ -40,6 +43,17 @@ class LocationPacket:
         transformer = Transformer.from_crs(self.crs, crs)
         self.coordinates = transformer.transform(self.coordinates)
 
+    def __getitem__(self, field: str) -> Any:
+        if field not in self:
+            raise KeyError(f'"{field}" not in packet')
+        return self.attributes[field]
+
+    def __setitem__(self, field: str, value: Any):
+        self.attributes[field] = value
+
+    def __contains__(self, field: str) -> bool:
+        return field in self.attributes
+
     def __sub__(self, other: 'LocationPacket') -> 'LocationPacketDelta':
         """
         Return subtraction of packets in the form of Delta object.
@@ -48,7 +62,8 @@ class LocationPacket:
         :return: Delta object
         """
 
-        other_coordinates = Transformer.from_crs(other.crs, self.crs).transform(*other.coordinates) if other.crs != self.crs else other.coordinates
+        other_coordinates = Transformer.from_crs(other.crs, self.crs).transform(
+            *other.coordinates) if other.crs != self.crs else other.coordinates
 
         seconds = (self.time - other.time) / timedelta(seconds=1)
         horizontal_distance = self.distance(other_coordinates[:2])
@@ -127,11 +142,10 @@ class APRSLocationPacket(LocationPacket):
         :param time: time of packet, either as datetime object, seconds since Unix epoch, or ISO format date string.
         """
 
-        super().__init__(time, x, y, z, crs)
-        self.parsed_packet = kwargs
+        super().__init__(time, x, y, z, crs, **kwargs)
 
     @classmethod
-    def from_raw_aprs(cls, raw_aprs: Union[str, bytes, dict], time: datetime = None) -> 'APRSLocationPacket':
+    def from_raw_aprs(cls, raw_aprs: Union[str, bytes, dict], time: datetime = None, **kwargs) -> 'APRSLocationPacket':
         """
         APRS packet object from raw packet and given datetime
 
@@ -153,7 +167,8 @@ class APRSLocationPacket(LocationPacket):
                     time = datetime.now()
 
             return cls(time, parsed_packet['longitude'], parsed_packet['latitude'],
-                       parsed_packet['altitude'] if 'altitude' in parsed_packet else None, crs=DEFAULT_CRS, **parsed_packet)
+                       parsed_packet['altitude'] if 'altitude' in parsed_packet else None, crs=DEFAULT_CRS, **parsed_packet,
+                       **kwargs)
         else:
             raise ValueError(f'Input packet does not contain location data: {raw_aprs}')
 
@@ -164,11 +179,7 @@ class APRSLocationPacket(LocationPacket):
     def __getitem__(self, field: str):
         if field == 'callsign':
             field = 'from'
-
-        if self.__contains__(field):
-            return self.parsed_packet[field]
-        else:
-            raise KeyError(f'Packet does not contain the field "{field}"')
+        return super().__getitem__(field)
 
     def __contains__(self, field: str):
         """
@@ -180,11 +191,10 @@ class APRSLocationPacket(LocationPacket):
 
         if field == 'callsign':
             field = 'from'
-
-        return field in self.parsed_packet
+        return super().__contains__(field)
 
     def __iter__(self):
-        yield from self.parsed_packet
+        yield from self.attributes
 
     def __eq__(self, other: 'APRSLocationPacket') -> bool:
         """

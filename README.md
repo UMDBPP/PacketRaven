@@ -39,7 +39,7 @@ optional arguments:
 #### Python API:
 to retrieve packets directly from https://aprs.fi:
 ```python
-from packetraven import DEFAULT_CALLSIGNS, APRSfiConnection
+from packetraven import  APRSfiConnection
 
 callsigns = ['W3EAX-8', 'W3EAX-12', 'KC3FXX', 'KC3ZRB']
 api_key = '' # enter your APRS.fi API key here - you can get a free API key from https://aprs.fi/page/api
@@ -64,14 +64,23 @@ or connect to a PostGreSQL database running PostGIS:
 ```python
 from packetraven import APRSPacketDatabaseTable
 
-hostname = 'bpp.umd.edu:5432' 
+callsigns = ['W3EAX-8', 'W3EAX-12', 'KC3FXX', 'KC3ZRB']
+
+hostname = 'bpp.umd.edu:5432'
 database = 'bpp'
 table = 'packets'
 
 username = 'username'
 password = '1234'
 
-table = APRSPacketDatabaseTable(hostname, database, table, username=username, password=password)
+# parameters for an SSH tunnel
+ssh_hostname = None
+ssh_username = None
+ssh_password = None
+
+table = APRSPacketDatabaseTable(hostname, database, table, callsigns, 
+                                username=username, password=password, 
+                                ssh_hostname=ssh_hostname, ssh_username=ssh_hostname, ssh_password=ssh_password)
 table_packets = table.packets
 
 print(table_packets)
@@ -81,6 +90,7 @@ print(table_packets)
 ###### current:
 - parse APRS packets from USB radio
 - retrieve packets from https://aprs.fi
+- synchronize with a PostGreSQL database
 - output packets to file
 - plot altitude
 
