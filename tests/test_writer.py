@@ -8,7 +8,7 @@ from packetraven.tracks import APRSTrack
 from packetraven.writer import write_aprs_packet_tracks
 
 
-class TestWriter(unittest.TestCase):
+class TestPacketWriter(unittest.TestCase):
     def test_write_kml(self):
         packet_1 = APRSLocationPacket.from_raw_aprs(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
