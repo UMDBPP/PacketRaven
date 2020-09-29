@@ -1,11 +1,14 @@
 from datetime import datetime, timedelta
 import math
-from typing import Any, Union
+from typing import Any, TYPE_CHECKING, Union
 
 import numpy
 from pyproj import CRS, Geod, Transformer
 
-from packetraven.parsing import parse_raw_aprs
+from .parsing import parse_raw_aprs
+
+if TYPE_CHECKING:
+    from .connections import PacketConnection
 
 DEFAULT_CRS = CRS.from_epsg(4326)
 
@@ -13,7 +16,7 @@ DEFAULT_CRS = CRS.from_epsg(4326)
 class LocationPacket:
     """ location packet encoding (x, y, z) and time """
 
-    def __init__(self, time: datetime, x: float, y: float, z: float = None, crs: CRS = None, source=None,
+    def __init__(self, time: datetime, x: float, y: float, z: float = None, crs: CRS = None, source: 'PacketConnection' = None,
                  **kwargs):
         self.time = time
         self.coordinates = numpy.array((x, y, z if z is not None else 0))

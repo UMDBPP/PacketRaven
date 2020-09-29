@@ -1,9 +1,3 @@
-"""
-Read serial connection from radio and extract APRS packets.
-
-__authors__ = []
-"""
-
 from abc import ABC, abstractmethod
 from datetime import datetime
 import logging
@@ -17,19 +11,62 @@ from serial.tools import list_ports
 from shapely.geometry import Point
 
 from client import CREDENTIALS_FILENAME
-from packetraven.database import DatabaseTable
-from packetraven.packets import APRSLocationPacket, LocationPacket
-from packetraven.utilities import get_logger, read_configuration
+from .database import DatabaseTable
+from .packets import APRSLocationPacket, LocationPacket
+from .utilities import get_logger, read_configuration
 
 LOGGER = get_logger('packetraven.connection')
 
 
 class PacketConnection(ABC):
-    location: str
+    def __init__(self, location: str):
+        """
+        Create a new generic packet connection.
+
+        :param location: location of packets
+        """
+
+        self.location = location
 
     @property
     @abstractmethod
     def packets(self) -> [LocationPacket]:
+        """
+        List the most recent packets available from this connection.
+
+        :return: list of packets
+        """
+
+        raise NotImplementedError
+
+    @abstractmethod
+    def __enter__(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        raise NotImplementedError
+
+    @abstractmethod
+    def close(self):
+        raise NotImplementedError
+
+
+class APRSPacketConnection(PacketConnection):
+    def __init__(self, location: str, callsigns: [str]):
+        """
+        Create a new generic APRS packet connection.
+
+        :param location:
+        :param callsigns: list of callsigns to return from source
+        """
+
+        super().__init__(location)
+        self.callsigns = callsigns
+
+    @property
+    @abstractmethod
+    def packets(self) -> [APRSLocationPacket]:
         """
         List the most recent packets available from this connection.
 
@@ -38,40 +75,34 @@ class PacketConnection(ABC):
 
         raise NotImplementedError
 
-    @abstractmethod
-    def __enter__(self):
-        raise NotImplementedError
 
-    @abstractmethod
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        raise NotImplementedError
-
-    @abstractmethod
-    def close(self):
-        raise NotImplementedError
-
-
-class APRSPacketRadio(PacketConnection):
-    def __init__(self, serial_port: str = None):
+class APRSPacketRadio(APRSPacketConnection):
+    def __init__(self, serial_port: str = None, callsigns: [str] = None):
         """
         Connect to radio over given serial port.
 
         :param serial_port: port name
+        :param callsigns: list of callsigns to return from source
         """
 
         if serial_port is None:
             try:
-                self.location = next_available_port()
+                serial_port = next_available_port()
             except ConnectionError:
                 raise ConnectionError('could not find radio over serial connection')
         else:
-            self.location = serial_port.strip('"')
+            serial_port = serial_port.strip('"')
 
-        self.connection = Serial(self.location, baudrate=9600, timeout=1)
+        super().__init__(serial_port, callsigns)
+        self.connection = Serial(serial_port, baudrate=9600, timeout=1)
 
     @property
     def packets(self) -> [APRSLocationPacket]:
-        return [parse_packet(line, source=self) for line in self.connection.readlines()]
+        packets = [parse_packet(line, source=self) for line in self.connection.readlines()]
+        if self.callsigns is not None:
+            return [packet for packet in packets if packet.callsign in self.callsigns]
+        else:
+            return packets
 
     def __enter__(self):
         return self.connection
@@ -86,13 +117,14 @@ class APRSPacketRadio(PacketConnection):
         return f'{self.__class__.__name__}("{self.location}")'
 
 
-class APRSPacketTextFile(PacketConnection):
-    def __init__(self, filename: PathLike = None):
+class APRSPacketTextFile(APRSPacketConnection):
+    def __init__(self, filename: PathLike = None, callsigns: str = None):
         """
         read APRS packets from a given text file where each line consists of the time sent (`%Y-%m-%d %H:%M:%S`) followed by
         the raw APRS string
 
         :param filename: path to text file
+        :param callsigns: list of callsigns to return from source
         """
 
         if not isinstance(filename, Path):
@@ -100,15 +132,17 @@ class APRSPacketTextFile(PacketConnection):
                 filename = filename.strip('"')
             filename = Path(filename)
 
-        self.location = filename
-
-        # open text file
-        self.connection = open(self.location)
+        super().__init__(filename, callsigns)
+        self.connection = open(filename)
 
     @property
     def packets(self) -> [APRSLocationPacket]:
-        return [parse_packet(line[25:].strip('\n'), datetime.strptime(line[:19], '%Y-%m-%d %H:%M:%S'), source=self)
-                for line in self.connection.readlines() if len(line) > 0]
+        packets = [parse_packet(line[25:].strip('\n'), datetime.strptime(line[:19], '%Y-%m-%d %H:%M:%S'), source=self)
+                   for line in self.connection.readlines() if len(line) > 0]
+        if self.callsigns is not None:
+            return [packet for packet in packets if packet.callsign in self.callsigns]
+        else:
+            return packets
 
     def __enter__(self):
         return self.connection
@@ -123,19 +157,19 @@ class APRSPacketTextFile(PacketConnection):
         return f'{self.__class__.__name__}("{self.location}")'
 
 
-class APRSfiConnection(PacketConnection):
-    location = 'https://api.aprs.fi/api/get'
-
+class APRSfiConnection(APRSPacketConnection):
     def __init__(self, callsigns: [str], api_key: str = None):
         """
         connect to https://aprs.fi
 
-        :param callsigns: list of callsigns to watch
+        :param callsigns: list of callsigns to return from source
         :param api_key: API key for aprs.fi
         """
 
+        url = 'https://api.aprs.fi/api/get'
         if callsigns is None:
-            raise ConnectionError(f'queries to {self.location} require a list of callsigns')
+            raise ConnectionError(f'queries to {url} require a list of callsigns')
+        super().__init__(url, callsigns)
 
         if api_key is None or api_key == '':
             configuration = read_configuration(CREDENTIALS_FILENAME)
@@ -145,7 +179,6 @@ class APRSfiConnection(PacketConnection):
             else:
                 raise ConnectionError(f'no APRS.fi API key specified')
 
-        self.callsigns = callsigns
         self.api_key = api_key
 
         if not self.connected:
@@ -213,8 +246,8 @@ class PacketDatabaseTable(DatabaseTable, PacketConnection):
         if 'fields' not in kwargs:
             kwargs['fields'] = {}
         kwargs['fields'] = {**self.__default_fields, **kwargs['fields']}
-        super().__init__(hostname, database, table, primary_key='time', **kwargs)
-        self.location = f'{self.hostname}:{self.port}/{self.database}/{self.table}'
+        DatabaseTable.__init__(self, hostname, database, table, primary_key='time', **kwargs)
+        PacketConnection.__init__(self, f'{self.hostname}:{self.port}/{self.database}/{self.table}')
 
     @property
     def packets(self) -> [LocationPacket]:
@@ -247,7 +280,7 @@ class PacketDatabaseTable(DatabaseTable, PacketConnection):
             self.tunnel.stop()
 
 
-class APRSPacketDatabaseTable(PacketDatabaseTable):
+class APRSPacketDatabaseTable(PacketDatabaseTable, APRSPacketConnection):
     __aprs_fields = {
         'from'        : str,
         'to'          : str,
@@ -265,8 +298,8 @@ class APRSPacketDatabaseTable(PacketDatabaseTable):
         if 'fields' not in kwargs:
             kwargs['fields'] = self.__aprs_fields
         kwargs['fields'] = {f'packet_{field}': field_type for field, field_type in kwargs['fields'].items()}
-        super().__init__(hostname, database, table, **kwargs)
-        self.callsigns = callsigns
+        PacketDatabaseTable.__init__(self, hostname, database, table, **kwargs)
+        APRSPacketConnection.__init__(self, f'{self.hostname}:{self.port}/{self.database}/{self.table}', callsigns)
 
     @property
     def packets(self) -> [APRSLocationPacket]:
@@ -292,11 +325,14 @@ class APRSPacketDatabaseTable(PacketDatabaseTable):
             'point'   : Point(*packet.coordinates),
             **{f'packet_{field}': value for field, value in packet.attributes.items()}
         }
-        super(super()).__setitem__(time, record)
+        super().__setitem__(time, record)
 
     @property
     def records(self) -> [{str: Any}]:
-        return self.records_where({'callsign': self.callsigns} if self.callsigns is not None else None)
+        if self.callsigns is not None:
+            return self.records_where({'callsign': self.callsigns})
+        else:
+            return self.records_where(None)
 
     def insert(self, packets: [APRSLocationPacket]):
         records = [{
