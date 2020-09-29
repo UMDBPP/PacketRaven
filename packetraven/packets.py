@@ -13,7 +13,7 @@ DEFAULT_CRS = CRS.from_epsg(4326)
 class LocationPacket:
     """ location packet encoding (x, y, z) and time """
 
-    def __init__(self, time: datetime, x: float, y: float, z: float = None, crs: CRS = None, source: 'PacketConnection' = None,
+    def __init__(self, time: datetime, x: float, y: float, z: float = None, crs: CRS = None, source=None,
                  **kwargs):
         self.time = time
         self.coordinates = numpy.array((x, y, z if z is not None else 0))
