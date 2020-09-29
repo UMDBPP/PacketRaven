@@ -3,8 +3,8 @@ from typing import Union
 import numpy
 from pyproj import CRS, Geod
 
-from packetraven.packets import APRSLocationPacket, DEFAULT_CRS, LocationPacket
-from packetraven.structures import DoublyLinkedList
+from .packets import APRSLocationPacket, DEFAULT_CRS, LocationPacket
+from .structures import DoublyLinkedList
 
 
 class LocationPacketTrack:

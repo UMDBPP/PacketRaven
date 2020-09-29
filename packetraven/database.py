@@ -13,7 +13,7 @@ from shapely.geometry import LineString, LinearRing, MultiLineString, MultiPoint
 from shapely.geometry.base import BaseGeometry
 from sshtunnel import SSHTunnelForwarder
 
-from packetraven.utilities import get_logger
+from .utilities import get_logger
 
 LOGGER = get_logger('packetraven.connection')
 

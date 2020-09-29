@@ -1,9 +1,3 @@
-"""
-Parse a APRS packets from raw strings.
-
-__authors__ = ['Zachary Burnett', 'Nick Rossomando']
-"""
-
 from typing import Union
 
 import aprslib
