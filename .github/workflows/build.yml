@@ -60,3 +60,4 @@ jobs:
                     env-var: VERSION
             -   name: Install wheel
                 run: pip install packetraven==$VERSION
+                shell: bash
