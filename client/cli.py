@@ -1,37 +1,44 @@
-import argparse
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from datetime import datetime
 from getpass import getpass
 import os
 from pathlib import Path
 import time
 
-from client import DEFAULT_CALLSIGNS, DEFAULT_INTERVAL_SECONDS
+from client import CREDENTIALS_FILENAME, DEFAULT_INTERVAL_SECONDS
 from client.gui import PacketRavenGUI
 from packetraven.connections import APRSPacketDatabaseTable, APRSPacketRadio, APRSPacketTextFile, APRSfiConnection, \
     PacketDatabaseTable
 from packetraven.tracks import APRSTrack
-from packetraven.utilities import CREDENTIALS_FILENAME, get_logger, read_configuration
+from packetraven.utilities import get_logger, read_configuration
 from packetraven.writer import write_aprs_packet_tracks
 
 LOGGER = get_logger('packetraven')
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--callsigns', help='comma-separated list of callsigns to track')
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-c', '--callsigns', nargs='?', const=None,
+                        help='comma-separated list of callsigns to track')
     parser.add_argument('-k', '--apikey', help='API key from https://aprs.fi/page/api')
     parser.add_argument('-p', '--port', help='name of serial port connected to APRS packet radio')
     parser.add_argument('-d', '--database', help='PostGres database table `user@hostname:port/database/table`')
     parser.add_argument('-t', '--tunnel', help='SSH tunnel `user@hostname:port`')
     parser.add_argument('-l', '--log', help='path to log file to save log messages')
     parser.add_argument('-o', '--output', help='path to output file to save packets')
-    parser.add_argument('-i', '--interval', type=float, help='seconds between each main loop')
+    parser.add_argument('-i', '--interval', default=DEFAULT_INTERVAL_SECONDS, type=float,
+                        help='seconds between each main loop')
     parser.add_argument('-g', '--gui', action='store_true', help='start the graphical interface')
     args = parser.parse_args()
 
-    callsigns = args.callsigns.strip('"').split(',') if args.callsigns is not None else DEFAULT_CALLSIGNS
+    using_gui = args.gui
+
+    if args.callsigns is None and not using_gui:
+        parser.error('the following arguments are required: -c/--callsigns')
+    callsigns = args.callsigns.strip('"').split(',') if args.callsigns is not None else None
 
     kwargs = {'api_key': args.apikey, 'serial_port': args.port}
+
     if args.database is not None:
         database = args.database
         if database.count('/') != 2:
@@ -40,6 +47,11 @@ def main():
             kwargs['hostname'], kwargs['database'], kwargs['table'] = database.split('/')
             if '@' in kwargs['hostname']:
                 kwargs['username'], kwargs['hostname'] = kwargs['hostname'].split('@', 1)
+
+    if args.tunnel is not None:
+        kwargs['ssh_hostname'] = args.tunnel
+        if '@' in kwargs['ssh_hostname']:
+            kwargs['ssh_username'], kwargs['ssh_hostname'] = kwargs['ssh_hostname'].split('@', 1)
 
     if args.log is not None:
         log_filename = Path(args.log).expanduser()
@@ -59,7 +71,7 @@ def main():
     else:
         output_filename = None
 
-    interval_seconds = args.interval if args.interval is not None else DEFAULT_INTERVAL_SECONDS
+    interval_seconds = args.interval
 
     if CREDENTIALS_FILENAME.exists():
         credentials = {}
@@ -68,13 +80,13 @@ def main():
         kwargs = {key: value if key not in kwargs or kwargs[key] is None else kwargs[key]
                   for key, value in credentials.items()}
 
-    if args.gui:
+    if using_gui:
         PacketRavenGUI(callsigns, log_filename, output_filename, interval_seconds, **kwargs)
     else:
         connections = []
         if 'serial_port' in kwargs:
             radio_kwargs = {key: kwargs[key] for key in ['serial_port'] if key in kwargs}
-            if 'txt' in radio_kwargs['serial_port']:
+            if radio_kwargs['serial_port'] is not None and 'txt' in radio_kwargs['serial_port']:
                 try:
                     text_file = APRSPacketTextFile(kwargs['serial_port'])
                     LOGGER.info(f'reading file {text_file.location}')
@@ -100,16 +112,12 @@ def main():
 
         if 'hostname' in kwargs:
             database_kwargs = {key: kwargs[key]
-                               for key in ['hostname', 'database', 'table', 'username', 'password', 'ssh_hostname',
-                                           'ssh_username', 'ssh_password'] if key in kwargs}
-            if args.tunnel is not None:
-                ssh_hostname = args.tunnel
-                if '@' in ssh_hostname:
-                    database_kwargs['ssh_username'], database_kwargs['ssh_hostname'] = ssh_hostname.split('@', 1)
-                if 'ssh_username' not in database_kwargs:
-                    database_kwargs['ssh_username'] = input('SSH username: ')
-                if 'ssh_password' not in database_kwargs or database_kwargs['ssh_password'] is None:
-                    database_kwargs['ssh_password'] = getpass('SSH password: ')
+                               for key in ['hostname', 'database', 'table', 'username', 'password',
+                                           'ssh_hostname', 'ssh_username', 'ssh_password'] if key in kwargs}
+            if 'ssh_username' not in database_kwargs:
+                database_kwargs['ssh_username'] = input('SSH username: ')
+            if 'ssh_password' not in database_kwargs or database_kwargs['ssh_password'] is None:
+                database_kwargs['ssh_password'] = getpass('SSH password: ')
 
             if 'username' not in database_kwargs:
                 database_kwargs['username'] = input(f'database username: ')
@@ -127,8 +135,8 @@ def main():
             LOGGER.debug(f'receiving packets from {len(connections)} source(s)')
 
             parsed_packets = []
-            for aprs_connection in connections:
-                parsed_packets.extend(aprs_connection.packets)
+            for connection in connections:
+                parsed_packets.extend(connection.packets)
 
             LOGGER.debug(f'received {len(parsed_packets)} packets')
 

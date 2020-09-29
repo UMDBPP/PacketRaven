@@ -2,10 +2,11 @@ from datetime import datetime
 import os
 import unittest
 
+from client import CREDENTIALS_FILENAME
 from packetraven.connections import APRSPacketDatabaseTable, APRSfiConnection
 from packetraven.database import database_has_table
 from packetraven.packets import APRSLocationPacket
-from packetraven.utilities import CREDENTIALS_FILENAME, read_configuration
+from packetraven.utilities import read_configuration
 
 
 class TestConnections(unittest.TestCase):

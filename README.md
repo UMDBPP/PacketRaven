@@ -12,34 +12,39 @@ pip install packetraven
 ```
 
 #### Usage:
-to start the client, run the following:
 ```bash
-packetraven
+packetraven -c W3EAX-8,W3EAX-12 -k <aprs_fi_api_key> 
 ```
 ```bash
-usage: packetraven [-h] [-k APIKEY] [-c CALLSIGNS] [-s] [-p PORT] [-l LOG] [-o OUTPUT] [-t INTERVAL] [-g]
+usage: cli.py [-h] [-c [CALLSIGNS]] [-k APIKEY] [-p PORT] [-d DATABASE]
+              [-t TUNNEL] [-l LOG] [-o OUTPUT] [-i INTERVAL] [-g]
 
 optional arguments:
   -h, --help            show this help message and exit
+  -c [CALLSIGNS], --callsigns [CALLSIGNS]
+                        comma-separated list of callsigns to track (default:
+                        None)
   -k APIKEY, --apikey APIKEY
-                        API key from https://aprs.fi/page/api
-  -c CALLSIGNS, --callsigns CALLSIGNS
-                        comma-separated list of callsigns to track
-  -s, --skipserial      skip attempting to connect to APRS packet radio
+                        API key from https://aprs.fi/page/api (default: None)
   -p PORT, --port PORT  name of serial port connected to APRS packet radio
-  -l LOG, --log LOG     path to log file to save log messages
+                        (default: None)
+  -d DATABASE, --database DATABASE
+                        PostGres database table
+                        `user@hostname:port/database/table` (default: None)
+  -t TUNNEL, --tunnel TUNNEL
+                        SSH tunnel `user@hostname:port` (default: None)
+  -l LOG, --log LOG     path to log file to save log messages (default: None)
   -o OUTPUT, --output OUTPUT
-                        path to output file to save packets
-  -t INTERVAL, --interval INTERVAL
-                        seconds between each main loop
-  -g, --gui             start the graphical interface
-
+                        path to output file to save packets (default: None)
+  -i INTERVAL, --interval INTERVAL
+                        seconds between each main loop (default: 10)
+  -g, --gui             start the graphical interface (default: False)
 ```
 
 #### Python API:
 to retrieve packets directly from https://aprs.fi:
 ```python
-from packetraven import  APRSfiConnection
+from packetraven import APRSfiConnection
 
 callsigns = ['W3EAX-8', 'W3EAX-12', 'KC3FXX', 'KC3ZRB']
 api_key = '' # enter your APRS.fi API key here - you can get a free API key from https://aprs.fi/page/api

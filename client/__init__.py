@@ -1,2 +1,4 @@
-DEFAULT_CALLSIGNS = ['W3EAX-8', 'W3EAX-10', 'W3EAX-11', 'W3EAX-14']
-DEFAULT_INTERVAL_SECONDS = 5
+from pathlib import Path
+
+DEFAULT_INTERVAL_SECONDS = 10
+CREDENTIALS_FILENAME = Path.cwd() / 'credentials.config'

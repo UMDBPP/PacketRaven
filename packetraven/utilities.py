@@ -20,9 +20,6 @@ def repository_root(path: PathLike = None) -> Path:
         return repository_root(path.parent)
 
 
-CREDENTIALS_FILENAME = repository_root() / 'credentials.config'
-
-
 def read_configuration(filename: PathLike) -> {str: str}:
     configuration_file = configparser.ConfigParser()
     configuration_file.read(filename)

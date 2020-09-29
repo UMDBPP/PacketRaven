@@ -16,9 +16,10 @@ from serial import Serial
 from serial.tools import list_ports
 from shapely.geometry import Point
 
+from client import CREDENTIALS_FILENAME
 from packetraven.database import DatabaseTable
 from packetraven.packets import APRSLocationPacket, LocationPacket
-from packetraven.utilities import CREDENTIALS_FILENAME, get_logger, read_configuration
+from packetraven.utilities import get_logger, read_configuration
 
 LOGGER = get_logger('packetraven.connection')
 
@@ -133,6 +134,9 @@ class APRSfiConnection(PacketConnection):
         :param api_key: API key for aprs.fi
         """
 
+        if callsigns is None:
+            raise ConnectionError(f'queries to {self.location} require a list of callsigns')
+
         if api_key is None or api_key == '':
             configuration = read_configuration(CREDENTIALS_FILENAME)
 
@@ -141,8 +145,8 @@ class APRSfiConnection(PacketConnection):
             else:
                 raise ConnectionError(f'no APRS.fi API key specified')
 
-        self.api_key = api_key
         self.callsigns = callsigns
+        self.api_key = api_key
 
         if not self.connected:
             raise ConnectionError(f'no network connection')
@@ -329,7 +333,7 @@ def next_available_port() -> str:
     try:
         return next(available_ports())
     except StopIteration:
-        raise ConnectionError('No open serial ports.')
+        raise ConnectionError('no open serial ports')
 
 
 def parse_packet(raw_packet: Union[str, bytes, dict], packet_time: datetime = None,
