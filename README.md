@@ -54,16 +54,16 @@ aprs_fi_packets = aprs_fi.packets
 
 print(aprs_fi_packets)
 ```
-or parse packets from a radio sending parsed APRS over a USB connection:
+or parse packets from a TNC sending parsed APRS over a USB connection:
 ```python
 from packetraven import SerialTNC
  
 serial_port = None # leave None to let PacketRaven guess the port name  
 
-radio = APRSPacketRadio(serial_port)
-radio_packets = radio.packets
+tnc = SerialTNC(serial_port)
+tnc_packets = tnc.packets
 
-print(radio_packets)
+print(tnc_packets)
 ```
 or connect to a PostGreSQL database running PostGIS:
 ```python
@@ -93,7 +93,7 @@ print(table_packets)
 
 #### Features:
 ###### current:
-- parse APRS packets from USB radio
+- parse APRS packets from USB TNC
 - retrieve packets from https://aprs.fi
 - synchronize with a PostGreSQL database
 - output packets to file
