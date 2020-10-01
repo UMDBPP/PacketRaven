@@ -46,13 +46,13 @@ class LocationPacket:
     def __getitem__(self, field: str) -> Any:
         if field not in self:
             raise KeyError(f'"{field}" not in packet')
-        return self.attributes[field]
+        return {**self.__dict__, **self.attributes}[field]
 
     def __setitem__(self, field: str, value: Any):
         self.attributes[field] = value
 
     def __contains__(self, field: str) -> bool:
-        return field in self.attributes
+        return field in {**self.__dict__, **self.attributes}
 
     def __sub__(self, other: 'LocationPacket') -> 'LocationPacketDelta':
         """

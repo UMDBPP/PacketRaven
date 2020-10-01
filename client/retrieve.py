@@ -57,7 +57,7 @@ def retrieve_packets(connections: [APRSPacketConnection], packet_tracks: [APRSTr
         updated_callsigns = sorted(updated_callsigns)
 
         if database is not None:
-            new_packets = [packet for packet in parsed_packets if packet.time not in database]
+            new_packets = [packet for packet in parsed_packets if packet not in database]
             logger.info(f'sending {len(new_packets)} packet(s) to {database.location}')
             database.insert(new_packets)
 

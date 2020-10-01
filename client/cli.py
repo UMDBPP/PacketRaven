@@ -16,19 +16,19 @@ LOGGER = get_logger('packetraven')
 
 
 def main():
-    parser = ArgumentParser()
-    parser.add_argument('-c', '--callsigns', help='comma-separated list of callsigns to track')
-    parser.add_argument('-k', '--apikey', help='API key from https://aprs.fi/page/api')
-    parser.add_argument('-p', '--port', help='name of serial port connected to APRS packet radio '
-                                             '(set to `auto` to connect to first open serial port)')
-    parser.add_argument('-d', '--database', help='PostGres database table `user@hostname:port/database/table`')
-    parser.add_argument('-t', '--tunnel', help='SSH tunnel `user@hostname:port`')
-    parser.add_argument('-l', '--log', help='path to log file to save log messages')
-    parser.add_argument('-o', '--output', help='path to output file to save packets')
-    parser.add_argument('-i', '--interval', default=DEFAULT_INTERVAL_SECONDS, type=float,
-                        help='seconds between each main loop (default: 10)')
-    parser.add_argument('-g', '--gui', action='store_true', help='start the graphical interface')
-    args = parser.parse_args()
+    args_parser = ArgumentParser()
+    args_parser.add_argument('-c', '--callsigns', help='comma-separated list of callsigns to track')
+    args_parser.add_argument('-k', '--apikey', help='API key from https://aprs.fi/page/api')
+    args_parser.add_argument('-p', '--port', help='name of serial port connected to APRS packet radio '
+                                                  '(set to `auto` to connect to the first open serial port)')
+    args_parser.add_argument('-d', '--database', help='PostGres database table `user@hostname:port/database/table`')
+    args_parser.add_argument('-t', '--tunnel', help='SSH tunnel `user@hostname:port`')
+    args_parser.add_argument('-l', '--log', help='path to log file to save log messages')
+    args_parser.add_argument('-o', '--output', help='path to output file to save packets')
+    args_parser.add_argument('-i', '--interval', default=DEFAULT_INTERVAL_SECONDS, type=float,
+                             help='seconds between each main loop (default: 10)')
+    args_parser.add_argument('-g', '--gui', action='store_true', help='start the graphical interface')
+    args = args_parser.parse_args()
 
     using_gui = args.gui
 

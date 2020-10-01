@@ -276,7 +276,9 @@ class PacketDatabaseTable(DatabaseTable, PacketConnection):
     def __contains__(self, packet: LocationPacket) -> bool:
         with self.connection:
             with self.connection.cursor() as cursor:
-                return database_table_has_record(cursor, self.table, {self.primary_key: packet.time})
+                return database_table_has_record(cursor, self.table, {key: packet[key.replace('packet_', '')]
+                                                                      for key in self.primary_key},
+                                                 self.primary_key)
 
     def __enter__(self):
         return self.connection
@@ -347,7 +349,9 @@ class APRSPacketDatabaseTable(PacketDatabaseTable, APRSPacketConnection):
     def __contains__(self, packet: APRSLocationPacket) -> bool:
         with self.connection:
             with self.connection.cursor() as cursor:
-                return database_table_has_record(cursor, self.table, {self.primary_key: (packet.time, packet.callsign)})
+                return database_table_has_record(cursor, self.table, {key: packet[key.replace('packet_', '')]
+                                                                      for key in self.primary_key},
+                                                 self.primary_key)
 
     def insert(self, packets: [APRSLocationPacket]):
         PacketDatabaseTable.insert(self, packets)
