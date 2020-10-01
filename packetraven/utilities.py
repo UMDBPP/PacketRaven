@@ -60,6 +60,9 @@ def get_logger(name: str, log_filename: PathLike = None, file_level: int = None,
                 logger.addHandler(console_errors)
 
     if log_filename is not None:
+        if not isinstance(log_filename, Path):
+            log_filename = Path(log_filename)
+        log_filename = log_filename.resolve().expanduser()
         file_handler = logging.FileHandler(log_filename)
         file_handler.setLevel(file_level)
         for existing_file_handler in [handler for handler in logger.handlers if

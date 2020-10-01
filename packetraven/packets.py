@@ -1,14 +1,11 @@
 from datetime import datetime, timedelta
 import math
-from typing import Any, TYPE_CHECKING, Union
+from typing import Any, Union
 
 import numpy
 from pyproj import CRS, Geod, Transformer
 
 from .parsing import parse_raw_aprs
-
-if TYPE_CHECKING:
-    from .connections import PacketConnection
 
 DEFAULT_CRS = CRS.from_epsg(4326)
 
@@ -16,7 +13,7 @@ DEFAULT_CRS = CRS.from_epsg(4326)
 class LocationPacket:
     """ location packet encoding (x, y, z) and time """
 
-    def __init__(self, time: datetime, x: float, y: float, z: float = None, crs: CRS = None, source: 'PacketConnection' = None,
+    def __init__(self, time: datetime, x: float, y: float, z: float = None, crs: CRS = None, source: str = None,
                  **kwargs):
         self.time = time
         self.coordinates = numpy.array((x, y, z if z is not None else 0))
@@ -49,89 +46,100 @@ class LocationPacket:
     def __getitem__(self, field: str) -> Any:
         if field not in self:
             raise KeyError(f'"{field}" not in packet')
-        return self.attributes[field]
+        return {**self.__dict__, **self.attributes}[field]
 
     def __setitem__(self, field: str, value: Any):
         self.attributes[field] = value
 
     def __contains__(self, field: str) -> bool:
-        return field in self.attributes
+        return field in {**self.__dict__, **self.attributes}
 
-    def __sub__(self, other: 'LocationPacket') -> 'LocationPacketDelta':
-        """
-        Return subtraction of packets in the form of Delta object.
-
-        :param other: location packet
-        :return: Delta object
-        """
-
-        other_coordinates = Transformer.from_crs(other.crs, self.crs).transform(
-            *other.coordinates) if other.crs != self.crs else other.coordinates
-
-        seconds = (self.time - other.time) / timedelta(seconds=1)
-        horizontal_distance = self.distance(other_coordinates[:2])
-        vertical_distance = self.coordinates[2] - other_coordinates[2]
-
-        return LocationPacketDelta(seconds, horizontal_distance, vertical_distance)
+    def __sub__(self, other: 'LocationPacket') -> 'Distance':
+        return Distance.from_packets(self, other)
 
     def __eq__(self, other: 'LocationPacket') -> bool:
-        """
-        Whether this packet equals another packet, ignoring datetime (because of possible staggered duplicate packets).
-
-        :param other: packet to compare to this one
-        :return: equality
-        """
-
         return numpy.allclose(self.coordinates, other.coordinates)
 
     def __gt__(self, other: 'LocationPacket') -> bool:
-        """
-        Whether this packet is after another packet in time.
-
-        :param other: packet to compare to this one
-        :return: whether this packet occurred after the other
-        """
-
         return self.time > other.time
 
     def __lt__(self, other: 'LocationPacket') -> bool:
-        """
-        Whether this packet is before another packet in time.
-
-        :param other: packet to compare to this one
-        :return: whether this packet occurred before the other
-        """
-
         return self.time < other.time
 
     def __str__(self) -> str:
         return f'{self.time} {self.coordinates}'
 
 
-class LocationPacketDelta:
-    def __init__(self, seconds: float, horizontal_distance: float, vertical_distance: float):
-        self.seconds = seconds
-        self.vertical_distance = vertical_distance
-        self.horizontal_distance = horizontal_distance
+class Distance:
+    def __init__(self, interval: timedelta, horizontal_distance: float, vertical_distance: float, crs: CRS):
+        self.__interval = interval
+        self.__horizontal_distance = horizontal_distance
+        self.__vertical_distance = vertical_distance
+        self.__crs = crs
+
+    @classmethod
+    def from_packets(cls, packet_1: LocationPacket, packet_2: LocationPacket):
+        """
+        Get distance between two location packets, using the first packet's CRS.
+
+        :param packet_1: first location packet
+        :param packet_2: second location packet
+        """
+
+        if packet_2.crs != packet_1.crs:
+            transformer = Transformer.from_crs(packet_2.crs, packet_1.crs)
+            packet_2_coordinates = transformer.transform(*packet_2.coordinates)
+        else:
+            packet_2_coordinates = packet_2.coordinates
+
+        interval = packet_1.time - packet_2.time
+        horizontal_distance = packet_1.distance(packet_2_coordinates[:2])
+        vertical_distance = packet_1.coordinates[2] - packet_2_coordinates[2]
+
+        return cls(interval, horizontal_distance, vertical_distance, packet_1.crs)
 
     @property
-    def distance(self):
+    def interval(self) -> timedelta:
+        return self.__interval
+
+    @property
+    def seconds(self) -> float:
+        return self.interval / timedelta(seconds=1)
+
+    @property
+    def horizontal_distance(self) -> float:
+        return self.__horizontal_distance
+
+    @property
+    def vertical_distance(self) -> float:
+        return self.__vertical_distance
+
+    @property
+    def crs(self) -> CRS:
+        return self.__crs
+
+    @property
+    def distance(self) -> float:
         # TODO account for ellipsoid
-        return numpy.hypot(self.horizontal_distance, self.vertical_distance)
+        return numpy.hypot(self.__horizontal_distance, self.__vertical_distance)
 
     @property
-    def ascent_rate(self):
-        return self.vertical_distance / self.seconds if self.seconds > 0 else math.inf
+    def ascent_rate(self) -> float:
+        return self.__vertical_distance / self.seconds if self.seconds > 0 else math.inf
 
     @property
-    def ground_speed(self):
-        return self.horizontal_distance / self.seconds if self.seconds > 0 else math.inf
+    def ground_speed(self) -> float:
+        return self.__horizontal_distance / self.seconds if self.seconds > 0 else math.inf
 
     def __str__(self) -> str:
-        return f'{self.seconds} s, {self.vertical_distance:6.2f} m vertical, {self.horizontal_distance:6.2f} m horizontal'
+        return f'{self.seconds}s, {self.vertical_distance:6.2f}m vertical, {self.horizontal_distance:6.2f}m horizontal'
+
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}({repr(self.interval)}, {self.vertical_distance}, {self.horizontal_distance}, ' \
+               f'{repr(self.crs)})'
 
 
-class APRSLocationPacket(LocationPacket):
+class APRSPacket(LocationPacket):
     """ APRS packet containing parsed APRS fields, along with location and time """
 
     def __init__(self, time: datetime, x: float, y: float, z: float, crs: CRS = None, **kwargs):
@@ -148,7 +156,7 @@ class APRSLocationPacket(LocationPacket):
         super().__init__(time, x, y, z, crs, **kwargs)
 
     @classmethod
-    def from_raw_aprs(cls, raw_aprs: Union[str, bytes, dict], time: datetime = None, **kwargs) -> 'APRSLocationPacket':
+    def from_raw_aprs(cls, raw_aprs: Union[str, bytes, dict], time: datetime = None, **kwargs) -> 'APRSPacket':
         """
         APRS packet object from raw packet and given datetime
 
@@ -185,13 +193,6 @@ class APRSLocationPacket(LocationPacket):
         return super().__getitem__(field)
 
     def __contains__(self, field: str):
-        """
-        whether packet contains the given APRS field
-
-        :param field: APRS field name
-        :return: whether field exists
-        """
-
         if field == 'callsign':
             field = 'from'
         return super().__contains__(field)
@@ -199,18 +200,12 @@ class APRSLocationPacket(LocationPacket):
     def __iter__(self):
         yield from self.attributes
 
-    def __eq__(self, other: 'APRSLocationPacket') -> bool:
-        """
-        whether this packet equals another packet, including callsign and comment
-
-        :param other: packet to compare to this one
-        :return: equality
-        """
-
+    def __eq__(self, other: 'APRSPacket') -> bool:
         return super().__eq__(other) and self.callsign == other.callsign and self['comment'] == other['comment']
 
     def __str__(self) -> str:
         return f'{self["callsign"]} {super().__str__()} "{self["comment"]}"'
 
     def __repr__(self) -> str:
-        return str(self)
+        return f'{self.__class__.__name__}(**{repr(self.coordinates)}, {self.crs.__class__.__name__}.from_wkt(' \
+               f'{repr(self.crs.to_wkt())}), **{repr(self.attributes)})'

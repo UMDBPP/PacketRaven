@@ -16,29 +16,25 @@ pip install packetraven
 packetraven -c W3EAX-8,W3EAX-12 -k <aprs_fi_api_key> 
 ```
 ```bash
-usage: cli.py [-h] [-c [CALLSIGNS]] [-k APIKEY] [-p PORT] [-d DATABASE]
-              [-t TUNNEL] [-l LOG] [-o OUTPUT] [-i INTERVAL] [-g]
+usage: packetraven [-h] -c CALLSIGNS [-k APIKEY] [-p PORT] [-d DATABASE] [-t TUNNEL] [-l LOG] [-o OUTPUT] [-i INTERVAL] [-g]
 
 optional arguments:
   -h, --help            show this help message and exit
-  -c [CALLSIGNS], --callsigns [CALLSIGNS]
-                        comma-separated list of callsigns to track (default:
-                        None)
+  -c CALLSIGNS, --callsigns [CALLSIGNS]
+                        comma-separated list of callsigns to track
   -k APIKEY, --apikey APIKEY
-                        API key from https://aprs.fi/page/api (default: None)
+                        API key from https://aprs.fi/page/api
   -p PORT, --port PORT  name of serial port connected to APRS packet radio
-                        (default: None)
   -d DATABASE, --database DATABASE
-                        PostGres database table
-                        `user@hostname:port/database/table` (default: None)
+                        PostGres database table `user@hostname:port/database/table`
   -t TUNNEL, --tunnel TUNNEL
-                        SSH tunnel `user@hostname:port` (default: None)
-  -l LOG, --log LOG     path to log file to save log messages (default: None)
+                        SSH tunnel `user@hostname:port`
+  -l LOG, --log LOG     path to log file to save log messages
   -o OUTPUT, --output OUTPUT
-                        path to output file to save packets (default: None)
+                        path to output file to save packets
   -i INTERVAL, --interval INTERVAL
                         seconds between each main loop (default: 10)
-  -g, --gui             start the graphical interface (default: False)
+  -g, --gui             start the graphical interface
 ```
 
 #### Python API:
@@ -56,7 +52,7 @@ print(aprs_fi_packets)
 ```
 or parse packets from a radio sending parsed APRS over a USB connection:
 ```python
-from packetraven import APRSPacketRadio
+from packetraven import SerialTNC
  
 serial_port = None # leave None to let PacketRaven guess the port name  
 

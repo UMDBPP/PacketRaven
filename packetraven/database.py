@@ -2,7 +2,7 @@ from ast import literal_eval
 from datetime import date, datetime
 from functools import partial
 from socket import socket
-from typing import Any, Union
+from typing import Any, Sequence, Union
 
 import psycopg2
 from pyproj import CRS
@@ -49,6 +49,8 @@ class DatabaseTable:
         self.table = table
 
         self.fields = fields
+        if not isinstance(primary_key, Sequence) or isinstance(primary_key, str):
+            primary_key = [primary_key]
         self.primary_key = primary_key
         self.crs = crs if crs is not None else DEFAULT_CRS
 
@@ -168,10 +170,15 @@ class DatabaseTable:
             dictionary record
         """
 
-        records = self.records_where({self.primary_key: key})
+        if not isinstance(key, Sequence) or isinstance(key, str):
+            key = [key]
+
+        where = dict(zip(self.primary_key, key))
+        records = self.records_where(where)
 
         if len(records) > 1:
-            LOGGER.warning(f'found more than one record with primary key "{self.primary_key} = {key}": {records}')
+            where_string = ' AND '.join(f'{key} = {value}' for key, value in where.items())
+            LOGGER.warning(f'found more than one record with primary key "{where_string}": {records}')
 
         return records[0]
 
@@ -187,7 +194,12 @@ class DatabaseTable:
             dictionary record
         """
 
-        record[self.primary_key] = key
+        if not isinstance(key, Sequence) or isinstance(key, str):
+            key = [key]
+
+        for key_index, primary_key in enumerate(self.primary_key):
+            record[primary_key] = key[key_index]
+
         self.insert([record])
 
     @property
@@ -254,12 +266,19 @@ class DatabaseTable:
         if type(records) is dict:
             records = [records]
 
-        assert all(self.primary_key in record for record in records), \
+        assert all(primary_key in record for primary_key in self.primary_key for record in records), \
             f'one or more records does not contain primary key "{self.primary_key}"'
 
         with self.connection:
             with self.connection.cursor() as cursor:
                 for record in records:
+                    if len(self.primary_key) == 1:
+                        primary_key_string = self.primary_key[0]
+                        primary_key_value = record[self.primary_key[0]]
+                    else:
+                        primary_key_string = f'({", ".join(self.primary_key)})'
+                        primary_key_value = tuple(record[primary_key] for primary_key in self.primary_key)
+
                     record_fields_not_in_local_table = [field for field in record if field not in self.fields]
                     if len(record_fields_not_in_local_table) > 0:
                         LOGGER.warning(f'record has {len(record_fields_not_in_local_table)} fields not in the local table '
@@ -273,17 +292,16 @@ class DatabaseTable:
 
                     if database_table_has_record(cursor, self.table, record, self.primary_key):
                         record_without_primary_key = {column: value for column, value in zip(columns, values)
-                                                      if column != self.primary_key}
-
+                                                      if column not in self.primary_key}
                         if len(record_without_primary_key) > 0:
                             if len(record_without_primary_key) > 1:
                                 cursor.execute(f'UPDATE {self.table} SET ({", ".join(record_without_primary_key.keys())}) = %s'
-                                               f' WHERE {self.primary_key} = %s;',
-                                               [tuple(record_without_primary_key.values()), record[self.primary_key]])
+                                               f' WHERE {primary_key_string} = %s;',
+                                               [tuple(record_without_primary_key.values()), primary_key_value])
                             else:
-                                cursor.execute(f'UPDATE {self.table} SET {tuple(record_without_primary_key.keys())[0]} = %s '
-                                               f'WHERE {self.primary_key} = %s;',
-                                               [tuple(record_without_primary_key.values())[0], record[self.primary_key]])
+                                cursor.execute(f'UPDATE {self.table} SET {tuple(record_without_primary_key.keys())[0]} = %s'
+                                               f' WHERE {primary_key_string} = %s;',
+                                               [tuple(record_without_primary_key.values())[0], primary_key_value])
                     else:
                         cursor.execute(f'INSERT INTO {self.table} ({", ".join(columns)}) VALUES %s;',
                                        [tuple(values)])
@@ -293,8 +311,8 @@ class DatabaseTable:
 
                         for field, geometry in geometries.items():
                             cursor.execute(f'UPDATE {self.table} SET {field} = ST_GeomFromWKB(%s::geometry, %s) '
-                                           f'WHERE {self.primary_key} = %s;',
-                                           [geometry.wkb, self.crs.to_epsg(), record[self.primary_key]])
+                                           f'WHERE {primary_key_string} = %s;',
+                                           [geometry.wkb, self.crs.to_epsg(), primary_key_value])
 
     @property
     def schema(self) -> str:
@@ -309,10 +327,9 @@ class DatabaseTable:
 
             field_definition = f'{field} {POSTGRES_TYPES[field_type.__name__]}{"[]" * dimensions}'
 
-            if field == self.primary_key:
-                field_definition = f'{field_definition} PRIMARY KEY'
-
             schema.append(field_definition)
+
+        schema.append(f'PRIMARY KEY({", ".join(self.primary_key)})')
 
         return ', '.join(schema)
 
@@ -353,14 +370,16 @@ class DatabaseTable:
         return {field: field_type for field, field_type in self.fields.items() if field_type in GEOMETRY_TYPES}
 
     def __contains__(self, key: Any) -> bool:
+        if not isinstance(key, Sequence) or isinstance(key, str):
+            key = [key]
         with self.connection:
             with self.connection.cursor() as cursor:
-                return database_table_has_record(cursor, self.table, {self.primary_key: key})
+                return database_table_has_record(cursor, self.table, dict(zip(self.primary_key, key)), self.primary_key)
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}({self.hostname}, {self.database}, {self.table}, {self.fields}, ' \
-               f'{self.primary_key}, {self.crs}, ' \
-               f'{self.username}, {self.password})'
+        return f'{self.__class__.__name__}({repr(self.hostname)}, {repr(self.database)}, {repr(self.table)}, ' \
+               f'{repr(self.fields)}, {repr(self.primary_key)}, {repr(self.crs)}, {repr(self.username)}, ' \
+               f'{repr(self.password)})'
 
 
 class InheritedTableError(Exception):
@@ -495,13 +514,20 @@ def database_table_has_record(cursor: psycopg2._psycopg.cursor, table: str, reco
         # primary_key = cursor.fetchall()[primary_key_index]
         primary_key = list(record)[0]
 
-    value = record[primary_key]
-    if type(value) is date:
-        value = f'{value:%Y%m%d}'
-    elif type(value) is datetime:
-        value = f'{value:%Y%m%d %H%M%S}'
+    if not isinstance(primary_key, Sequence) or isinstance(primary_key, str):
+        primary_key = [primary_key]
 
-    cursor.execute(f'SELECT EXISTS(SELECT 1 FROM {table} WHERE {primary_key}=%s);', [value])
+    values = []
+    for key in primary_key:
+        value = record[key]
+        if type(value) is date:
+            value = f'{value:%Y%m%d}'
+        elif type(value) is datetime:
+            value = f'{value:%Y%m%d %H%M%S}'
+        values.append(value)
+    values = tuple(values)
+
+    cursor.execute(f'SELECT EXISTS(SELECT 1 FROM {table} WHERE ({", ".join(primary_key)}) = %s);', [values])
     return cursor.fetchone()[0]
 
 

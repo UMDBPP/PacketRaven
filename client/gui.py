@@ -1,43 +1,37 @@
 from datetime import datetime
 import logging
+from os import PathLike
 from pathlib import Path
 import re
 import tkinter
 from tkinter import filedialog, messagebox, simpledialog
+from tkinter.ttk import Combobox, Separator
+
+from dateutil.parser import parse
 
 from client import DEFAULT_INTERVAL_SECONDS
-from packetraven.connections import APRSPacketDatabaseTable, APRSPacketRadio, APRSPacketTextFile, APRSfiConnection, \
+from client.retrieve import retrieve_packets
+from packetraven.connections import APRSPacketDatabaseTable, APRSfiConnection, SerialTNC, TextFileTNC, available_ports, \
     next_available_port
-from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
-from packetraven.writer import write_aprs_packet_tracks
 
 LOGGER = get_logger('packetraven')
 
-DESKTOP_PATH = Path('~').expanduser() / 'Desktop'
-
 
 class PacketRavenGUI:
-    def __init__(self, callsigns: [str] = None, log_filename: str = None, output_filename: str = None,
+    def __init__(self, callsigns: [str] = None, log_filename: PathLike = None, output_filename: PathLike = None,
                  interval_seconds: int = None, **kwargs):
-        self.main_window = tkinter.Tk()
-        self.main_window.title('packetraven main')
-
-        self.callsigns = callsigns
-
-        self.log_filename = log_filename if log_filename is not None else DESKTOP_PATH / f'packetraven_log_' \
-                                                                                         f'{datetime.now():%Y%m%dT%H%M%S}.txt'
-        self.output_filename = output_filename if output_filename is not None else DESKTOP_PATH / f'packetraven_output_' \
-                                                                                                  f'{datetime.now():%Y%m%dT%H%M%S}.geojson'
+        self.__window = tkinter.Tk()
+        self.__window.title('PacketRaven')
 
         self.interval_seconds = interval_seconds if interval_seconds is not None else DEFAULT_INTERVAL_SECONDS
 
-        self.configuration = {
+        self.__connection_configuration = {
             'aprs_fi'   : {
                 'api_key': None
             },
-            'radio'     : {
-                'serial_port': None
+            'tnc'       : {
+                'tnc': None
             },
             'database'  : {
                 'hostname': None,
@@ -53,267 +47,221 @@ class PacketRavenGUI:
             }
         }
 
-        for section_name, section in self.configuration.items():
+        for section_name, section in self.__connection_configuration.items():
             section.update({
                 key: value for key, value in kwargs.items() if key in section
             })
 
         self.database = None
-        self.connections = []
+        self.__connections = []
 
         self.__active = False
-        self.packet_tracks = {}
+        self.__packet_tracks = {}
 
-        self.frames = {}
-        self.elements = {}
-        self.last_row = 0
+        self.__frames = {}
+        self.__elements = {}
+        self.__last_row = 0
 
-        self.frames['configuration'] = tkinter.Frame(self.main_window)
-        self.frames['configuration'].pack()
+        self.__frames['configuration'] = tkinter.Frame(self.__window)
+        self.__frames['configuration'].pack(side='left')
 
-        self.frames['controls'] = tkinter.Frame(self.main_window)
-        self.frames['controls'].pack()
+        separator = Separator(self.__window, orient=tkinter.VERTICAL)
+        separator.pack(side='left', padx=10, fill='y', expand=True)
 
-        self.frames['separator'] = tkinter.Frame(height=2, bd=1, relief=tkinter.SUNKEN)
-        self.frames['separator'].pack(fill=tkinter.X, padx=5, pady=5)
+        self.__frames['controls'] = tkinter.Frame(self.__window)
+        self.__frames['controls'].pack(side='left')
 
-        self.frames['data'] = tkinter.Frame(self.main_window)
-        self.frames['data'].pack()
+        separator = Separator(self.__window, orient=tkinter.VERTICAL)
+        separator.pack(side='left', padx=10, fill='y', expand=True)
 
-        self.__add_entry_box(self.frames['configuration'], 'callsigns', width=45)
-        if self.callsigns is not None:
-            self.callsigns = self.callsigns.upper()
-            self.elements['callsigns'].insert(0, self.callsigns)
+        self.__frames['data'] = tkinter.Frame(self.__window)
+        self.__frames['data'].pack(side='left')
 
-        self.__add_entry_box(self.frames['configuration'], 'serial_port')
+        configuration_top = tkinter.Frame(self.__frames['configuration'])
+        configuration_top.pack(pady=5)
+        configuration_bottom = tkinter.Frame(self.__frames['configuration'])
+        configuration_bottom.pack(pady=5)
 
-        self.__add_entry_box(self.frames['configuration'], title='log_file', width=45)
-        self.elements['log_file'].insert(0, self.log_filename)
-        log_file_button = tkinter.Button(self.frames['configuration'], text='...', command=self.__select_log_file)
-        log_file_button.grid(row=self.last_row, column=2)
+        configuration_left = tkinter.Frame(configuration_top)
+        configuration_left.pack(side='left')
+        configuration_right = tkinter.Frame(configuration_top)
+        configuration_right.pack(side='left')
 
-        self.__add_entry_box(self.frames['configuration'], title='output_file', width=45)
-        self.elements['output_file'].insert(0, self.output_filename)
-        output_file_button = tkinter.Button(self.frames['configuration'], text='...', command=self.__select_output_file)
-        output_file_button.grid(row=self.last_row, column=2)
+        self.__add_entry_box(configuration_left, title='callsigns', label='Callsigns', width=30)
 
-        self.toggle_text = tkinter.StringVar()
-        self.toggle_text.set('Start')
-        toggle_button = tkinter.Button(self.frames['controls'], textvariable=self.toggle_text, command=self.toggle)
-        toggle_button.grid(row=self.last_row + 1, column=1)
-        self.last_row += 1
+        self.__file_selection_option = 'select file...'
+        self.__add_combo_box(configuration_left, title='tnc', label='TNC Port / File',
+                             options=list(available_ports()) + [self.__file_selection_option], width=20)
+        self.__elements['tnc'].bind('<<ComboboxSelected>>', self.__select_tnc)
 
-        self.__add_text_box(self.frames['data'], title='longitude', units='°')
-        self.__add_text_box(self.frames['data'], title='latitude', units='°')
-        self.__add_text_box(self.frames['data'], title='altitude', units='m')
-        self.__add_text_box(self.frames['data'], title='ground_speed', units='m/s')
-        self.__add_text_box(self.frames['data'], title='ascent_rate', units='m/s')
+        self.__add_entry_box(configuration_right, title='start_date', label='Start Date', width=17)
+        self.__add_entry_box(configuration_right, title='end_date', label='End Date', width=17)
 
-        for element in self.frames['data'].winfo_children():
-            element.configure(state=tkinter.DISABLED)
+        self.__add_entry_box(configuration_bottom, title='log_file', label='Log', width=55)
+        log_file_button = tkinter.Button(configuration_bottom, text='...', command=self.__select_log_file)
+        log_file_button.grid(row=self.__last_row - 1, column=2)
 
-        serial_port = self.configuration['radio']['serial_port']
-        if serial_port is None:
-            try:
-                serial_port = next_available_port()
-                self.replace_text(self.elements['serial_port'], serial_port)
-                self.configuration['radio']['serial_port'] = serial_port
-            except OSError:
-                LOGGER.debug(f'could not automatically determine radio serial port')
+        self.__add_entry_box(configuration_bottom, title='output_file', label='Output', width=55)
+        output_file_button = tkinter.Button(configuration_bottom, text='...', command=self.__select_output_file)
+        output_file_button.grid(row=self.__last_row - 1, column=2)
 
-        self.main_window.mainloop()
+        self.__toggle_text = tkinter.StringVar()
+        self.__toggle_text.set('Start')
+        row = tkinter.Frame(self.__frames['controls'])
+        row.pack()
+        toggle_button = tkinter.Button(row, textvariable=self.__toggle_text, command=self.toggle)
+        toggle_button.pack()
 
-    def __add_text_box(self, frame: tkinter.Frame, title: str, units: str = None, row: int = None, entry: bool = False,
-                       width: int = 10):
-        if row is None:
-            row = self.last_row + 1
+        self.__add_text_box(self.__frames['data'], title='longitude', label='Longitude', units='°')
+        self.__add_text_box(self.__frames['data'], title='latitude', label='Latitude', units='°')
+        self.__add_text_box(self.__frames['data'], title='altitude', label='Altitude', units='m')
+        self.__add_text_box(self.__frames['data'], title='ground_speed', label='Ground Speed', units='m/s')
+        self.__add_text_box(self.__frames['data'], title='ascent_rate', label='Ascent Rate', units='m/s')
 
-        column = 0
+        disable_children(self.__frames['data'])
 
-        element_label = tkinter.Label(frame, text=title)
-        element_label.grid(row=row, column=column)
+        self.callsigns = callsigns
+        self.tnc = self.__connection_configuration['tnc']['tnc']
 
-        column += 1
+        if 'start_date' in kwargs:
+            self.start_date = kwargs['start_date']
+        if 'end_date' in kwargs:
+            self.end_date = kwargs['end_date']
 
-        if entry:
-            element = tkinter.Entry(frame, width=width)
+        self.log_filename = log_filename
+        if self.log_filename is None:
+            self.log_filename = Path('~') / 'Desktop'
+
+        self.output_filename = output_filename
+        if self.output_filename is None:
+            self.output_filename = Path('~') / 'Desktop'
+
+        self.__window.mainloop()
+
+    @property
+    def callsigns(self) -> [str]:
+        callsigns = self.__elements['callsigns'].get()
+        if len(callsigns) > 0:
+            callsigns = [callsign.strip().upper() for callsign in re.split(',+\ *|\ +', callsigns.strip('"'))]
         else:
-            element = tkinter.Text(frame, width=width, height=1)
+            callsigns = None
+        self.callsigns = callsigns
+        return callsigns
 
-        element.grid(row=row, column=column)
-
-        column += 1
-
-        if units is not None:
-            units_label = tkinter.Label(frame, text=units)
-            units_label.grid(row=row, column=column)
-
-        column += 1
-
-        self.last_row = row
-
-        self.elements[title] = element
-
-    def __add_entry_box(self, frame: tkinter.Frame, title: str, row: int = None, width: int = 10):
-        self.__add_text_box(frame, title, row=row, entry=True, width=width)
-
-    def __select_log_file(self):
-        filename = Path(self.elements['log_file'].get()).stem
-        path = filedialog.asksaveasfilename(title='PacketRaven log location...', initialfile=filename,
-                                            defaultextension='.txt', filetypes=[('Text', '*.txt')])
-
-        if path != '':
-            self.replace_text(self.elements['log_file'], path)
-
-    def __select_output_file(self):
-        filename = Path(self.elements['output_file'].get()).stem
-        path = filedialog.asksaveasfilename(title='PacketRaven output location...', initialfile=filename,
-                                            defaultextension='.kml',
-                                            filetypes=[('GeoJSON', '*.geojson'), ('Keyhole Markup Language', '*.kml')])
-        if path != '':
-            self.replace_text(self.elements['output_file'], path)
-
-    def toggle(self):
-        if self.active:
-            for connection in self.connections:
-                connection.close()
-
-                if type(connection) is APRSPacketRadio:
-                    LOGGER.info(f'closing port {connection.location}')
-
-            LOGGER.info(f'closed {len(self.connections)} connections')
-
-            for element in self.frames['data'].winfo_children():
-                element.configure(state=tkinter.DISABLED)
-
-            for element in self.frames['configuration'].winfo_children():
-                element.configure(state=tkinter.NORMAL)
-
-            self.toggle_text.set('Start')
-            self.__active = False
-            self.connections = []
-
-            logging.shutdown()
+    @callsigns.setter
+    def callsigns(self, callsigns: [str]):
+        if callsigns is not None:
+            callsigns = ', '.join([callsign.upper() for callsign in callsigns])
         else:
-            log_filename = self.elements['log_file'].get()
-            get_logger(LOGGER.name, log_filename)
+            callsigns = ''
+        self.replace_text(self.__elements['callsigns'], callsigns)
 
-            callsigns = self.elements['callsigns'].get()
-            if callsigns != '':
-                callsigns = [callsign.strip().upper() for callsign in re.split(',* ', callsigns.strip('"'))]
-                self.callsigns = callsigns
-            self.replace_text(self.elements['callsigns'], ', '.join(callsigns))
-            self.elements['callsigns'].configure(state=tkinter.DISABLED)
-
-            try:
-                connection_errors = []
-
-                radio_port = self.elements['serial_port'].get()
-                if radio_port == '':
-                    radio_port = self.configuration['radio']['serial_port']
-                    if radio_port is None:
-                        try:
-                            radio_port = next_available_port()
-                            self.replace_text(self.elements['serial_port'], radio_port)
-                        except Exception as error:
-                            connection_errors.append(f'USB - {error}')
-                            LOGGER.error(f'{error.__class__.__name__} - {error}')
-                            radio_port = None
-                self.elements['serial_port'].configure(state=tkinter.DISABLED)
-
-                if radio_port is not None:
-                    if 'txt' in radio_port:
-                        try:
-                            text_file = APRSPacketTextFile(radio_port)
-                            LOGGER.info(f'reading file {text_file.location}')
-                            self.connections.append(text_file)
-                        except Exception as error:
-                            connection_errors.append(f'file - {error}')
-                            LOGGER.error(f'{error.__class__.__name__} - {error}')
-                    else:
-                        try:
-                            radio = APRSPacketRadio(radio_port)
-                            LOGGER.info(f'opened port {radio.location}')
-                            radio_port = radio.location
-                            self.connections.append(radio)
-                        except Exception as error:
-                            connection_errors.append(f'serial ports - {error}')
-                            LOGGER.error(f'{error.__class__.__name__} - {error}')
-                self.configuration['radio']['serial_port'] = radio_port
-
-                api_key = self.configuration['aprs_fi']['api_key']
-                if api_key is None:
-                    api_key = simpledialog.askstring('APRS.fi API Key', 'enter API key for https://aprs.fi',
-                                                     parent=self.main_window, show='*')
+    @property
+    def tnc(self) -> Path:
+        tnc_location = self.__elements['tnc'].get()
+        if len(tnc_location) > 0:
+            if tnc_location == 'auto':
                 try:
-                    aprs_api = APRSfiConnection(self.callsigns, api_key=api_key)
-                    LOGGER.info(f'established connection to {aprs_api.location}')
-                    self.connections.append(aprs_api)
-                    self.configuration['aprs_fi']['api_key'] = api_key
-                except Exception as error:
-                    connection_errors.append(f'aprs.fi - {error}')
-                    LOGGER.error(f'{error.__class__.__name__} - {error}')
+                    tnc_location = next_available_port()
+                except OSError:
+                    LOGGER.warning(f'no open serial ports')
+                    tnc_location = None
+                self.tnc = tnc_location
+            tnc_location = Path(tnc_location)
+        else:
+            tnc_location = None
+        return tnc_location
 
-                if 'database' in self.configuration and self.configuration['database']['hostname'] is not None:
-                    ssh_tunnel_kwargs = {}
-                    if 'ssh_tunnel' in self.configuration:
-                        ssh_hostname = self.configuration['ssh_tunnel']['ssh_hostname']
-                        if ssh_hostname is not None:
-                            ssh_tunnel_kwargs.update(self.configuration['ssh_tunnel'])
-                            if '@' in ssh_hostname:
-                                ssh_tunnel_kwargs['ssh_username'], ssh_tunnel_kwargs['ssh_hostname'] = ssh_hostname.split('@',
-                                                                                                                          1)
-                            if 'ssh_username' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_username'] is None:
-                                ssh_tunnel_kwargs['ssh_username'] = simpledialog.askstring('SSH Tunnel Username',
-                                                                                           'enter SSH username for tunnel',
-                                                                                           parent=self.main_window)
-                            if 'ssh_password' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_password'] is None:
-                                ssh_tunnel_kwargs['ssh_password'] = simpledialog.askstring('SSH Tunnel Password',
-                                                                                           'enter SSH password for tunnel',
-                                                                                           parent=self.main_window, show='*')
+    @tnc.setter
+    def tnc(self, filename: PathLike):
+        self.__connection_configuration['tnc']['tnc'] = filename
+        if filename is None:
+            filename = ''
+        self.replace_text(self.__elements['tnc'], filename)
 
-                    database_kwargs = self.configuration['database']
-                    if 'username' not in database_kwargs or database_kwargs['username'] is None:
-                        database_kwargs['username'] = simpledialog.askstring('Database Username',
-                                                                             'enter database username',
-                                                                             parent=self.main_window)
-                    if 'password' not in database_kwargs or database_kwargs['password'] is None:
-                        database_kwargs['password'] = simpledialog.askstring('Database Password',
-                                                                             'enter database password',
-                                                                             parent=self.main_window, show='*')
+    @property
+    def start_date(self) -> datetime:
+        start_date = self.__elements['start_date'].get()
+        if len(start_date) > 0:
+            start_date = parse(start_date)
+        else:
+            start_date = None
+        return start_date
 
-                    try:
-                        self.database = APRSPacketDatabaseTable(callsigns=callsigns, **database_kwargs, **ssh_tunnel_kwargs)
-                        LOGGER.info(f'connected to {self.database.location}')
-                        self.connections.append(self.database)
-                        self.configuration['database'].update(database_kwargs)
-                        self.configuration['ssh_tunnel'].update(ssh_tunnel_kwargs)
-                    except Exception as error:
-                        connection_errors.append(f'database - {error}')
-                else:
-                    self.database = None
+    @start_date.setter
+    def start_date(self, start_date: datetime):
+        if start_date is not None:
+            if isinstance(start_date, str):
+                start_date = parse(start_date)
+            start_date = f'{start_date:%Y-%m-%s %H:%M:%S}'
+        else:
+            start_date = ''
+        self.replace_text(self.__elements['start_date'], start_date)
 
-                connection_errors = '\n'.join(str(error) for error in connection_errors)
-                if len(self.connections) == 0:
-                    raise ConnectionError(f'no connections started\n{connection_errors}')
+    @property
+    def end_date(self) -> datetime:
+        end_date = self.__elements['end_date'].get()
+        if len(end_date) > 0:
+            end_date = parse(end_date)
+        else:
+            end_date = None
+        return end_date
 
-                LOGGER.info(f'opened {len(self.connections)} connections')
+    @end_date.setter
+    def end_date(self, end_date: datetime):
+        if end_date is not None:
+            if isinstance(end_date, str):
+                end_date = parse(end_date)
+            end_date = f'{end_date:%Y-%m-%s %H:%M:%S}'
+        else:
+            end_date = ''
+        self.replace_text(self.__elements['start_date'], end_date)
 
-                for element in self.frames['configuration'].winfo_children():
-                    element.configure(state=tkinter.DISABLED)
+    @property
+    def log_filename(self) -> Path:
+        filename = self.__elements['log_file'].get()
+        if len(filename) > 0:
+            filename = Path(filename)
+            if filename.expanduser().resolve().is_dir():
+                self.log_filename = filename
+                filename = self.log_filename
+        else:
+            filename = None
+        return filename
 
-                for element in self.frames['data'].winfo_children():
-                    element.configure(state=tkinter.NORMAL)
+    @log_filename.setter
+    def log_filename(self, filename: PathLike):
+        if filename is not None:
+            if not isinstance(filename, Path):
+                filename = Path(filename)
+            if filename.expanduser().resolve().is_dir():
+                filename = filename / f'packetraven_log_{datetime.now():%Y%m%dT%H%M%S}.txt'
+        else:
+            filename = ''
+        self.replace_text(self.__elements['log_file'], filename)
 
-                self.toggle_text.set('Stop')
-                self.__active = True
-            except Exception as error:
-                messagebox.showerror('PacketRaven Error', error)
-                self.__active = False
-                for element in self.frames['configuration'].winfo_children():
-                    element.configure(state=tkinter.NORMAL)
+    @property
+    def output_filename(self) -> Path:
+        filename = self.__elements['output_file'].get()
+        if len(filename) > 0:
+            filename = Path(filename)
+            if filename.expanduser().resolve().is_dir():
+                self.output_filename = filename
+                filename = self.output_filename
+        else:
+            filename = None
+        return filename
 
-            self.run()
+    @output_filename.setter
+    def output_filename(self, filename: PathLike):
+        if filename is not None:
+            if not isinstance(filename, Path):
+                filename = Path(filename)
+            if filename.expanduser().resolve().is_dir():
+                filename = filename / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson'
+        else:
+            filename = ''
+        self.replace_text(self.__elements['output_file'], filename)
 
     @property
     def active(self) -> bool:
@@ -324,69 +272,234 @@ class PacketRavenGUI:
         if active is not self.active:
             self.toggle()
 
-    def run(self):
-        if self.active:
-            LOGGER.debug(f'receiving packets from {len(self.connections)} source(s)')
+    def __select_log_file(self):
+        self.log_filename = filedialog.asksaveasfilename(title='Create log file...',
+                                                         initialdir=self.log_filename.parent,
+                                                         initialfile=self.log_filename.stem,
+                                                         defaultextension='.txt',
+                                                         filetypes=[('Text', '*.txt')])
 
-            parsed_packets = []
-            for connection in self.connections:
-                parsed_packets.extend(connection.packets)
+    def __select_output_file(self):
+        self.output_filename = filedialog.asksaveasfilename(title='Create output file...',
+                                                            initialdir=self.output_filename.parent,
+                                                            initialfile=self.output_filename.stem,
+                                                            defaultextension='.geojson',
+                                                            filetypes=[('GeoJSON', '*.geojson'),
+                                                                       ('Keyhole Markup Language', '*.kml')])
 
-            LOGGER.debug(f'received {len(parsed_packets)} packets')
+    def __select_tnc(self, event):
+        if event.widget.get() == self.__file_selection_option:
+            self.tnc = filedialog.askopenfilename(title='Select TNC text file...', defaultextension='.txt',
+                                                  filetypes=[('Text', '*.txt')])
 
-            if len(parsed_packets) > 0:
-                for parsed_packet in parsed_packets:
-                    callsign = parsed_packet['callsign']
+    def __add_combo_box(self, frame: tkinter.Frame, title: str, options: [str], **kwargs) -> Combobox:
+        width = kwargs['width'] if 'width' in kwargs else None
+        combo_box = Combobox(frame, width=width)
+        combo_box['values'] = options
+        return self.__add_text_box(frame, title, text_box=combo_box, **kwargs)
 
-                    if callsign in self.packet_tracks:
-                        if parsed_packet not in self.packet_tracks[callsign]:
-                            self.packet_tracks[callsign].append(parsed_packet)
-                        else:
-                            LOGGER.debug(f'skipping duplicate packet: {parsed_packet}')
-                            continue
+    def __add_entry_box(self, frame: tkinter.Frame, title: str, **kwargs) -> tkinter.Entry:
+        width = kwargs['width'] if 'width' in kwargs else None
+        entry_box = tkinter.Entry(frame, width=width)
+        return self.__add_text_box(frame, title, text_box=entry_box, **kwargs)
+
+    def __add_text_box(self, frame: tkinter.Frame, title: str, label: str, units: str = None, row: int = None,
+                       column: int = None, width: int = 10, text_box: tkinter.Entry = None) -> tkinter.Text:
+        if row is None:
+            row = self.__last_row
+            self.__last_row += 1
+        if column is None:
+            column = 0
+
+        if label is not None:
+            text_label = tkinter.Label(frame, text=label)
+            text_label.grid(row=row, column=column)
+            column += 1
+
+        if text_box is None:
+            text_box = tkinter.Text(frame, width=width, height=1)
+        text_box.grid(row=row, column=column)
+        column += 1
+
+        if units is not None:
+            units_label = tkinter.Label(frame, text=units)
+            units_label.grid(row=row, column=column)
+            column += 1
+
+        self.__elements[title] = text_box
+        return text_box
+
+    def toggle(self):
+        if not self.active:
+            if self.log_filename is not None:
+                get_logger(LOGGER.name, self.log_filename)
+            self.__elements['log_file'].configure(state=tkinter.DISABLED)
+
+            start_date = self.start_date
+            self.__elements['start_date'].configure(state=tkinter.DISABLED)
+
+            end_date = self.end_date
+            self.__elements['end_date'].configure(state=tkinter.DISABLED)
+
+            callsigns = self.callsigns
+            self.__elements['callsigns'].configure(state=tkinter.DISABLED)
+
+            filter_message = 'retrieving packets'
+            if start_date is not None and end_date is None:
+                filter_message += f' sent after {start_date:%Y-%m-%d %H:%M:%S}'
+            elif start_date is None and end_date is not None:
+                filter_message += f' sent before {end_date:%Y-%m-%d %H:%M:%S}'
+            elif start_date is not None and end_date is not None:
+                filter_message += f' sent between {start_date:%Y-%m-%d %H:%M:%S} and {end_date:%Y-%m-%d %H:%M:%S}'
+            if callsigns is not None:
+                filter_message += f' from {len(callsigns)} callsigns: {callsigns}'
+            LOGGER.info(filter_message)
+
+            try:
+                connection_errors = []
+
+                tnc_location = self.tnc
+                self.__elements['tnc'].configure(state=tkinter.DISABLED)
+
+                if tnc_location is not None:
+                    if 'txt' in tnc_location:
+                        try:
+                            text_file_tnc = TextFileTNC(tnc_location, self.callsigns)
+                            LOGGER.info(f'reading file {text_file_tnc.location}')
+                            self.__connections.append(text_file_tnc)
+                        except Exception as error:
+                            connection_errors.append(f'file TNC - {error}')
+                            LOGGER.error(f'{error.__class__.__name__} - {error}')
                     else:
-                        self.packet_tracks[callsign] = APRSTrack(callsign, [parsed_packet])
-                        LOGGER.debug(f'started tracking {callsign:8}')
+                        try:
+                            serial_tnc = SerialTNC(tnc_location, self.callsigns)
+                            LOGGER.info(f'opened port {serial_tnc.location}')
+                            self.tnc = serial_tnc.location
+                            self.__connections.append(serial_tnc)
+                        except Exception as error:
+                            connection_errors.append(f'serial TNC - {error}')
+                            LOGGER.error(f'{error.__class__.__name__} - {error}')
 
-                    packet_track = self.packet_tracks[callsign]
+                api_key = self.__connection_configuration['aprs_fi']['api_key']
+                if api_key is None:
+                    api_key = simpledialog.askstring('APRS.fi API Key', 'enter API key for https://aprs.fi',
+                                                     parent=self.__window, show='*')
+                try:
+                    aprs_api = APRSfiConnection(self.callsigns, api_key=api_key)
+                    LOGGER.info(f'established connection to {aprs_api.location}')
+                    self.__connections.append(aprs_api)
+                    self.__connection_configuration['aprs_fi']['api_key'] = api_key
+                except Exception as error:
+                    connection_errors.append(f'aprs.fi - {error}')
+                    LOGGER.error(f'{error.__class__.__name__} - {error}')
 
-                    LOGGER.info(f'new packet from {parsed_packet.source.location}: {parsed_packet}')
+                if 'database' in self.__connection_configuration \
+                        and self.__connection_configuration['database']['hostname'] is not None:
+                    ssh_tunnel_kwargs = {}
+                    if 'ssh_tunnel' in self.__connection_configuration:
+                        ssh_hostname = self.__connection_configuration['ssh_tunnel']['ssh_hostname']
+                        if ssh_hostname is not None:
+                            ssh_tunnel_kwargs.update(self.__connection_configuration['ssh_tunnel'])
+                            if '@' in ssh_hostname:
+                                ssh_tunnel_kwargs['ssh_username'], ssh_tunnel_kwargs['ssh_hostname'] = ssh_hostname.split('@',
+                                                                                                                          1)
+                            if 'ssh_username' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_username'] is None:
+                                ssh_tunnel_kwargs['ssh_username'] = simpledialog.askstring('SSH Tunnel Username',
+                                                                                           'enter SSH username for tunnel',
+                                                                                           parent=self.__window)
+                            if 'ssh_password' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_password'] is None:
+                                ssh_tunnel_kwargs['ssh_password'] = simpledialog.askstring('SSH Tunnel Password',
+                                                                                           'enter SSH password for tunnel',
+                                                                                           parent=self.__window, show='*')
 
-                    if self.database is not None:
-                        LOGGER.info(f'sending packet to {self.database.location}')
-                        self.database.insert([parsed_packet])
+                    database_kwargs = self.__connection_configuration['database']
+                    if 'username' not in database_kwargs or database_kwargs['username'] is None:
+                        database_kwargs['username'] = simpledialog.askstring('Database Username',
+                                                                             'enter database username',
+                                                                             parent=self.__window)
+                    if 'password' not in database_kwargs or database_kwargs['password'] is None:
+                        database_kwargs['password'] = simpledialog.askstring('Database Password',
+                                                                             'enter database password',
+                                                                             parent=self.__window, show='*')
 
-                    if 'longitude' in parsed_packet and 'latitude' in parsed_packet:
-                        coordinates = packet_track.coordinates[-1]
-                        ascent_rate = packet_track.ascent_rate[-1]
-                        ground_speed = packet_track.ground_speed[-1]
-                        seconds_to_impact = packet_track.seconds_to_impact
+                    try:
+                        self.database = APRSPacketDatabaseTable(**database_kwargs, **ssh_tunnel_kwargs,
+                                                                callsigns=self.callsigns)
+                        LOGGER.info(f'connected to {self.database.location}')
+                        self.__connections.append(self.database)
+                        self.__connection_configuration['database'].update(database_kwargs)
+                        self.__connection_configuration['ssh_tunnel'].update(ssh_tunnel_kwargs)
+                    except Exception as error:
+                        connection_errors.append(f'database - {error}')
+                else:
+                    self.database = None
 
-                        LOGGER.info(f'{callsign:8} ascent rate      : {ascent_rate} m/s')
-                        LOGGER.info(f'{callsign:8} ground speed     : {ground_speed} m/s')
-                        if seconds_to_impact >= 0:
-                            LOGGER.info(f'{callsign:8} estimated landing: {seconds_to_impact} s')
+                connection_errors = '\n'.join(str(error) for error in connection_errors)
+                if len(self.__connections) == 0:
+                    raise ConnectionError(f'no connections started\n{connection_errors}')
 
-                        if callsign in self.callsigns:
-                            self.replace_text(self.elements['longitude'], coordinates[0])
-                            self.replace_text(self.elements['latitude'], coordinates[1])
-                            self.replace_text(self.elements['altitude'], coordinates[2])
-                            self.replace_text(self.elements['ground_speed'], ground_speed)
-                            self.replace_text(self.elements['ascent_rate'], ascent_rate)
+                LOGGER.info(f'listening for packets every {self.interval_seconds}s '
+                            f'from {len(self.__connections)} connection(s): '
+                            f'{", ".join([connection.location for connection in self.__connections])}')
 
-                output_filename = self.elements['output_file'].get()
-                if output_filename != '':
-                    write_aprs_packet_tracks(self.packet_tracks.values(), output_filename)
+                disable_children(self.__frames['configuration'])
+                enable_children(self.__frames['data'])
 
+                self.__toggle_text.set('Stop')
+                self.__active = True
+            except Exception as error:
+                messagebox.showerror('PacketRaven Error', error)
+                self.__active = False
+                enable_children(self.__frames['configuration'])
+
+            self.retrieve_packets()
+        else:
+            for connection in self.__connections:
+                connection.close()
+
+                if type(connection) is SerialTNC:
+                    LOGGER.info(f'closing port {connection.location}')
+
+            LOGGER.info(f'closed {len(self.__connections)} connections')
+
+            disable_children(self.__frames['data'])
+            enable_children(self.__frames['configuration'])
+
+            self.__toggle_text.set('Start')
+            self.__active = False
+            self.__connections = []
+
+            logging.shutdown()
+
+    def retrieve_packets(self):
+        if self.active:
+            retrieve_packets(self.__connections, self.__packet_tracks, self.database, self.output_filename, self.start_date,
+                             self.end_date, logger=LOGGER)
             if self.active:
-                self.main_window.after(self.interval_seconds * 1000, self.run)
+                self.__window.after(self.interval_seconds * 1000, self.retrieve_packets)
 
     @staticmethod
-    def replace_text(element, value):
-        if type(element) is tkinter.Text:
+    def replace_text(element: tkinter.Entry, value: str):
+        if isinstance(element, tkinter.Text):
             start_index = '1.0'
         else:
             start_index = 0
 
         element.delete(start_index, tkinter.END)
         element.insert(start_index, value)
+
+
+def disable_children(frame: tkinter.Frame):
+    for child in frame.winfo_children():
+        if isinstance(child, tkinter.Frame):
+            disable_children(child)
+        else:
+            child.configure(state=tkinter.DISABLED)
+
+
+def enable_children(frame: tkinter.Frame):
+    for child in frame.winfo_children():
+        if isinstance(child, tkinter.Frame):
+            enable_children(child)
+        else:
+            child.configure(state=tkinter.NORMAL)
