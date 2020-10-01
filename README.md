@@ -13,30 +13,29 @@ pip install packetraven
 
 #### Examples:
 ###### listen to a TNC sending raw APRS strings over USB port COM4:
-```bash
+```cmd
 packetraven --tnc COM4
 ```
 ###### listen to APRS.fi, watching specific callsigns:
-
 you need an API key to connect to APRS.fi; you can get one from https://aprs.fi/page/api
-```bash
+```cmd
 packetraven --apikey <api_key> --callsigns W3EAX-8,W3EAX-14
 ```
 ###### listen to a PostGIS database table:
-```bash
+```cmd
 packetraven --database <username>@<hostname>:5432/<database_name>/<table_name>
 ```
 ###### watch a text file for new lines containing raw APRS strings:
-```bash
+```cmd
 packetraven --tnc ~\Desktop\aprs_packets.txt
 ```
 ###### listen to a TNC on COM3, watching specific callsigns, and synchronize new packets with a database table, using an SSH tunnel to connect:
-```bash
+```cmd
 packetraven --tnc COM3 --callsigns W3EAX-8,W3EAX-14 --database <username>@<hostname>:5432/<database_name>/<table_name> --tunnel <ssh_username>@<hostname>:22
 ```
 
 #### Usage:
-```bash
+```text
 usage: packetraven [-h] [-c CALLSIGNS] [-k APIKEY] [-p TNC] [-d DATABASE] [-t TUNNEL] [-s START] [-e END] [-l LOG] [-o OUTPUT] [-i INTERVAL] [-g]
 
 optional arguments:
@@ -60,8 +59,6 @@ optional arguments:
                         seconds between each main loop (default: 10)
   -g, --gui             start the graphical interface
 ```
-
-
 
 #### Python API:
 to retrieve packets directly from https://aprs.fi:
