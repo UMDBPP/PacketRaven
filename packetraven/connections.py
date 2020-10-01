@@ -185,6 +185,17 @@ class APRSfiConnection(APRSPacketConnection):
             raise ConnectionError(f'no network connection')
 
     @property
+    def api_key(self) -> str:
+        return self.__api_key
+
+    @api_key.setter
+    def api_key(self, api_key: str):
+        response = requests.get(f'{self.location}?name=OH2TI&what=wx&apikey={api_key}&format=json').json()
+        if response['result'] == 'fail':
+            raise ConnectionError(response['description'])
+        self.__api_key = api_key
+
+    @property
     def packets(self) -> [APRSLocationPacket]:
         query = {
             'name'  : ','.join(self.callsigns),

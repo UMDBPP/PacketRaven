@@ -1,3 +1,4 @@
+from datetime import datetime
 from logging import Logger
 from os import PathLike
 
@@ -13,7 +14,8 @@ LOGGER = get_logger('packetraven')
 
 
 def retrieve_packets(connections: [APRSPacketConnection], packet_tracks: [APRSTrack], database: APRSPacketDatabaseTable = None,
-                     output_filename: PathLike = None, logger: Logger = None) -> [APRSPacket]:
+                     output_filename: PathLike = None, start_date: datetime = None, end_date: datetime = None,
+                     logger: Logger = None) -> [APRSPacket]:
     if logger is None:
         logger = LOGGER
 
@@ -30,6 +32,11 @@ def retrieve_packets(connections: [APRSPacketConnection], packet_tracks: [APRSTr
         new_packets = {}
         for parsed_packet in parsed_packets:
             callsign = parsed_packet['callsign']
+
+            if start_date is not None and parsed_packet.time <= start_date:
+                continue
+            if end_date is not None and parsed_packet.time >= end_date:
+                continue
 
             if callsign not in packet_tracks:
                 packet_tracks[callsign] = APRSTrack(callsign, [parsed_packet])
@@ -58,8 +65,9 @@ def retrieve_packets(connections: [APRSPacketConnection], packet_tracks: [APRSTr
 
         if database is not None:
             new_packets = [packet for packet in parsed_packets if packet not in database]
-            logger.info(f'sending {len(new_packets)} packet(s) to {database.location}')
-            database.insert(new_packets)
+            if len(new_packets) > 0:
+                logger.info(f'sending {len(new_packets)} packet(s) to {database.location}')
+                database.insert(new_packets)
 
         for callsign in updated_callsigns:
             ascent_rate = packet_tracks[callsign].ascent_rate[-1]

@@ -12,6 +12,7 @@ KML_STANDARD = '{http://www.opengis.net/kml/2.2}'
 def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLike):
     if not isinstance(output_filename, Path):
         output_filename = Path(output_filename)
+    output_filename = output_filename.resolve().expanduser()
     extension = output_filename.suffix
     if extension == '.geojson':
         import geojson

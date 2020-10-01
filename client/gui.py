@@ -5,6 +5,9 @@ from pathlib import Path
 import re
 import tkinter
 from tkinter import filedialog, messagebox, simpledialog
+from tkinter.ttk import Separator
+
+from dateutil.parser import parse
 
 from client import DEFAULT_INTERVAL_SECONDS
 from client.retrieve import retrieve_packets
@@ -13,8 +16,6 @@ from packetraven.connections import APRSPacketDatabaseTable, APRSPacketRadio, AP
 from packetraven.utilities import get_logger
 
 LOGGER = get_logger('packetraven')
-
-DESKTOP_PATH = Path('~').expanduser() / 'Desktop'
 
 
 class PacketRavenGUI:
@@ -62,53 +63,74 @@ class PacketRavenGUI:
         self.__last_row = 0
 
         self.__frames['configuration'] = tkinter.Frame(self.__window)
-        self.__frames['configuration'].pack()
+        self.__frames['configuration'].pack(side='left')
+
+        separator = Separator(self.__window, orient=tkinter.VERTICAL)
+        separator.pack(side='left', padx=10, fill='y', expand=True)
 
         self.__frames['controls'] = tkinter.Frame(self.__window)
-        self.__frames['controls'].pack()
+        self.__frames['controls'].pack(side='left')
 
-        self.__frames['separator'] = tkinter.Frame(height=2, bd=1, relief=tkinter.SUNKEN)
-        self.__frames['separator'].pack(fill=tkinter.X, padx=5, pady=5)
+        separator = Separator(self.__window, orient=tkinter.VERTICAL)
+        separator.pack(side='left', padx=10, fill='y', expand=True)
 
         self.__frames['data'] = tkinter.Frame(self.__window)
-        self.__frames['data'].pack()
+        self.__frames['data'].pack(side='left')
 
-        self.__add_entry_box(self.__frames['configuration'], 'callsigns', width=45)
-        self.__add_entry_box(self.__frames['configuration'], 'serial_port')
+        configuration_top = tkinter.Frame(self.__frames['configuration'])
+        configuration_top.pack(pady=5)
+        configuration_bottom = tkinter.Frame(self.__frames['configuration'])
+        configuration_bottom.pack(pady=5)
 
-        self.__add_entry_box(self.__frames['configuration'], title='log_file', width=45)
-        log_file_button = tkinter.Button(self.__frames['configuration'], text='...', command=self.__select_log_file)
-        log_file_button.grid(row=self.__last_row, column=2)
+        configuration_left = tkinter.Frame(configuration_top)
+        configuration_left.pack(side='left')
+        configuration_right = tkinter.Frame(configuration_top)
+        configuration_right.pack(side='left')
 
-        self.__add_entry_box(self.__frames['configuration'], title='output_file', width=45)
-        output_file_button = tkinter.Button(self.__frames['configuration'], text='...', command=self.__select_output_file)
-        output_file_button.grid(row=self.__last_row, column=2)
+        self.__add_entry_box(configuration_left, title='callsigns', label='Callsigns', width=30)
+        self.__add_entry_box(configuration_left, title='serial_port', label='Serial Port', width=30)
+
+        self.__add_entry_box(configuration_right, title='start_date', label='Start Date', width=17)
+        self.__add_entry_box(configuration_right, title='end_date', label='End Date', width=17)
+
+        self.__add_entry_box(configuration_bottom, title='log_file', label='Log', width=55)
+        log_file_button = tkinter.Button(configuration_bottom, text='...', command=self.__select_log_file)
+        log_file_button.grid(row=self.__last_row - 1, column=2)
+
+        self.__add_entry_box(configuration_bottom, title='output_file', label='Output', width=55)
+        output_file_button = tkinter.Button(configuration_bottom, text='...', command=self.__select_output_file)
+        output_file_button.grid(row=self.__last_row - 1, column=2)
 
         self.__toggle_text = tkinter.StringVar()
         self.__toggle_text.set('Start')
-        toggle_button = tkinter.Button(self.__frames['controls'], textvariable=self.__toggle_text, command=self.toggle)
-        toggle_button.grid(row=self.__last_row + 1, column=1)
-        self.__last_row += 1
+        row = tkinter.Frame(self.__frames['controls'])
+        row.pack()
+        toggle_button = tkinter.Button(row, textvariable=self.__toggle_text, command=self.toggle)
+        toggle_button.pack()
 
-        self.__add_text_box(self.__frames['data'], title='longitude', units='°')
-        self.__add_text_box(self.__frames['data'], title='latitude', units='°')
-        self.__add_text_box(self.__frames['data'], title='altitude', units='m')
-        self.__add_text_box(self.__frames['data'], title='ground_speed', units='m/s')
-        self.__add_text_box(self.__frames['data'], title='ascent_rate', units='m/s')
+        self.__add_text_box(self.__frames['data'], title='longitude', label='Longitude', units='°')
+        self.__add_text_box(self.__frames['data'], title='latitude', label='Latitude', units='°')
+        self.__add_text_box(self.__frames['data'], title='altitude', label='Altitude', units='m')
+        self.__add_text_box(self.__frames['data'], title='ground_speed', label='Ground Speed', units='m/s')
+        self.__add_text_box(self.__frames['data'], title='ascent_rate', label='Ascent Rate', units='m/s')
 
-        for element in self.__frames['data'].winfo_children():
-            element.configure(state=tkinter.DISABLED)
+        disable_children(self.__frames['data'])
 
         self.callsigns = callsigns
         self.serial_port = self.__connection_configuration['radio']['serial_port']
 
+        if 'start_date' in kwargs:
+            self.start_date = kwargs['start_date']
+        if 'end_date' in kwargs:
+            self.end_date = kwargs['end_date']
+
         self.log_filename = log_filename
         if self.log_filename is None:
-            self.log_filename = DESKTOP_PATH / f'packetraven_log_{datetime.now():%Y%m%dT%H%M%S}.txt'
+            self.log_filename = Path('~') / 'Desktop' / f'packetraven_log_{datetime.now():%Y%m%dT%H%M%S}.txt'
 
         self.output_filename = output_filename
         if self.output_filename is None:
-            self.output_filename = DESKTOP_PATH / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson'
+            self.output_filename = Path('~') / 'Desktop' / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson'
 
         self.__window.mainloop()
 
@@ -128,18 +150,21 @@ class PacketRavenGUI:
             callsigns = ', '.join([callsign.upper() for callsign in callsigns])
         else:
             callsigns = ''
-        self.__elements['callsigns'].insert(0, callsigns)
+        self.replace_text(self.__elements['callsigns'], callsigns)
 
     @property
     def serial_port(self) -> str:
         serial_port = self.__elements['serial_port'].get()
-        if serial_port == 'auto':
-            try:
-                serial_port = next_available_port()
-            except OSError:
-                LOGGER.warning(f'no open serial ports')
-                serial_port = None
-            self.serial_port = serial_port
+        if len(serial_port) > 0:
+            if serial_port == 'auto':
+                try:
+                    serial_port = next_available_port()
+                except OSError:
+                    LOGGER.warning(f'no open serial ports')
+                    serial_port = None
+                self.serial_port = serial_port
+        else:
+            serial_port = None
         return serial_port
 
     @serial_port.setter
@@ -148,6 +173,44 @@ class PacketRavenGUI:
         if serial_port is None:
             serial_port = ''
         self.replace_text(self.__elements['serial_port'], serial_port)
+
+    @property
+    def start_date(self) -> datetime:
+        start_date = self.__elements['start_date'].get()
+        if len(start_date) > 0:
+            start_date = parse(start_date)
+        else:
+            start_date = None
+        return start_date
+
+    @start_date.setter
+    def start_date(self, start_date: datetime):
+        if start_date is not None:
+            if isinstance(start_date, str):
+                start_date = parse(start_date)
+            start_date = f'{start_date:%Y-%m-%s %H:%M:%S}'
+        else:
+            start_date = ''
+        self.replace_text(self.__elements['start_date'], start_date)
+
+    @property
+    def end_date(self) -> datetime:
+        end_date = self.__elements['end_date'].get()
+        if len(end_date) > 0:
+            end_date = parse(end_date)
+        else:
+            end_date = None
+        return end_date
+
+    @end_date.setter
+    def end_date(self, end_date: datetime):
+        if end_date is not None:
+            if isinstance(end_date, str):
+                end_date = parse(end_date)
+            end_date = f'{end_date:%Y-%m-%s %H:%M:%S}'
+        else:
+            end_date = ''
+        self.replace_text(self.__elements['start_date'], end_date)
 
     @property
     def log_filename(self) -> Path:
@@ -163,7 +226,6 @@ class PacketRavenGUI:
         if filename is not None:
             if not isinstance(filename, Path):
                 filename = Path(filename)
-            filename = filename.expanduser().resolve()
         else:
             filename = ''
         self.replace_text(self.__elements['log_file'], filename)
@@ -182,7 +244,6 @@ class PacketRavenGUI:
         if filename is not None:
             if not isinstance(filename, Path):
                 filename = Path(filename)
-            filename = filename.expanduser().resolve()
         else:
             filename = ''
         self.replace_text(self.__elements['output_file'], filename)
@@ -196,39 +257,35 @@ class PacketRavenGUI:
         if active is not self.active:
             self.toggle()
 
-    def __add_text_box(self, frame: tkinter.Frame, title: str, units: str = None, row: int = None, entry: bool = False,
-                       width: int = 10):
+    def __add_entry_box(self, frame: tkinter.Frame, title: str, **kwargs):
+        return self.__add_text_box(frame, title, entry=True, **kwargs)
+
+    def __add_text_box(self, frame: tkinter.Frame, title: str, label: str, units: str = None, entry: bool = False,
+                       width: int = 10, row: int = None, column: int = None):
         if row is None:
-            row = self.__last_row + 1
+            row = self.__last_row
+            self.__last_row += 1
+        if column is None:
+            column = 0
 
-        column = 0
-
-        element_label = tkinter.Label(frame, text=title)
-        element_label.grid(row=row, column=column)
-
-        column += 1
+        if label is not None:
+            text_label = tkinter.Label(frame, text=label)
+            text_label.grid(row=row, column=column)
+            column += 1
 
         if entry:
-            element = tkinter.Entry(frame, width=width)
+            text_box = tkinter.Entry(frame, width=width)
         else:
-            element = tkinter.Text(frame, width=width, height=1)
-
-        element.grid(row=row, column=column)
-
+            text_box = tkinter.Text(frame, width=width, height=1)
+        text_box.grid(row=row, column=column)
         column += 1
 
         if units is not None:
             units_label = tkinter.Label(frame, text=units)
             units_label.grid(row=row, column=column)
+            column += 1
 
-        column += 1
-
-        self.__last_row = row
-
-        self.__elements[title] = element
-
-    def __add_entry_box(self, frame: tkinter.Frame, title: str, row: int = None, width: int = 10):
-        self.__add_text_box(frame, title, row=row, entry=True, width=width)
+        self.__elements[title] = text_box
 
     def __select_log_file(self):
         self.log_filename = filedialog.asksaveasfilename(title='PacketRaven log location...',
@@ -246,11 +303,27 @@ class PacketRavenGUI:
         if not self.active:
             if self.log_filename is not None:
                 get_logger(LOGGER.name, self.log_filename)
+            self.__elements['log_file'].configure(state=tkinter.DISABLED)
 
-            if self.callsigns is not None:
-                LOGGER.info(f'filtering by {len(self.callsigns)} selected callsign(s): {self.callsigns}')
+            start_date = self.start_date
+            self.__elements['start_date'].configure(state=tkinter.DISABLED)
 
+            end_date = self.end_date
+            self.__elements['end_date'].configure(state=tkinter.DISABLED)
+
+            callsigns = self.callsigns
             self.__elements['callsigns'].configure(state=tkinter.DISABLED)
+
+            filter_message = 'retrieving packets'
+            if start_date is not None and end_date is None:
+                filter_message += f' sent after {start_date:%Y-%m-%d %H:%M:%S}'
+            elif start_date is None and end_date is not None:
+                filter_message += f' sent before {end_date:%Y-%m-%d %H:%M:%S}'
+            elif start_date is not None and end_date is not None:
+                filter_message += f' sent between {start_date:%Y-%m-%d %H:%M:%S} and {end_date:%Y-%m-%d %H:%M:%S}'
+            if callsigns is not None:
+                filter_message += f' from {len(callsigns)} callsigns: {callsigns}'
+            LOGGER.info(filter_message)
 
             try:
                 connection_errors = []
@@ -335,21 +408,18 @@ class PacketRavenGUI:
                 if len(self.__connections) == 0:
                     raise ConnectionError(f'no connections started\n{connection_errors}')
 
-                LOGGER.info(f'opened {len(self.__connections)} connections')
+                LOGGER.info(f'listening for packets every {self.interval_seconds}s '
+                            f'from {len(self.__connections)} connection(s)')
 
-                for element in self.__frames['configuration'].winfo_children():
-                    element.configure(state=tkinter.DISABLED)
-
-                for element in self.__frames['data'].winfo_children():
-                    element.configure(state=tkinter.NORMAL)
+                disable_children(self.__frames['configuration'])
+                enable_children(self.__frames['data'])
 
                 self.__toggle_text.set('Stop')
                 self.__active = True
             except Exception as error:
                 messagebox.showerror('PacketRaven Error', error)
                 self.__active = False
-                for element in self.__frames['configuration'].winfo_children():
-                    element.configure(state=tkinter.NORMAL)
+                enable_children(self.__frames['configuration'])
 
             self.retrieve_packets()
         else:
@@ -361,11 +431,8 @@ class PacketRavenGUI:
 
             LOGGER.info(f'closed {len(self.__connections)} connections')
 
-            for element in self.__frames['data'].winfo_children():
-                element.configure(state=tkinter.DISABLED)
-
-            for element in self.__frames['configuration'].winfo_children():
-                element.configure(state=tkinter.NORMAL)
+            disable_children(self.__frames['data'])
+            enable_children(self.__frames['configuration'])
 
             self.__toggle_text.set('Start')
             self.__active = False
@@ -375,7 +442,8 @@ class PacketRavenGUI:
 
     def retrieve_packets(self):
         if self.active:
-            retrieve_packets(self.__connections, self.__packet_tracks, self.database, self.output_filename, LOGGER)
+            retrieve_packets(self.__connections, self.__packet_tracks, self.database, self.output_filename, self.start_date,
+                             self.end_date, logger=LOGGER)
             if self.active:
                 self.__window.after(self.interval_seconds * 1000, self.retrieve_packets)
 
@@ -388,3 +456,19 @@ class PacketRavenGUI:
 
         element.delete(start_index, tkinter.END)
         element.insert(start_index, value)
+
+
+def disable_children(frame: tkinter.Frame):
+    for child in frame.winfo_children():
+        if isinstance(child, tkinter.Frame):
+            disable_children(child)
+        else:
+            child.configure(state=tkinter.DISABLED)
+
+
+def enable_children(frame: tkinter.Frame):
+    for child in frame.winfo_children():
+        if isinstance(child, tkinter.Frame):
+            enable_children(child)
+        else:
+            child.configure(state=tkinter.NORMAL)

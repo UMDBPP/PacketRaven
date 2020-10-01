@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 import time
 
+from dateutil.parser import parse
+
 from client import CREDENTIALS_FILENAME, DEFAULT_INTERVAL_SECONDS
 from client.gui import PacketRavenGUI
 from client.retrieve import retrieve_packets
@@ -23,6 +25,8 @@ def main():
                                                   '(set to `auto` to connect to the first open serial port)')
     args_parser.add_argument('-d', '--database', help='PostGres database table `user@hostname:port/database/table`')
     args_parser.add_argument('-t', '--tunnel', help='SSH tunnel `user@hostname:port`')
+    args_parser.add_argument('-s', '--startdate', help='starting date of time period of interest: `"YYYY-MM-DD HH:MM:SS"`')
+    args_parser.add_argument('-e', '--enddate', help='ending date of time period of interest `"YYYY-MM-DD HH:MM:SS"`')
     args_parser.add_argument('-l', '--log', help='path to log file to save log messages')
     args_parser.add_argument('-o', '--output', help='path to output file to save packets')
     args_parser.add_argument('-i', '--interval', default=DEFAULT_INTERVAL_SECONDS, type=float,
@@ -52,6 +56,19 @@ def main():
         kwargs['ssh_hostname'] = args.tunnel
         if '@' in kwargs['ssh_hostname']:
             kwargs['ssh_username'], kwargs['ssh_hostname'] = kwargs['ssh_hostname'].split('@', 1)
+
+    if args.startdate is not None:
+        kwargs['start_date'] = parse(args.startdate.strip('"'))
+
+    if args.enddate is not None:
+        kwargs['end_date'] = parse(args.enddate.strip('"'))
+
+    if 'start_date' in kwargs and 'end_date' in kwargs:
+        if kwargs['start_date'] > kwargs['end_date']:
+            start_date = kwargs['start_date']
+            kwargs['start_date'] = kwargs['end_date']
+            kwargs['end_date'] = start_date
+            del start_date
 
     if args.log is not None:
         log_filename = Path(args.log).expanduser()
@@ -83,8 +100,19 @@ def main():
     if using_gui:
         PacketRavenGUI(callsigns, log_filename, output_filename, interval_seconds, **kwargs)
     else:
+        start_date = kwargs['start_date'] if 'start_date' in kwargs else None
+        end_date = kwargs['end_date'] if 'end_date' in kwargs else None
+
+        filter_message = 'retrieving packets'
+        if start_date is not None and end_date is None:
+            filter_message += f' sent after {start_date:%Y-%m-%d %H:%M:%S}'
+        elif start_date is None and end_date is not None:
+            filter_message += f' sent before {end_date:%Y-%m-%d %H:%M:%S}'
+        elif start_date is not None and end_date is not None:
+            filter_message += f' sent between {start_date:%Y-%m-%d %H:%M:%S} and {end_date:%Y-%m-%d %H:%M:%S}'
         if callsigns is not None:
-            LOGGER.info(f'filtering by {len(callsigns)}')
+            filter_message += f' from {len(callsigns)} callsigns: {callsigns}'
+        LOGGER.info(filter_message)
 
         connections = []
         if 'serial_port' in kwargs:
@@ -108,7 +136,7 @@ def main():
             aprs_fi_kwargs = {key: kwargs[key] for key in ['api_key'] if key in kwargs}
             try:
                 aprs_api = APRSfiConnection(callsigns=callsigns, **aprs_fi_kwargs)
-                LOGGER.info(f'connected to {aprs_api.location} with selected callsigns: {", ".join(callsigns)}')
+                LOGGER.info(f'connected to {aprs_api.location}')
                 connections.append(aprs_api)
             except ConnectionError as error:
                 LOGGER.warning(f'{error.__class__.__name__} - {error}')
@@ -136,11 +164,12 @@ def main():
         else:
             database = None
 
-        LOGGER.info(f'opened {len(connections)} connections')
+        LOGGER.info(f'listening for packets every {interval_seconds}s from {len(connections)} connection(s)')
 
         packet_tracks = {}
         while len(connections) > 0:
-            retrieve_packets(connections, packet_tracks, database, output_filename, LOGGER)
+            retrieve_packets(connections, packet_tracks, database, output_filename, start_date=start_date, end_date=end_date,
+                             logger=LOGGER)
             time.sleep(interval_seconds)
         else:
             LOGGER.warning(f'no connections started')
