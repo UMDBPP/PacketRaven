@@ -16,19 +16,23 @@ pip install packetraven
 packetraven -c W3EAX-8,W3EAX-12 -k <aprs_fi_api_key> 
 ```
 ```bash
-usage: packetraven [-h] -c CALLSIGNS [-k APIKEY] [-p PORT] [-d DATABASE] [-t TUNNEL] [-l LOG] [-o OUTPUT] [-i INTERVAL] [-g]
+usage: packetraven [-h] [-c CALLSIGNS] [-k APIKEY] [-p TNC] [-d DATABASE] [-t TUNNEL] [-s STARTDATE] [-e ENDDATE] [-l LOG] [-o OUTPUT] [-i INTERVAL] [-g]
 
 optional arguments:
   -h, --help            show this help message and exit
-  -c CALLSIGNS, --callsigns [CALLSIGNS]
+  -c CALLSIGNS, --callsigns CALLSIGNS
                         comma-separated list of callsigns to track
   -k APIKEY, --apikey APIKEY
                         API key from https://aprs.fi/page/api
-  -p PORT, --port PORT  name of serial port connected to APRS packet radio
+  -p TNC, --tnc TNC     serial port or text file of TNC parsing APRS packets from analog audio to ASCII (set to `auto` to use the first open serial port)
   -d DATABASE, --database DATABASE
                         PostGres database table `user@hostname:port/database/table`
   -t TUNNEL, --tunnel TUNNEL
                         SSH tunnel `user@hostname:port`
+  -s STARTDATE, --startdate STARTDATE
+                        starting date of time period of interest: `"YYYY-MM-DD HH:MM:SS"`
+  -e ENDDATE, --enddate ENDDATE
+                        ending date of time period of interest `"YYYY-MM-DD HH:MM:SS"`
   -l LOG, --log LOG     path to log file to save log messages
   -o OUTPUT, --output OUTPUT
                         path to output file to save packets
