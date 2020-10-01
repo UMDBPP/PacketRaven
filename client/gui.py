@@ -5,13 +5,13 @@ from pathlib import Path
 import re
 import tkinter
 from tkinter import filedialog, messagebox, simpledialog
-from tkinter.ttk import Separator
+from tkinter.ttk import Combobox, Separator
 
 from dateutil.parser import parse
 
 from client import DEFAULT_INTERVAL_SECONDS
 from client.retrieve import retrieve_packets
-from packetraven.connections import APRSPacketDatabaseTable, APRSPacketRadio, APRSPacketTextFile, APRSfiConnection, \
+from packetraven.connections import APRSPacketDatabaseTable, APRSfiConnection, SerialTNC, TextFileTNC, available_ports, \
     next_available_port
 from packetraven.utilities import get_logger
 
@@ -30,8 +30,8 @@ class PacketRavenGUI:
             'aprs_fi'   : {
                 'api_key': None
             },
-            'radio'     : {
-                'serial_port': None
+            'tnc'       : {
+                'tnc': None
             },
             'database'  : {
                 'hostname': None,
@@ -88,7 +88,11 @@ class PacketRavenGUI:
         configuration_right.pack(side='left')
 
         self.__add_entry_box(configuration_left, title='callsigns', label='Callsigns', width=30)
-        self.__add_entry_box(configuration_left, title='serial_port', label='Serial Port', width=30)
+
+        self.__file_selection_option = 'select file...'
+        self.__add_combo_box(configuration_left, title='tnc', label='TNC Port / File',
+                             options=list(available_ports()) + [self.__file_selection_option], width=20)
+        self.__elements['tnc'].bind('<<ComboboxSelected>>', self.__select_tnc)
 
         self.__add_entry_box(configuration_right, title='start_date', label='Start Date', width=17)
         self.__add_entry_box(configuration_right, title='end_date', label='End Date', width=17)
@@ -117,7 +121,7 @@ class PacketRavenGUI:
         disable_children(self.__frames['data'])
 
         self.callsigns = callsigns
-        self.serial_port = self.__connection_configuration['radio']['serial_port']
+        self.tnc = self.__connection_configuration['tnc']['tnc']
 
         if 'start_date' in kwargs:
             self.start_date = kwargs['start_date']
@@ -153,26 +157,27 @@ class PacketRavenGUI:
         self.replace_text(self.__elements['callsigns'], callsigns)
 
     @property
-    def serial_port(self) -> str:
-        serial_port = self.__elements['serial_port'].get()
-        if len(serial_port) > 0:
-            if serial_port == 'auto':
+    def tnc(self) -> Path:
+        tnc_location = self.__elements['tnc'].get()
+        if len(tnc_location) > 0:
+            if tnc_location == 'auto':
                 try:
-                    serial_port = next_available_port()
+                    tnc_location = next_available_port()
                 except OSError:
                     LOGGER.warning(f'no open serial ports')
-                    serial_port = None
-                self.serial_port = serial_port
+                    tnc_location = None
+                self.tnc = tnc_location
+            tnc_location = Path(tnc_location)
         else:
-            serial_port = None
-        return serial_port
+            tnc_location = None
+        return tnc_location
 
-    @serial_port.setter
-    def serial_port(self, serial_port: str):
-        self.__connection_configuration['radio']['serial_port'] = serial_port
-        if serial_port is None:
-            serial_port = ''
-        self.replace_text(self.__elements['serial_port'], serial_port)
+    @tnc.setter
+    def tnc(self, filename: PathLike):
+        self.__connection_configuration['tnc']['tnc'] = filename
+        if filename is None:
+            filename = ''
+        self.replace_text(self.__elements['tnc'], filename)
 
     @property
     def start_date(self) -> datetime:
@@ -217,7 +222,7 @@ class PacketRavenGUI:
         filename = self.__elements['log_file'].get()
         if len(filename) > 0:
             filename = Path(filename)
-            if filename.is_dir():
+            if filename.expanduser().resolve().is_dir():
                 self.log_filename = filename
                 filename = self.log_filename
         else:
@@ -229,7 +234,7 @@ class PacketRavenGUI:
         if filename is not None:
             if not isinstance(filename, Path):
                 filename = Path(filename)
-            if filename.is_dir():
+            if filename.expanduser().resolve().is_dir():
                 filename = filename / f'packetraven_log_{datetime.now():%Y%m%dT%H%M%S}.txt'
         else:
             filename = ''
@@ -240,7 +245,7 @@ class PacketRavenGUI:
         filename = self.__elements['output_file'].get()
         if len(filename) > 0:
             filename = Path(filename)
-            if filename.is_dir():
+            if filename.expanduser().resolve().is_dir():
                 self.output_filename = filename
                 filename = self.output_filename
         else:
@@ -252,7 +257,7 @@ class PacketRavenGUI:
         if filename is not None:
             if not isinstance(filename, Path):
                 filename = Path(filename)
-            if filename.is_dir():
+            if filename.expanduser().resolve().is_dir():
                 filename = filename / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson'
         else:
             filename = ''
@@ -268,24 +273,38 @@ class PacketRavenGUI:
             self.toggle()
 
     def __select_log_file(self):
-        self.log_filename = filedialog.asksaveasfilename(title='PacketRaven log location...',
+        self.log_filename = filedialog.asksaveasfilename(title='Create log file...',
                                                          initialdir=self.log_filename.parent,
                                                          initialfile=self.log_filename.stem,
-                                                         defaultextension='.txt', filetypes=[('Text', '*.txt')])
+                                                         defaultextension='.txt',
+                                                         filetypes=[('Text', '*.txt')])
 
     def __select_output_file(self):
-        self.output_filename = filedialog.asksaveasfilename(title='PacketRaven output location...',
+        self.output_filename = filedialog.asksaveasfilename(title='Create output file...',
                                                             initialdir=self.output_filename.parent,
                                                             initialfile=self.output_filename.stem,
                                                             defaultextension='.geojson',
                                                             filetypes=[('GeoJSON', '*.geojson'),
                                                                        ('Keyhole Markup Language', '*.kml')])
 
-    def __add_entry_box(self, frame: tkinter.Frame, title: str, **kwargs):
-        return self.__add_text_box(frame, title, entry=True, **kwargs)
+    def __select_tnc(self, event):
+        if event.widget.get() == self.__file_selection_option:
+            self.tnc = filedialog.askopenfilename(title='Select TNC text file...', defaultextension='.txt',
+                                                  filetypes=[('Text', '*.txt')])
 
-    def __add_text_box(self, frame: tkinter.Frame, title: str, label: str, units: str = None, entry: bool = False,
-                       width: int = 10, row: int = None, column: int = None):
+    def __add_combo_box(self, frame: tkinter.Frame, title: str, options: [str], **kwargs) -> Combobox:
+        width = kwargs['width'] if 'width' in kwargs else None
+        combo_box = Combobox(frame, width=width)
+        combo_box['values'] = options
+        return self.__add_text_box(frame, title, text_box=combo_box, **kwargs)
+
+    def __add_entry_box(self, frame: tkinter.Frame, title: str, **kwargs) -> tkinter.Entry:
+        width = kwargs['width'] if 'width' in kwargs else None
+        entry_box = tkinter.Entry(frame, width=width)
+        return self.__add_text_box(frame, title, text_box=entry_box, **kwargs)
+
+    def __add_text_box(self, frame: tkinter.Frame, title: str, label: str, units: str = None, row: int = None,
+                       column: int = None, width: int = 10, text_box: tkinter.Entry = None) -> tkinter.Text:
         if row is None:
             row = self.__last_row
             self.__last_row += 1
@@ -297,9 +316,7 @@ class PacketRavenGUI:
             text_label.grid(row=row, column=column)
             column += 1
 
-        if entry:
-            text_box = tkinter.Entry(frame, width=width)
-        else:
+        if text_box is None:
             text_box = tkinter.Text(frame, width=width, height=1)
         text_box.grid(row=row, column=column)
         column += 1
@@ -310,6 +327,7 @@ class PacketRavenGUI:
             column += 1
 
         self.__elements[title] = text_box
+        return text_box
 
     def toggle(self):
         if not self.active:
@@ -340,26 +358,26 @@ class PacketRavenGUI:
             try:
                 connection_errors = []
 
-                radio_port = self.serial_port
-                self.__elements['serial_port'].configure(state=tkinter.DISABLED)
+                tnc_location = self.tnc
+                self.__elements['tnc'].configure(state=tkinter.DISABLED)
 
-                if radio_port is not None:
-                    if 'txt' in radio_port:
+                if tnc_location is not None:
+                    if 'txt' in tnc_location:
                         try:
-                            text_file = APRSPacketTextFile(radio_port, self.callsigns)
-                            LOGGER.info(f'reading file {text_file.location}')
-                            self.__connections.append(text_file)
+                            text_file_tnc = TextFileTNC(tnc_location, self.callsigns)
+                            LOGGER.info(f'reading file {text_file_tnc.location}')
+                            self.__connections.append(text_file_tnc)
                         except Exception as error:
-                            connection_errors.append(f'file - {error}')
+                            connection_errors.append(f'file TNC - {error}')
                             LOGGER.error(f'{error.__class__.__name__} - {error}')
                     else:
                         try:
-                            radio = APRSPacketRadio(radio_port, self.callsigns)
-                            LOGGER.info(f'opened port {radio.location}')
-                            self.serial_port = radio.location
-                            self.__connections.append(radio)
+                            serial_tnc = SerialTNC(tnc_location, self.callsigns)
+                            LOGGER.info(f'opened port {serial_tnc.location}')
+                            self.tnc = serial_tnc.location
+                            self.__connections.append(serial_tnc)
                         except Exception as error:
-                            connection_errors.append(f'serial ports - {error}')
+                            connection_errors.append(f'serial TNC - {error}')
                             LOGGER.error(f'{error.__class__.__name__} - {error}')
 
                 api_key = self.__connection_configuration['aprs_fi']['api_key']
@@ -421,7 +439,8 @@ class PacketRavenGUI:
                     raise ConnectionError(f'no connections started\n{connection_errors}')
 
                 LOGGER.info(f'listening for packets every {self.interval_seconds}s '
-                            f'from {len(self.__connections)} connection(s)')
+                            f'from {len(self.__connections)} connection(s): '
+                            f'{", ".join([connection.location for connection in self.__connections])}')
 
                 disable_children(self.__frames['configuration'])
                 enable_children(self.__frames['data'])
@@ -438,7 +457,7 @@ class PacketRavenGUI:
             for connection in self.__connections:
                 connection.close()
 
-                if type(connection) is APRSPacketRadio:
+                if type(connection) is SerialTNC:
                     LOGGER.info(f'closing port {connection.location}')
 
             LOGGER.info(f'closed {len(self.__connections)} connections')

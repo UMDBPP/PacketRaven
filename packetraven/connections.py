@@ -3,8 +3,9 @@ from datetime import datetime
 import logging
 from os import PathLike
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 
+from dateutil.parser import parse
 import requests
 from serial import Serial
 from serial.tools import list_ports
@@ -12,7 +13,7 @@ from shapely.geometry import Point
 
 from client import CREDENTIALS_FILENAME
 from .database import DatabaseTable, database_table_has_record
-from .packets import APRSLocationPacket, LocationPacket
+from .packets import APRSPacket, LocationPacket
 from .utilities import get_logger, read_configuration
 
 LOGGER = get_logger('packetraven.connection')
@@ -66,7 +67,7 @@ class APRSPacketConnection(PacketConnection):
 
     @property
     @abstractmethod
-    def packets(self) -> [APRSLocationPacket]:
+    def packets(self) -> [APRSPacket]:
         """
         List the most recent packets available from this connection.
 
@@ -76,10 +77,10 @@ class APRSPacketConnection(PacketConnection):
         raise NotImplementedError
 
 
-class APRSPacketRadio(APRSPacketConnection):
+class SerialTNC(APRSPacketConnection):
     def __init__(self, serial_port: str = None, callsigns: [str] = None):
         """
-        Connect to radio over given serial port.
+        Connect to TNC over given serial port.
 
         :param serial_port: port name
         :param callsigns: list of callsigns to return from source
@@ -89,7 +90,7 @@ class APRSPacketRadio(APRSPacketConnection):
             try:
                 serial_port = next_available_port()
             except ConnectionError:
-                raise ConnectionError('could not find radio over serial connection')
+                raise ConnectionError('could not find TNC connected to serial')
         else:
             serial_port = serial_port.strip('"')
 
@@ -97,8 +98,8 @@ class APRSPacketRadio(APRSPacketConnection):
         super().__init__(self.connection.port, callsigns)
 
     @property
-    def packets(self) -> [APRSLocationPacket]:
-        packets = [parse_packet(line, source=self.location) for line in self.connection.readlines()]
+    def packets(self) -> [APRSPacket]:
+        packets = [APRSPacket.from_raw_aprs(line, source=self.location) for line in self.connection.readlines()]
         if self.callsigns is not None:
             return [packet for packet in packets if packet.callsign in self.callsigns]
         else:
@@ -117,10 +118,10 @@ class APRSPacketRadio(APRSPacketConnection):
         return f'{self.__class__.__name__}("{self.location}")'
 
 
-class APRSPacketTextFile(APRSPacketConnection):
+class TextFileTNC(APRSPacketConnection):
     def __init__(self, filename: PathLike = None, callsigns: str = None):
         """
-        read APRS packets from a given text file where each line consists of the time sent (`%Y-%m-%d %H:%M:%S`) followed by
+        read APRS packets from a given text file where each line consists of the time sent (`YYYY-MM-DDTHH:MM:SS`) followed by
         the raw APRS string
 
         :param filename: path to text file
@@ -136,9 +137,18 @@ class APRSPacketTextFile(APRSPacketConnection):
         self.connection = open(filename)
 
     @property
-    def packets(self) -> [APRSLocationPacket]:
-        packets = [parse_packet(line[25:].strip('\n'), datetime.strptime(line[:19], '%Y-%m-%d %H:%M:%S'), source=self.location)
-                   for line in self.connection.readlines() if len(line) > 0]
+    def packets(self) -> [APRSPacket]:
+        packets = []
+        for line in self.connection.readlines():
+            if len(line) > 0:
+                try:
+                    packet_time, raw_aprs = line.split(' ', 1)
+                    packet_time = parse(packet_time)
+                except:
+                    raw_aprs = line
+                    packet_time = datetime.now()
+                raw_aprs = raw_aprs.strip()
+                packets.append(APRSPacket.from_raw_aprs(raw_aprs, packet_time, source=self.location))
         if self.callsigns is not None:
             return [packet for packet in packets if packet.callsign in self.callsigns]
         else:
@@ -196,7 +206,7 @@ class APRSfiConnection(APRSPacketConnection):
         self.__api_key = api_key
 
     @property
-    def packets(self) -> [APRSLocationPacket]:
+    def packets(self) -> [APRSPacket]:
         query = {
             'name'  : ','.join(self.callsigns),
             'what'  : 'loc',
@@ -208,7 +218,8 @@ class APRSfiConnection(APRSPacketConnection):
 
         response = requests.get(f'{self.location}?{query}').json()
         if response['result'] != 'fail':
-            packets = [parse_packet(packet_candidate, source=self.location) for packet_candidate in response['entries']]
+            packets = [APRSPacket.from_raw_aprs(packet_candidate, source=self.location)
+                       for packet_candidate in response['entries']]
         else:
             logging.warning(f'query failure "{response["code"]}: {response["description"]}"')
             packets = []
@@ -277,7 +288,7 @@ class PacketDatabaseTable(DatabaseTable, PacketConnection):
             packet.transform_to(self.crs)
         super().__setitem__(time, self.__packet_record(packet))
 
-    def insert(self, packets: [APRSLocationPacket]):
+    def insert(self, packets: [APRSPacket]):
         for packet in packets:
             if packet.crs != self.crs:
                 packet.transform_to(self.crs)
@@ -341,30 +352,30 @@ class APRSPacketDatabaseTable(PacketDatabaseTable, APRSPacketConnection):
                                       callsigns)
 
     @property
-    def packets(self) -> [APRSLocationPacket]:
+    def packets(self) -> [APRSPacket]:
         return [
-            APRSLocationPacket(
+            APRSPacket(
                 **{field if field in ['time', 'x', 'y', 'z'] else field.replace('packet_', ''): value
                    for field, value in record.items() if field not in ['point']},
                 source=self.location
             ) for record in self.records
         ]
 
-    def __getitem__(self, key: (datetime, str)) -> APRSLocationPacket:
+    def __getitem__(self, key: (datetime, str)) -> APRSPacket:
         packet = super().__getitem__(key)
-        return APRSLocationPacket(packet.time, *packet.coordinates, packet.crs, **packet.attributes)
+        return APRSPacket(packet.time, *packet.coordinates, packet.crs, **packet.attributes)
 
-    def __setitem__(self, key: (datetime, str), packet: APRSLocationPacket):
+    def __setitem__(self, key: (datetime, str), packet: APRSPacket):
         PacketDatabaseTable.__setitem__(self, key, packet)
 
-    def __contains__(self, packet: APRSLocationPacket) -> bool:
+    def __contains__(self, packet: APRSPacket) -> bool:
         with self.connection:
             with self.connection.cursor() as cursor:
                 return database_table_has_record(cursor, self.table, {key: packet[key.replace('packet_', '')]
                                                                       for key in self.primary_key},
                                                  self.primary_key)
 
-    def insert(self, packets: [APRSLocationPacket]):
+    def insert(self, packets: [APRSPacket]):
         PacketDatabaseTable.insert(self, packets)
 
     @property
@@ -411,11 +422,3 @@ def next_available_port() -> str:
         return next(available_ports())
     except StopIteration:
         raise ConnectionError('no open serial ports')
-
-
-def parse_packet(raw_packet: Union[str, bytes, dict], packet_time: datetime = None,
-                 source: PacketConnection = None) -> APRSLocationPacket:
-    try:
-        return APRSLocationPacket.from_raw_aprs(raw_packet, packet_time, source=source)
-    except Exception as error:
-        logging.exception(f'{error.__class__.__name__} - {error} for raw packet "{raw_packet}"')

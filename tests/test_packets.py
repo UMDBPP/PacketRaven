@@ -3,13 +3,13 @@ import unittest
 
 import numpy
 
-from packetraven.packets import APRSLocationPacket
+from packetraven.packets import APRSPacket
 from packetraven.tracks import APRSTrack
 
 
 class TestPackets(unittest.TestCase):
     def test_from_raw_aprs(self):
-        packet_1 = APRSLocationPacket.from_raw_aprs(
+        packet_1 = APRSPacket.from_raw_aprs(
             "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,"
             "nearspace.umd.edu",
             time=datetime(2019, 2, 3, 14, 36, 16))
@@ -20,18 +20,18 @@ class TestPackets(unittest.TestCase):
         assert packet_1['comment'] == "|!g|  /W3EAX,313,0,21'C,nearspace.umd.edu"
 
     def test_equality(self):
-        packet_1 = APRSLocationPacket.from_raw_aprs(
+        packet_1 = APRSPacket.from_raw_aprs(
             "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,"
             "nearspace.umd.edu",
             time=datetime(2019, 2, 3, 14, 36, 16))
-        packet_2 = APRSLocationPacket.from_raw_aprs(
+        packet_2 = APRSPacket.from_raw_aprs(
             "W3EAX-13>APRS,WIDE1-1,WIDE2-1,qAR,W4TTU:!/:JAe:tn8O   /A=046255|!i|  /W3EAX,322,0,20'C,nearspace.umd.edu",
             time=datetime(2019, 2, 3, 14, 38, 23))
-        packet_3 = APRSLocationPacket.from_raw_aprs(
+        packet_3 = APRSPacket.from_raw_aprs(
             "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,"
             "nearspace.umd.edu",
             time=datetime(2019, 2, 3, 14, 38, 23))
-        packet_4 = APRSLocationPacket.from_raw_aprs(
+        packet_4 = APRSPacket.from_raw_aprs(
             "W3EAX-13>APRS,WIDE1-1,WIDE2-1,qAR,W4TTU:!/:JAe:tn8O   /A=046255|!i|  /W3EAX,322,0,20'C,nearspace.umd.edu",
             time=datetime(2019, 2, 3, 14, 36, 16))
 
@@ -40,11 +40,11 @@ class TestPackets(unittest.TestCase):
         assert packet_4 != packet_1
 
     def test_subtraction(self):
-        packet_1 = APRSLocationPacket.from_raw_aprs(
+        packet_1 = APRSPacket.from_raw_aprs(
             "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,"
             "nearspace.umd.edu",
             time=datetime(2019, 2, 3, 14, 36, 16))
-        packet_2 = APRSLocationPacket.from_raw_aprs(
+        packet_2 = APRSPacket.from_raw_aprs(
             "W3EAX-13>APRS,WIDE1-1,WIDE2-1,qAR,W4TTU:!/:JAe:tn8O   /A=046255|!i|  /W3EAX,322,0,20'C,nearspace.umd.edu",
             time=datetime(2019, 2, 3, 14, 38, 23))
 
@@ -57,14 +57,14 @@ class TestPackets(unittest.TestCase):
 
 class TestPacketTracks(unittest.TestCase):
     def test_append(self):
-        packet_1 = APRSLocationPacket.from_raw_aprs(
+        packet_1 = APRSPacket.from_raw_aprs(
             "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,"
             "nearspace.umd.edu",
             time=datetime(2019, 2, 3, 14, 36, 16))
-        packet_2 = APRSLocationPacket.from_raw_aprs(
+        packet_2 = APRSPacket.from_raw_aprs(
             "W3EAX-13>APRS,WIDE1-1,WIDE2-1,qAR,W4TTU:!/:JAe:tn8O   /A=046255|!i|  /W3EAX,322,0,20'C,nearspace.umd.edu",
             time=datetime(2019, 2, 3, 14, 38, 23))
-        packet_3 = APRSLocationPacket.from_raw_aprs(
+        packet_3 = APRSPacket.from_raw_aprs(
             "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18\'C,http://www.umd.edu")
 
         track = APRSTrack('W3EAX-13')
@@ -78,7 +78,7 @@ class TestPacketTracks(unittest.TestCase):
         assert track[-1] is packet_2
 
     def test_values(self):
-        packet_1 = APRSLocationPacket.from_raw_aprs(
+        packet_1 = APRSPacket.from_raw_aprs(
             "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,"
             "nearspace.umd.edu",
             time=datetime(2019, 2, 3, 14, 36, 16))
@@ -88,14 +88,14 @@ class TestPacketTracks(unittest.TestCase):
         assert numpy.all(track.coordinates[-1] == packet_1.coordinates)
 
     def test_rates(self):
-        packet_1 = APRSLocationPacket.from_raw_aprs(
+        packet_1 = APRSPacket.from_raw_aprs(
             "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,"
             "nearspace.umd.edu",
             time=datetime(2019, 2, 3, 14, 36, 16))
-        packet_2 = APRSLocationPacket.from_raw_aprs(
+        packet_2 = APRSPacket.from_raw_aprs(
             "W3EAX-13>APRS,WIDE1-1,WIDE2-1,qAR,W4TTU:!/:JAe:tn8O   /A=046255|!i|  /W3EAX,322,0,20'C,nearspace.umd.edu",
             time=datetime(2019, 2, 3, 14, 38, 23))
-        packet_3 = APRSLocationPacket.from_raw_aprs(
+        packet_3 = APRSPacket.from_raw_aprs(
             "W3EAX-13>APRS,KC3FIT-1,WIDE1*,WIDE2-1,qAR,KC3AWP-10:!/:JL2:u4wO   /A=043080|!j|  /W3EAX,326,0,20'C,"
             "nearspace.umd.edu",
             time=datetime(2019, 2, 3, 14, 39, 28))
@@ -106,14 +106,14 @@ class TestPacketTracks(unittest.TestCase):
         assert track.ground_speed[1] == (packet_2 - packet_1).ground_speed
 
     def test_sorting(self):
-        packet_1 = APRSLocationPacket.from_raw_aprs(
+        packet_1 = APRSPacket.from_raw_aprs(
             "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,"
             "nearspace.umd.edu",
             time=datetime(2019, 2, 3, 14, 36, 16))
-        packet_2 = APRSLocationPacket.from_raw_aprs(
+        packet_2 = APRSPacket.from_raw_aprs(
             "W3EAX-13>APRS,WIDE1-1,WIDE2-1,qAR,W4TTU:!/:JAe:tn8O   /A=046255|!i|  /W3EAX,322,0,20'C,nearspace.umd.edu",
             time=datetime(2019, 2, 3, 14, 38, 23))
-        packet_3 = APRSLocationPacket.from_raw_aprs(
+        packet_3 = APRSPacket.from_raw_aprs(
             "W3EAX-13>APRS,KC3FIT-1,WIDE1*,WIDE2-1,qAR,KC3AWP-10:!/:JL2:u4wO   /A=043080|!j|  /W3EAX,326,0,20'C,"
             "nearspace.umd.edu",
             time=datetime(2019, 2, 3, 14, 39, 28))

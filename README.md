@@ -52,7 +52,7 @@ print(aprs_fi_packets)
 ```
 or parse packets from a radio sending parsed APRS over a USB connection:
 ```python
-from packetraven import APRSPacketRadio
+from packetraven import SerialTNC
  
 serial_port = None # leave None to let PacketRaven guess the port name  
 

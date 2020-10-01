@@ -3,7 +3,7 @@ from typing import Union
 import numpy
 from pyproj import CRS, Geod
 
-from .packets import APRSLocationPacket, DEFAULT_CRS, LocationPacket
+from .packets import APRSPacket, DEFAULT_CRS, LocationPacket
 from .structures import DoublyLinkedList
 
 
@@ -113,7 +113,7 @@ class LocationPacketTrack:
 class APRSTrack(LocationPacketTrack):
     """ collection of APRS location packets """
 
-    def __init__(self, callsign: str, packets: [APRSLocationPacket] = None, crs: CRS = None):
+    def __init__(self, callsign: str, packets: [APRSPacket] = None, crs: CRS = None):
         """
         APRS packet track
 
@@ -125,7 +125,7 @@ class APRSTrack(LocationPacketTrack):
         self.callsign = callsign
         super().__init__(packets, crs)
 
-    def append(self, packet: APRSLocationPacket):
+    def append(self, packet: APRSPacket):
         packet_callsign = packet['callsign']
 
         if packet_callsign == self.callsign:
