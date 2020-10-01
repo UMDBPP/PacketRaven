@@ -126,11 +126,11 @@ class PacketRavenGUI:
 
         self.log_filename = log_filename
         if self.log_filename is None:
-            self.log_filename = Path('~') / 'Desktop' / f'packetraven_log_{datetime.now():%Y%m%dT%H%M%S}.txt'
+            self.log_filename = Path('~') / 'Desktop'
 
         self.output_filename = output_filename
         if self.output_filename is None:
-            self.output_filename = Path('~') / 'Desktop' / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson'
+            self.output_filename = Path('~') / 'Desktop'
 
         self.__window.mainloop()
 
@@ -217,6 +217,9 @@ class PacketRavenGUI:
         filename = self.__elements['log_file'].get()
         if len(filename) > 0:
             filename = Path(filename)
+            if filename.is_dir():
+                self.log_filename = filename
+                filename = self.log_filename
         else:
             filename = None
         return filename
@@ -226,6 +229,8 @@ class PacketRavenGUI:
         if filename is not None:
             if not isinstance(filename, Path):
                 filename = Path(filename)
+            if filename.is_dir():
+                filename = filename / f'packetraven_log_{datetime.now():%Y%m%dT%H%M%S}.txt'
         else:
             filename = ''
         self.replace_text(self.__elements['log_file'], filename)
@@ -235,6 +240,9 @@ class PacketRavenGUI:
         filename = self.__elements['output_file'].get()
         if len(filename) > 0:
             filename = Path(filename)
+            if filename.is_dir():
+                self.output_filename = filename
+                filename = self.output_filename
         else:
             filename = None
         return filename
@@ -244,6 +252,8 @@ class PacketRavenGUI:
         if filename is not None:
             if not isinstance(filename, Path):
                 filename = Path(filename)
+            if filename.is_dir():
+                filename = filename / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson'
         else:
             filename = ''
         self.replace_text(self.__elements['output_file'], filename)
@@ -256,6 +266,20 @@ class PacketRavenGUI:
     def active(self, active: bool):
         if active is not self.active:
             self.toggle()
+
+    def __select_log_file(self):
+        self.log_filename = filedialog.asksaveasfilename(title='PacketRaven log location...',
+                                                         initialdir=self.log_filename.parent,
+                                                         initialfile=self.log_filename.stem,
+                                                         defaultextension='.txt', filetypes=[('Text', '*.txt')])
+
+    def __select_output_file(self):
+        self.output_filename = filedialog.asksaveasfilename(title='PacketRaven output location...',
+                                                            initialdir=self.output_filename.parent,
+                                                            initialfile=self.output_filename.stem,
+                                                            defaultextension='.geojson',
+                                                            filetypes=[('GeoJSON', '*.geojson'),
+                                                                       ('Keyhole Markup Language', '*.kml')])
 
     def __add_entry_box(self, frame: tkinter.Frame, title: str, **kwargs):
         return self.__add_text_box(frame, title, entry=True, **kwargs)
@@ -286,18 +310,6 @@ class PacketRavenGUI:
             column += 1
 
         self.__elements[title] = text_box
-
-    def __select_log_file(self):
-        self.log_filename = filedialog.asksaveasfilename(title='PacketRaven log location...',
-                                                         initialfile=self.log_filename.stem,
-                                                         defaultextension='.txt', filetypes=[('Text', '*.txt')])
-
-    def __select_output_file(self):
-        self.output_filename = filedialog.asksaveasfilename(title='PacketRaven output location...',
-                                                            initialfile=self.output_filename.stem,
-                                                            defaultextension='.kml',
-                                                            filetypes=[('GeoJSON', '*.geojson'),
-                                                                       ('Keyhole Markup Language', '*.kml')])
 
     def toggle(self):
         if not self.active:
