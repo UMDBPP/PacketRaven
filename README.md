@@ -11,12 +11,32 @@ PacketRaven is a front-end data aggregator / dashboard, designed to track the pr
 pip install packetraven
 ```
 
+#### Examples:
+##### listen to a TNC sending raw APRS strings over USB port COM4:
+```bash
+packetraven --tnc COM4
+```
+##### listen to APRS.fi, watching specific callsigns:
+you need an API key to connect to APRS.fi; you can get one from https://aprs.fi/page/api
+```bash
+packetraven -apikey <api_key> -callsigns W3EAX-8,W3EAX-14
+```
+##### listen to a PostGIS database table:
+```bash
+packetraven --database <username>@<hostname>:5432/<database_name>/<table_name>
+```
+##### watch a text file for new lines containing raw APRS strings:
+```bash
+packetraven --tnc ~\Desktop\aprs_packets.txt
+```
+##### listen to a TNC on COM3, watching specific callsigns, and synchronize new packets with a database table, using an SSH tunnel to connect:
+```bash
+packetraven --tnc COM3 -callsigns W3EAX-8,W3EAX-14 --database <username>@<hostname>:5432/<database_name>/<table_name> --tunnel <ssh_username>@<hostname>:22
+```
+
 #### Usage:
 ```bash
-packetraven -c W3EAX-8,W3EAX-12 -k <aprs_fi_api_key> 
-```
-```bash
-usage: packetraven [-h] [-c CALLSIGNS] [-k APIKEY] [-p TNC] [-d DATABASE] [-t TUNNEL] [-s STARTDATE] [-e ENDDATE] [-l LOG] [-o OUTPUT] [-i INTERVAL] [-g]
+usage: packetraven [-h] [-c CALLSIGNS] [-k APIKEY] [-p TNC] [-d DATABASE] [-t TUNNEL] [-s START] [-e END] [-l LOG] [-o OUTPUT] [-i INTERVAL] [-g]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -29,10 +49,9 @@ optional arguments:
                         PostGres database table `user@hostname:port/database/table`
   -t TUNNEL, --tunnel TUNNEL
                         SSH tunnel `user@hostname:port`
-  -s STARTDATE, --startdate STARTDATE
-                        starting date of time period of interest: `"YYYY-MM-DD HH:MM:SS"`
-  -e ENDDATE, --enddate ENDDATE
-                        ending date of time period of interest `"YYYY-MM-DD HH:MM:SS"`
+  -s START, --start START
+                        start date / time, in any common date format
+  -e END, --end END     end date / time, in any common date format
   -l LOG, --log LOG     path to log file to save log messages
   -o OUTPUT, --output OUTPUT
                         path to output file to save packets
@@ -41,13 +60,15 @@ optional arguments:
   -g, --gui             start the graphical interface
 ```
 
+
+
 #### Python API:
 to retrieve packets directly from https://aprs.fi:
 ```python
 from packetraven import APRSfiConnection
 
 callsigns = ['W3EAX-8', 'W3EAX-12', 'KC3FXX', 'KC3ZRB']
-api_key = '' # enter your APRS.fi API key here - you can get a free API key from https://aprs.fi/page/api
+api_key = '<api_key>' # enter your APRS.fi API key here - you can get one from https://aprs.fi/page/api
 
 aprs_fi = APRSfiConnection(callsigns, api_key)
 aprs_fi_packets = aprs_fi.packets
@@ -58,7 +79,7 @@ or parse packets from a TNC sending parsed APRS over a USB connection:
 ```python
 from packetraven import SerialTNC
  
-serial_port = None # leave None to let PacketRaven guess the port name  
+serial_port = 'COM5' # set to `'auto'` to connect to the first open serial port  
 
 tnc = SerialTNC(serial_port)
 tnc_packets = tnc.packets
@@ -71,12 +92,12 @@ from packetraven import APRSPacketDatabaseTable
 
 callsigns = ['W3EAX-8', 'W3EAX-12', 'KC3FXX', 'KC3ZRB']
 
-hostname = 'bpp.umd.edu:5432'
-database = 'bpp'
+hostname = '<hostname>:5432'
+database = '<database_name>'
 table = 'packets'
 
-username = 'username'
-password = '1234'
+username = '<username>'
+password = '<password>'
 
 # parameters for an SSH tunnel
 ssh_hostname = None
@@ -90,17 +111,3 @@ table_packets = table.packets
 
 print(table_packets)
 ```
-
-#### Features:
-###### current:
-- parse APRS packets from USB TNC
-- retrieve packets from https://aprs.fi
-- synchronize with a PostGreSQL database
-- output packets to file
-- plot altitude
-
-###### in development:
-- flight track plotting
-- live track prediction
-- Iridium telemetry and commands
-- live chase navigation

@@ -25,8 +25,8 @@ def main():
                                                  'port)')
     args_parser.add_argument('-d', '--database', help='PostGres database table `user@hostname:port/database/table`')
     args_parser.add_argument('-t', '--tunnel', help='SSH tunnel `user@hostname:port`')
-    args_parser.add_argument('-s', '--startdate', help='starting date of time period of interest: `"YYYY-MM-DD HH:MM:SS"`')
-    args_parser.add_argument('-e', '--enddate', help='ending date of time period of interest `"YYYY-MM-DD HH:MM:SS"`')
+    args_parser.add_argument('-s', '--start', help='start date / time, in any common date format')
+    args_parser.add_argument('-e', '--end', help='end date / time, in any common date format')
     args_parser.add_argument('-l', '--log', help='path to log file to save log messages')
     args_parser.add_argument('-o', '--output', help='path to output file to save packets')
     args_parser.add_argument('-i', '--interval', default=DEFAULT_INTERVAL_SECONDS, type=float,
