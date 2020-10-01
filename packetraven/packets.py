@@ -1,14 +1,11 @@
 from datetime import datetime, timedelta
 import math
-from typing import Any, TYPE_CHECKING, Union
+from typing import Any, Union
 
 import numpy
 from pyproj import CRS, Geod, Transformer
 
 from .parsing import parse_raw_aprs
-
-if TYPE_CHECKING:
-    from .connections import PacketConnection
 
 DEFAULT_CRS = CRS.from_epsg(4326)
 
@@ -16,7 +13,7 @@ DEFAULT_CRS = CRS.from_epsg(4326)
 class LocationPacket:
     """ location packet encoding (x, y, z) and time """
 
-    def __init__(self, time: datetime, x: float, y: float, z: float = None, crs: CRS = None, source: 'PacketConnection' = None,
+    def __init__(self, time: datetime, x: float, y: float, z: float = None, crs: CRS = None, source: str = None,
                  **kwargs):
         self.time = time
         self.coordinates = numpy.array((x, y, z if z is not None else 0))
@@ -49,13 +46,13 @@ class LocationPacket:
     def __getitem__(self, field: str) -> Any:
         if field not in self:
             raise KeyError(f'"{field}" not in packet')
-        return self.attributes[field]
+        return {**self.__dict__, **self.attributes}[field]
 
     def __setitem__(self, field: str, value: Any):
         self.attributes[field] = value
 
     def __contains__(self, field: str) -> bool:
-        return field in self.attributes
+        return field in {**self.__dict__, **self.attributes}
 
     def __sub__(self, other: 'LocationPacket') -> 'LocationPacketDelta':
         """

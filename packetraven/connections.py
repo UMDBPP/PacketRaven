@@ -11,7 +11,7 @@ from serial.tools import list_ports
 from shapely.geometry import Point
 
 from client import CREDENTIALS_FILENAME
-from .database import DatabaseTable
+from .database import DatabaseTable, database_table_has_record
 from .packets import APRSLocationPacket, LocationPacket
 from .utilities import get_logger, read_configuration
 
@@ -85,7 +85,7 @@ class APRSPacketRadio(APRSPacketConnection):
         :param callsigns: list of callsigns to return from source
         """
 
-        if serial_port is None:
+        if serial_port is None or serial_port == 'auto':
             try:
                 serial_port = next_available_port()
             except ConnectionError:
@@ -93,12 +93,12 @@ class APRSPacketRadio(APRSPacketConnection):
         else:
             serial_port = serial_port.strip('"')
 
-        super().__init__(serial_port, callsigns)
         self.connection = Serial(serial_port, baudrate=9600, timeout=1)
+        super().__init__(self.connection.port, callsigns)
 
     @property
     def packets(self) -> [APRSLocationPacket]:
-        packets = [parse_packet(line, source=self) for line in self.connection.readlines()]
+        packets = [parse_packet(line, source=self.location) for line in self.connection.readlines()]
         if self.callsigns is not None:
             return [packet for packet in packets if packet.callsign in self.callsigns]
         else:
@@ -137,7 +137,7 @@ class APRSPacketTextFile(APRSPacketConnection):
 
     @property
     def packets(self) -> [APRSLocationPacket]:
-        packets = [parse_packet(line[25:].strip('\n'), datetime.strptime(line[:19], '%Y-%m-%d %H:%M:%S'), source=self)
+        packets = [parse_packet(line[25:].strip('\n'), datetime.strptime(line[:19], '%Y-%m-%d %H:%M:%S'), source=self.location)
                    for line in self.connection.readlines() if len(line) > 0]
         if self.callsigns is not None:
             return [packet for packet in packets if packet.callsign in self.callsigns]
@@ -197,7 +197,7 @@ class APRSfiConnection(APRSPacketConnection):
 
         response = requests.get(f'{self.location}?{query}').json()
         if response['result'] != 'fail':
-            packets = [parse_packet(packet_candidate, source=self) for packet_candidate in response['entries']]
+            packets = [parse_packet(packet_candidate, source=self.location) for packet_candidate in response['entries']]
         else:
             logging.warning(f'query failure "{response["code"]}: {response["description"]}"')
             packets = []
@@ -245,28 +245,40 @@ class PacketDatabaseTable(DatabaseTable, PacketConnection):
     def __init__(self, hostname: str, database: str, table: str, **kwargs):
         if 'fields' not in kwargs:
             kwargs['fields'] = {}
+        if 'primary_key' not in kwargs:
+            kwargs['primary_key'] = 'time'
         kwargs['fields'] = {**self.__default_fields, **kwargs['fields']}
-        DatabaseTable.__init__(self, hostname, database, table, primary_key='time', **kwargs)
-        PacketConnection.__init__(self, f'{self.hostname}:{self.port}/{self.database}/{self.table}')
+        DatabaseTable.__init__(self, hostname, database, table, **kwargs)
+        PacketConnection.__init__(self, f'postgresql://{self.hostname}:{self.port}/{self.database}/{self.table}')
 
     @property
     def packets(self) -> [LocationPacket]:
-        return [LocationPacket(**{key: value for key, value in record.items() if key != 'point'}, source=self)
+        return [LocationPacket(**{key: value for key, value in record.items() if key != 'point'}, source=self.location)
                 for record in self.records]
 
-    def __getitem__(self, time: datetime) -> LocationPacket:
-        record = super().__getitem__(time)
-        return LocationPacket(record['time'], record['x'], record['y'], record['z'], record['crs'])
+    def __getitem__(self, key: Any) -> LocationPacket:
+        record = super().__getitem__(key)
+        record = {key.replace('packet_', ''): value for key, value in record.items()}
+        return LocationPacket(**record, crs=self.crs)
 
     def __setitem__(self, time: datetime, packet: LocationPacket):
-        record = {
-            'time' : packet.time,
-            'x'    : packet.coordinates[0],
-            'y'    : packet.coordinates[1],
-            'z'    : packet.coordinates[2],
-            'point': Point(*packet.coordinates)
-        }
-        super().__setitem__(time, record)
+        if packet.crs != self.crs:
+            packet.transform_to(self.crs)
+        super().__setitem__(time, self.__packet_record(packet))
+
+    def insert(self, packets: [APRSLocationPacket]):
+        for packet in packets:
+            if packet.crs != self.crs:
+                packet.transform_to(self.crs)
+        records = [self.__packet_record(packet) for packet in packets]
+        super().insert(records)
+
+    def __contains__(self, packet: LocationPacket) -> bool:
+        with self.connection:
+            with self.connection.cursor() as cursor:
+                return database_table_has_record(cursor, self.table, {key: packet[key.replace('packet_', '')]
+                                                                      for key in self.primary_key},
+                                                 self.primary_key)
 
     def __enter__(self):
         return self.connection
@@ -278,6 +290,17 @@ class PacketDatabaseTable(DatabaseTable, PacketConnection):
         self.connection.close()
         if self.tunnel is not None:
             self.tunnel.stop()
+
+    @staticmethod
+    def __packet_record(packet: LocationPacket) -> {str: Any}:
+        return {
+            'time' : packet.time,
+            'x'    : packet.coordinates[0],
+            'y'    : packet.coordinates[1],
+            'z'    : packet.coordinates[2],
+            'point': Point(*packet.coordinates),
+            **{f'packet_{field}': value for field, value in packet.attributes.items()}
+        }
 
 
 class APRSPacketDatabaseTable(PacketDatabaseTable, APRSPacketConnection):
@@ -297,9 +320,14 @@ class APRSPacketDatabaseTable(PacketDatabaseTable, APRSPacketConnection):
     def __init__(self, hostname: str, database: str, table: str, callsigns: [str] = None, **kwargs):
         if 'fields' not in kwargs:
             kwargs['fields'] = self.__aprs_fields
+        if 'primary_key' not in kwargs:
+            kwargs['primary_key'] = ('time', 'packet_from')
+        elif 'callsign' in kwargs['primary_key']:
+            kwargs['primary_key'][kwargs['primary_key'].index('callsign')] = 'packet_from'
         kwargs['fields'] = {f'packet_{field}': field_type for field, field_type in kwargs['fields'].items()}
         PacketDatabaseTable.__init__(self, hostname, database, table, **kwargs)
-        APRSPacketConnection.__init__(self, f'{self.hostname}:{self.port}/{self.database}/{self.table}', callsigns)
+        APRSPacketConnection.__init__(self, f'postgresql://{self.hostname}:{self.port}/{self.database}/{self.table}',
+                                      callsigns)
 
     @property
     def packets(self) -> [APRSLocationPacket]:
@@ -307,25 +335,26 @@ class APRSPacketDatabaseTable(PacketDatabaseTable, APRSPacketConnection):
             APRSLocationPacket(
                 **{field if field in ['time', 'x', 'y', 'z'] else field.replace('packet_', ''): value
                    for field, value in record.items() if field not in ['point']},
-                source=self
+                source=self.location
             ) for record in self.records
         ]
 
-    def __getitem__(self, time: datetime) -> APRSLocationPacket:
-        packet = super().__getitem__(time)
-        return APRSLocationPacket(packet.time, *packet.coordinates, packet.crs)
+    def __getitem__(self, key: (datetime, str)) -> APRSLocationPacket:
+        packet = super().__getitem__(key)
+        return APRSLocationPacket(packet.time, *packet.coordinates, packet.crs, **packet.attributes)
 
-    def __setitem__(self, time: datetime, packet: APRSLocationPacket):
-        record = {
-            'time'    : packet.time,
-            'callsign': packet.callsign,
-            'x'       : packet.coordinates[0],
-            'y'       : packet.coordinates[1],
-            'z'       : packet.coordinates[2],
-            'point'   : Point(*packet.coordinates),
-            **{f'packet_{field}': value for field, value in packet.attributes.items()}
-        }
-        super().__setitem__(time, record)
+    def __setitem__(self, key: (datetime, str), packet: APRSLocationPacket):
+        PacketDatabaseTable.__setitem__(self, key, packet)
+
+    def __contains__(self, packet: APRSLocationPacket) -> bool:
+        with self.connection:
+            with self.connection.cursor() as cursor:
+                return database_table_has_record(cursor, self.table, {key: packet[key.replace('packet_', '')]
+                                                                      for key in self.primary_key},
+                                                 self.primary_key)
+
+    def insert(self, packets: [APRSLocationPacket]):
+        PacketDatabaseTable.insert(self, packets)
 
     @property
     def records(self) -> [{str: Any}]:
@@ -334,16 +363,17 @@ class APRSPacketDatabaseTable(PacketDatabaseTable, APRSPacketConnection):
         else:
             return self.records_where(None)
 
-    def insert(self, packets: [APRSLocationPacket]):
-        records = [{
-            'time' : packet.time,
-            'x'    : packet.coordinates[0],
-            'y'    : packet.coordinates[1],
-            'z'    : packet.coordinates[2],
-            'point': Point(*packet.coordinates),
+    @staticmethod
+    def __packet_record(packet: LocationPacket) -> {str: Any}:
+        return {
+            'time'    : packet.time,
+            'callsign': packet.callsign,
+            'x'       : packet.coordinates[0],
+            'y'       : packet.coordinates[1],
+            'z'       : packet.coordinates[2],
+            'point'   : Point(*packet.coordinates),
             **{f'packet_{field}': value for field, value in packet.attributes.items()}
-        } for packet in packets]
-        super().insert(records)
+        }
 
 
 def available_ports() -> str:

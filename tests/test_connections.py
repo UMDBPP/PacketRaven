@@ -9,7 +9,7 @@ from packetraven.packets import APRSLocationPacket
 from packetraven.utilities import read_configuration
 
 
-class TestConnections(unittest.TestCase):
+class TestAPRS_fi(unittest.TestCase):
     def test_aprs_fi(self):
         balloon_callsigns = ['W3EAX-10', 'W3EAX-11', 'W3EAX-13', 'W3EAX-14']
 
@@ -24,6 +24,8 @@ class TestConnections(unittest.TestCase):
 
         assert all(type(packet) is APRSLocationPacket for packet in packets)
 
+
+class TestDatabase(unittest.TestCase):
     def test_packet_database(self):
         packet_1 = APRSLocationPacket.from_raw_aprs(
             "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,"
@@ -61,6 +63,9 @@ class TestConnections(unittest.TestCase):
 
         packet_table = APRSPacketDatabaseTable(**credentials['database'], fields={field: str for field in packet_1})
         packet_table.insert(input_packets)
+
+        assert packet_1 == packet_table[packet_1.time, packet_1.callsign]
+
         packets = packet_table.packets
 
         with packet_table.connection as connection:
@@ -68,8 +73,8 @@ class TestConnections(unittest.TestCase):
                 assert database_has_table(cursor, packet_table.table)
                 cursor.execute(f'DROP TABLE {packet_table.table};')
 
-        assert len(packets) > 0 \
-               and all(packets[packet_index] == input_packets[packet_index] for packet_index in range(len(packets)))
+        assert len(packets) > 0 and all(packets[packet_index] == input_packets[packet_index]
+                                        for packet_index in range(len(packets)))
 
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+from argparse import ArgumentParser
 from datetime import datetime
 from getpass import getpass
 import os
@@ -7,37 +7,37 @@ import time
 
 from client import CREDENTIALS_FILENAME, DEFAULT_INTERVAL_SECONDS
 from client.gui import PacketRavenGUI
-from packetraven.connections import APRSPacketDatabaseTable, APRSPacketRadio, APRSPacketTextFile, APRSfiConnection, \
-    PacketDatabaseTable
-from packetraven.tracks import APRSTrack
+from client.retrieve import retrieve_packets
+from packetraven.connections import APRSPacketDatabaseTable, APRSPacketRadio, APRSPacketTextFile, \
+    APRSfiConnection
 from packetraven.utilities import get_logger, read_configuration
-from packetraven.writer import write_aprs_packet_tracks
 
 LOGGER = get_logger('packetraven')
 
 
 def main():
-    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-c', '--callsigns', nargs='?', const=None,
-                        help='comma-separated list of callsigns to track')
-    parser.add_argument('-k', '--apikey', help='API key from https://aprs.fi/page/api')
-    parser.add_argument('-p', '--port', help='name of serial port connected to APRS packet radio')
-    parser.add_argument('-d', '--database', help='PostGres database table `user@hostname:port/database/table`')
-    parser.add_argument('-t', '--tunnel', help='SSH tunnel `user@hostname:port`')
-    parser.add_argument('-l', '--log', help='path to log file to save log messages')
-    parser.add_argument('-o', '--output', help='path to output file to save packets')
-    parser.add_argument('-i', '--interval', default=DEFAULT_INTERVAL_SECONDS, type=float,
-                        help='seconds between each main loop')
-    parser.add_argument('-g', '--gui', action='store_true', help='start the graphical interface')
-    args = parser.parse_args()
+    args_parser = ArgumentParser()
+    args_parser.add_argument('-c', '--callsigns', help='comma-separated list of callsigns to track')
+    args_parser.add_argument('-k', '--apikey', help='API key from https://aprs.fi/page/api')
+    args_parser.add_argument('-p', '--port', help='name of serial port connected to APRS packet radio '
+                                                  '(set to `auto` to connect to the first open serial port)')
+    args_parser.add_argument('-d', '--database', help='PostGres database table `user@hostname:port/database/table`')
+    args_parser.add_argument('-t', '--tunnel', help='SSH tunnel `user@hostname:port`')
+    args_parser.add_argument('-l', '--log', help='path to log file to save log messages')
+    args_parser.add_argument('-o', '--output', help='path to output file to save packets')
+    args_parser.add_argument('-i', '--interval', default=DEFAULT_INTERVAL_SECONDS, type=float,
+                             help='seconds between each main loop (default: 10)')
+    args_parser.add_argument('-g', '--gui', action='store_true', help='start the graphical interface')
+    args = args_parser.parse_args()
 
     using_gui = args.gui
 
-    if args.callsigns is None and not using_gui:
-        parser.error('the following arguments are required: -c/--callsigns')
-    callsigns = args.callsigns.strip('"').split(',') if args.callsigns is not None else None
+    callsigns = [callsign.upper() for callsign in args.callsigns.strip('"').split(',')] if args.callsigns is not None else None
 
-    kwargs = {'api_key': args.apikey, 'serial_port': args.port}
+    kwargs = {'api_key': args.apikey}
+
+    if args.port is not None:
+        kwargs['serial_port'] = args.port
 
     if args.database is not None:
         database = args.database
@@ -83,19 +83,22 @@ def main():
     if using_gui:
         PacketRavenGUI(callsigns, log_filename, output_filename, interval_seconds, **kwargs)
     else:
+        if callsigns is not None:
+            LOGGER.info(f'filtering by {len(callsigns)}')
+
         connections = []
         if 'serial_port' in kwargs:
             radio_kwargs = {key: kwargs[key] for key in ['serial_port'] if key in kwargs}
             if radio_kwargs['serial_port'] is not None and 'txt' in radio_kwargs['serial_port']:
                 try:
-                    text_file = APRSPacketTextFile(kwargs['serial_port'])
+                    text_file = APRSPacketTextFile(kwargs['serial_port'], callsigns)
                     LOGGER.info(f'reading file {text_file.location}')
                     connections.append(text_file)
                 except ConnectionError as error:
                     LOGGER.warning(f'{error.__class__.__name__} - {error}')
             else:
                 try:
-                    radio = APRSPacketRadio(kwargs['serial_port'])
+                    radio = APRSPacketRadio(kwargs['serial_port'], callsigns)
                     LOGGER.info(f'opened port {radio.location}')
                     connections.append(radio)
                 except ConnectionError as error:
@@ -112,69 +115,35 @@ def main():
 
         if 'hostname' in kwargs:
             database_kwargs = {key: kwargs[key]
-                               for key in ['hostname', 'database', 'table', 'username', 'password',
-                                           'ssh_hostname', 'ssh_username', 'ssh_password'] if key in kwargs}
-            if 'ssh_username' not in database_kwargs:
-                database_kwargs['ssh_username'] = input('SSH username: ')
-            if 'ssh_password' not in database_kwargs or database_kwargs['ssh_password'] is None:
-                database_kwargs['ssh_password'] = getpass('SSH password: ')
+                               for key in ['hostname', 'database', 'table', 'username', 'password', ]
+                               if key in kwargs}
+            ssh_tunnel_kwargs = {key: kwargs[key]
+                                 for key in ['ssh_hostname', 'ssh_username', 'ssh_password']
+                                 if key in kwargs}
+            if 'ssh_username' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_username'] is None:
+                ssh_tunnel_kwargs['ssh_username'] = input('enter SSH username: ')
+            if 'ssh_password' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_password'] is None:
+                ssh_tunnel_kwargs['ssh_password'] = getpass('enter SSH password: ')
 
-            if 'username' not in database_kwargs:
-                database_kwargs['username'] = input(f'database username: ')
-            if 'password' not in database_kwargs:
-                database_kwargs['password'] = getpass('database password: ')
+            if 'username' not in database_kwargs or database_kwargs['username'] is None:
+                database_kwargs['username'] = input(f'enter database username: ')
+            if 'password' not in database_kwargs or database_kwargs['password'] is None:
+                database_kwargs['password'] = getpass('enter database password: ')
 
-            database = APRSPacketDatabaseTable(callsigns=callsigns, **database_kwargs)
-            LOGGER.info(f'connected to {database.location} with selected callsigns: {", ".join(callsigns)}')
+            database = APRSPacketDatabaseTable(**database_kwargs, **ssh_tunnel_kwargs, callsigns=callsigns)
+            LOGGER.info(f'connected to {database.location}')
             connections.append(database)
         else:
             database = None
 
+        LOGGER.info(f'opened {len(connections)} connections')
+
         packet_tracks = {}
         while len(connections) > 0:
-            LOGGER.debug(f'receiving packets from {len(connections)} source(s)')
-
-            parsed_packets = []
-            for connection in connections:
-                parsed_packets.extend(connection.packets)
-
-            LOGGER.debug(f'received {len(parsed_packets)} packets')
-
-            if len(parsed_packets) > 0:
-                for parsed_packet in parsed_packets:
-                    callsign = parsed_packet['callsign']
-
-                    if callsign not in packet_tracks:
-                        packet_tracks[callsign] = APRSTrack(callsign, [parsed_packet])
-                        LOGGER.debug(f'started tracking {callsign:8}')
-                    else:
-                        packet_track = packet_tracks[callsign]
-                        if parsed_packet not in packet_track:
-                            packet_track.append(parsed_packet)
-                        else:
-                            if not isinstance(parsed_packet.source, PacketDatabaseTable):
-                                LOGGER.debug(f'skipping duplicate packet: {parsed_packet}')
-                            continue
-
-                    LOGGER.info(f'new packet from {parsed_packet.source.location}: {parsed_packet}')
-
-                    if database is not None:
-                        LOGGER.info(f'sending packet to {database.location}')
-                        database.insert([parsed_packet])
-
-                    if 'longitude' in parsed_packet and 'latitude' in parsed_packet:
-                        ascent_rate = packet_tracks[callsign].ascent_rate[-1]
-                        ground_speed = packet_tracks[callsign].ground_speed[-1]
-                        seconds_to_impact = packet_tracks[callsign].seconds_to_impact
-                        LOGGER.info(f'{callsign:8} ascent rate      : {ascent_rate} m/s')
-                        LOGGER.info(f'{callsign:8} ground speed     : {ground_speed} m/s')
-                        if seconds_to_impact >= 0:
-                            LOGGER.info(f'{callsign:8} estimated landing: {seconds_to_impact} s')
-
-                if output_filename is not None:
-                    write_aprs_packet_tracks(packet_tracks.values(), output_filename)
-
+            retrieve_packets(connections, packet_tracks, database, output_filename, LOGGER)
             time.sleep(interval_seconds)
+        else:
+            LOGGER.warning(f'no connections started')
 
 
 if __name__ == '__main__':
