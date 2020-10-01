@@ -16,19 +16,23 @@ pip install packetraven
 packetraven -c W3EAX-8,W3EAX-12 -k <aprs_fi_api_key> 
 ```
 ```bash
-usage: packetraven [-h] -c CALLSIGNS [-k APIKEY] [-p PORT] [-d DATABASE] [-t TUNNEL] [-l LOG] [-o OUTPUT] [-i INTERVAL] [-g]
+usage: packetraven [-h] [-c CALLSIGNS] [-k APIKEY] [-p TNC] [-d DATABASE] [-t TUNNEL] [-s STARTDATE] [-e ENDDATE] [-l LOG] [-o OUTPUT] [-i INTERVAL] [-g]
 
 optional arguments:
   -h, --help            show this help message and exit
-  -c CALLSIGNS, --callsigns [CALLSIGNS]
+  -c CALLSIGNS, --callsigns CALLSIGNS
                         comma-separated list of callsigns to track
   -k APIKEY, --apikey APIKEY
                         API key from https://aprs.fi/page/api
-  -p PORT, --port PORT  name of serial port connected to APRS packet radio
+  -p TNC, --tnc TNC     serial port or text file of TNC parsing APRS packets from analog audio to ASCII (set to `auto` to use the first open serial port)
   -d DATABASE, --database DATABASE
                         PostGres database table `user@hostname:port/database/table`
   -t TUNNEL, --tunnel TUNNEL
                         SSH tunnel `user@hostname:port`
+  -s STARTDATE, --startdate STARTDATE
+                        starting date of time period of interest: `"YYYY-MM-DD HH:MM:SS"`
+  -e ENDDATE, --enddate ENDDATE
+                        ending date of time period of interest `"YYYY-MM-DD HH:MM:SS"`
   -l LOG, --log LOG     path to log file to save log messages
   -o OUTPUT, --output OUTPUT
                         path to output file to save packets
@@ -50,16 +54,16 @@ aprs_fi_packets = aprs_fi.packets
 
 print(aprs_fi_packets)
 ```
-or parse packets from a radio sending parsed APRS over a USB connection:
+or parse packets from a TNC sending parsed APRS over a USB connection:
 ```python
 from packetraven import SerialTNC
  
 serial_port = None # leave None to let PacketRaven guess the port name  
 
-radio = APRSPacketRadio(serial_port)
-radio_packets = radio.packets
+tnc = SerialTNC(serial_port)
+tnc_packets = tnc.packets
 
-print(radio_packets)
+print(tnc_packets)
 ```
 or connect to a PostGreSQL database running PostGIS:
 ```python
@@ -89,7 +93,7 @@ print(table_packets)
 
 #### Features:
 ###### current:
-- parse APRS packets from USB radio
+- parse APRS packets from USB TNC
 - retrieve packets from https://aprs.fi
 - synchronize with a PostGreSQL database
 - output packets to file
