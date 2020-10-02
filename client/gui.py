@@ -434,13 +434,12 @@ class PacketRavenGUI:
                 else:
                     self.database = None
 
-                connection_errors = '\n'.join(str(error) for error in connection_errors)
                 if len(self.__connections) == 0:
+                    connection_errors = '\n'.join(str(error) for error in connection_errors)
                     raise ConnectionError(f'no connections started\n{connection_errors}')
 
-                LOGGER.info(f'listening for packets every {self.interval_seconds}s '
-                            f'from {len(self.__connections)} connection(s): '
-                            f'{", ".join([connection.location for connection in self.__connections])}')
+                LOGGER.info(f'listening for packets every {self.interval_seconds}s from {len(self.__connections)} '
+                            f'connection(s): {", ".join([connection.location for connection in self.__connections])}')
 
                 disable_children(self.__frames['configuration'])
                 enable_children(self.__frames['data'])

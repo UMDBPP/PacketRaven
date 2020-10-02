@@ -3,6 +3,7 @@ from datetime import datetime
 from getpass import getpass
 import os
 from pathlib import Path
+import sys
 import time
 
 from dateutil.parser import parse
@@ -165,6 +166,10 @@ def main():
         else:
             database = None
 
+        if len(connections) == 0:
+            LOGGER.error(f'no connections started')
+            sys.exit(1)
+
         LOGGER.info(f'listening for packets every {interval_seconds}s from {len(connections)} connection(s): '
                     f'{", ".join([connection.location for connection in connections])}')
 
@@ -173,8 +178,6 @@ def main():
             retrieve_packets(connections, packet_tracks, database, output_filename, start_date=start_date, end_date=end_date,
                              logger=LOGGER)
             time.sleep(interval_seconds)
-        else:
-            LOGGER.warning(f'no connections started')
 
 
 if __name__ == '__main__':
