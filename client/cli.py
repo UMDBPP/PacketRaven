@@ -57,10 +57,10 @@ def main():
         if '@' in kwargs['ssh_hostname']:
             kwargs['ssh_username'], kwargs['ssh_hostname'] = kwargs['ssh_hostname'].split('@', 1)
 
-    if args.startdate is not None:
+    if args.start is not None:
         kwargs['start_date'] = parse(args.startdate.strip('"'))
 
-    if args.enddate is not None:
+    if args.end is not None:
         kwargs['end_date'] = parse(args.enddate.strip('"'))
 
     if 'start_date' in kwargs and 'end_date' in kwargs:
