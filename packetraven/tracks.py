@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Union
 
 import numpy
@@ -28,36 +29,36 @@ class LocationPacketTrack:
             self.packets.append(packet)
 
     @property
-    def times(self) -> numpy.datetime64:
+    def times(self) -> numpy.ndarray:
         return numpy.array([packet.time for packet in self.packets], dtype=numpy.datetime64)
 
     @property
-    def coordinates(self) -> numpy.float:
+    def coordinates(self) -> numpy.ndarray:
         return numpy.stack([packet.coordinates for packet in self.packets], axis=0)
 
     @property
-    def intervals(self) -> numpy.float:
+    def intervals(self) -> numpy.ndarray:
         return numpy.concatenate([[0], numpy.array([packet_delta.seconds for packet_delta in numpy.diff(self.packets)])])
 
     @property
-    def distances(self) -> numpy.float:
+    def distances(self) -> numpy.ndarray:
         return numpy.concatenate([[0], numpy.array([packet_delta.distance for packet_delta in numpy.diff(self.packets)])])
 
     @property
-    def ascents(self) -> numpy.float:
+    def ascents(self) -> numpy.ndarray:
         return numpy.concatenate([[0], numpy.array([packet_delta.ascent for packet_delta in numpy.diff(self.packets)])])
 
     @property
-    def ascent_rates(self) -> numpy.float:
+    def ascent_rates(self) -> numpy.ndarray:
         return numpy.concatenate([[0], numpy.array([packet_delta.ascent_rate for packet_delta in numpy.diff(self.packets)])])
 
     @property
-    def ground_speeds(self) -> numpy.float:
+    def ground_speeds(self) -> numpy.ndarray:
         return numpy.concatenate([[0], numpy.array([packet_delta.ground_speed for packet_delta in numpy.diff(self.packets)])])
 
     @property
-    def seconds_to_impact(self) -> float:
-        """ seconds to reach the ground at the current ascent rate """
+    def time_to_ground(self) -> timedelta:
+        """ estimated time to reach the ground at the current ascent rate """
 
         current_ascent_rate = self.ascent_rates[-1]
 
@@ -66,7 +67,7 @@ class LocationPacketTrack:
             # TODO implement a time to impact calc based off of standard atmo
             return self.packets[-1].coordinates[2] / current_ascent_rate
         else:
-            return -1
+            return timedelta(seconds=-1)
 
     @property
     def distance_from_start(self) -> float:
