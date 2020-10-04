@@ -71,10 +71,10 @@ class LocationPacket:
 
 
 class Distance:
-    def __init__(self, interval: timedelta, horizontal_distance: float, vertical_distance: float, crs: CRS):
+    def __init__(self, interval: timedelta, horizontal: float, vertical: float, crs: CRS):
         self.__interval = interval
-        self.__horizontal_distance = horizontal_distance
-        self.__vertical_distance = vertical_distance
+        self.__horizontal = horizontal
+        self.__vertical = vertical
         self.__crs = crs
 
     @classmethod
@@ -107,35 +107,30 @@ class Distance:
         return self.interval / timedelta(seconds=1)
 
     @property
-    def horizontal_distance(self) -> float:
-        return self.__horizontal_distance
+    def distance(self) -> float:
+        return self.__horizontal
 
     @property
-    def vertical_distance(self) -> float:
-        return self.__vertical_distance
+    def ascent(self) -> float:
+        return self.__vertical
 
     @property
     def crs(self) -> CRS:
         return self.__crs
 
     @property
-    def distance(self) -> float:
-        # TODO account for ellipsoid
-        return numpy.hypot(self.__horizontal_distance, self.__vertical_distance)
-
-    @property
     def ascent_rate(self) -> float:
-        return self.__vertical_distance / self.seconds if self.seconds > 0 else math.inf
+        return self.__vertical / self.seconds if self.seconds > 0 else math.inf
 
     @property
     def ground_speed(self) -> float:
-        return self.__horizontal_distance / self.seconds if self.seconds > 0 else math.inf
+        return self.__horizontal / self.seconds if self.seconds > 0 else math.inf
 
     def __str__(self) -> str:
-        return f'{self.seconds}s, {self.vertical_distance:6.2f}m vertical, {self.horizontal_distance:6.2f}m horizontal'
+        return f'{self.seconds}s, {self.ascent:6.2f}m vertical, {self.distance:6.2f}m horizontal'
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}({repr(self.interval)}, {self.vertical_distance}, {self.horizontal_distance}, ' \
+        return f'{self.__class__.__name__}({repr(self.interval)}, {self.ascent}, {self.distance}, ' \
                f'{repr(self.crs)})'
 
 

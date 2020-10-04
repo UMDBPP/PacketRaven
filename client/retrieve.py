@@ -33,9 +33,9 @@ def retrieve_packets(connections: [APRSPacketConnection], packet_tracks: [APRSTr
         for parsed_packet in parsed_packets:
             callsign = parsed_packet['callsign']
 
-            if start_date is not None and parsed_packet.time <= start_date:
+            if start_date is not None and parsed_packet.times <= start_date:
                 continue
-            if end_date is not None and parsed_packet.time >= end_date:
+            if end_date is not None and parsed_packet.times >= end_date:
                 continue
 
             if callsign not in packet_tracks:
@@ -70,8 +70,8 @@ def retrieve_packets(connections: [APRSPacketConnection], packet_tracks: [APRSTr
                 database.insert(new_packets)
 
         for callsign in updated_callsigns:
-            ascent_rate = packet_tracks[callsign].ascent_rate[-1]
-            ground_speed = packet_tracks[callsign].ground_speed[-1]
+            ascent_rate = packet_tracks[callsign].ascent_rates[-1]
+            ground_speed = packet_tracks[callsign].ground_speeds[-1]
             seconds_to_impact = packet_tracks[callsign].seconds_to_impact
             logger.info(f'{callsign:8} ascent rate      : {ascent_rate} m/s')
             logger.info(f'{callsign:8} ground speed     : {ground_speed} m/s')

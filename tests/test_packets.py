@@ -51,8 +51,8 @@ class TestPackets(unittest.TestCase):
         packet_delta = packet_2 - packet_1
 
         assert packet_delta.seconds == 127
-        assert numpy.allclose(packet_delta.vertical_distance, -2243.0231999999996)
-        assert numpy.allclose(packet_delta.horizontal_distance, 4019.3334763155167)
+        assert numpy.allclose(packet_delta.ascent, -2243.0231999999996)
+        assert numpy.allclose(packet_delta.distance, 4019.3334763155167)
 
 
 class TestPacketTracks(unittest.TestCase):
@@ -102,8 +102,8 @@ class TestPacketTracks(unittest.TestCase):
 
         track = APRSTrack('W3EAX-13', [packet_1, packet_2, packet_3])
 
-        assert track.ascent_rate[1] == (packet_2 - packet_1).ascent_rate
-        assert track.ground_speed[1] == (packet_2 - packet_1).ground_speed
+        assert track.ascent_rates[1] == (packet_2 - packet_1).ascent_rate
+        assert track.ground_speeds[1] == (packet_2 - packet_1).ground_speed
 
     def test_sorting(self):
         packet_1 = APRSPacket.from_raw_aprs(
