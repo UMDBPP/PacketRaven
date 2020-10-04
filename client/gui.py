@@ -476,30 +476,30 @@ class PacketRavenGUI:
                 if callsign not in existing_callsigns:
                     window = tkinter.Toplevel()
                     window.title(callsign)
-                    self.__add_text_box(window, title=f'{callsign}.time', label='Packet Time', width=19)
-                    self.__add_text_box(window, title=f'{callsign}.altitude', label='Altitude', units='m')
-                    self.__add_text_box(window, title=f'{callsign}.coordinates', label='Coordinates', width=19)
-                    self.__add_text_box(window, title=f'{callsign}.ascent_rate', label='Ascent Rate', units='m/s')
-                    self.__add_text_box(window, title=f'{callsign}.ground_speed', label='Ground Speed', units='m/s')
-                    self.__add_text_box(window, title=f'{callsign}.interval', label='Interval',
-                                        units='s')
-                    self.__add_text_box(window, title=f'{callsign}.ascent', label='Ascent', units='m')
-                    self.__add_text_box(window, title=f'{callsign}.distance', label='Distance',
-                                        units='m')
+                    self.__add_text_box(window, title=f'{callsign}.packets', label='Packets')
+                    self.__add_text_box(window, title=f'{callsign}.time', label='Last Time', width=19)
+                    self.__add_text_box(window, title=f'{callsign}.altitude', label='Last Altitude', units='m')
+                    self.__add_text_box(window, title=f'{callsign}.coordinates', label='Last Coordinates', width=19)
+                    self.__add_text_box(window, title=f'{callsign}.ascent', label='Last Ascent', units='m')
+                    self.__add_text_box(window, title=f'{callsign}.distance', label='Last Distance', units='m')
+                    self.__add_text_box(window, title=f'{callsign}.interval', label='Last Interval', units='s')
+                    self.__add_text_box(window, title=f'{callsign}.ascent_rate', label='Last Ascent Rate', units='m/s')
+                    self.__add_text_box(window, title=f'{callsign}.ground_speed', label='Last Ground Speed', units='m/s')
                     self.__add_text_box(window, title=f'{callsign}.distance_downrange', label='Distance Downrange', units='m')
                     self.__add_text_box(window, title=f'{callsign}.distance_traveled', label='Distance Traveled', units='m')
                     self.__windows[callsign] = window
 
                 packet_track = self.packet_tracks[callsign]
+                self.replace_text(self.__elements[f'{callsign}.packets'], len(packet_track))
                 self.replace_text(self.__elements[f'{callsign}.time'], packet_track.times[-1])
                 self.replace_text(self.__elements[f'{callsign}.altitude'], packet_track.coordinates[-1, 2])
                 self.replace_text(self.__elements[f'{callsign}.coordinates'],
                                   ', '.join(str(value) for value in packet_track.coordinates[-1, :2]))
-                self.replace_text(self.__elements[f'{callsign}.ascent_rate'], packet_track.ascent_rates[-1])
-                self.replace_text(self.__elements[f'{callsign}.ground_speed'], packet_track.ground_speeds[-1])
-                self.replace_text(self.__elements[f'{callsign}.interval'], packet_track.intervals[-1])
                 self.replace_text(self.__elements[f'{callsign}.ascent'], packet_track.ascents[-1])
                 self.replace_text(self.__elements[f'{callsign}.distance'], packet_track.distances[-1])
+                self.replace_text(self.__elements[f'{callsign}.interval'], packet_track.intervals[-1])
+                self.replace_text(self.__elements[f'{callsign}.ascent_rate'], packet_track.ascent_rates[-1])
+                self.replace_text(self.__elements[f'{callsign}.ground_speed'], packet_track.ground_speeds[-1])
                 self.replace_text(self.__elements[f'{callsign}.distance_downrange'], packet_track.distance_from_start)
                 self.replace_text(self.__elements[f'{callsign}.distance_traveled'], packet_track.length)
 

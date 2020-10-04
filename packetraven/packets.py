@@ -69,6 +69,12 @@ class LocationPacket:
     def __str__(self) -> str:
         return f'{self.time} {self.coordinates}'
 
+    def __repr__(self) -> str:
+        coordinate_string = ', '.join(f'{key}={value}' for key, value in dict(zip(('x', 'y', 'z'), self.coordinates)).items())
+        attribute_string = ', '.join(f'{attribute}={repr(value)}' for attribute, value in self.attributes.items())
+        return f'{self.__class__.__name__}(time={repr(self.time)}, {coordinate_string}, ' \
+               f'crs={self.crs.__class__.__name__}.from_epsg({repr(self.crs.to_epsg())}), {attribute_string})'
+
 
 class Distance:
     def __init__(self, interval: timedelta, horizontal: float, vertical: float, crs: CRS):
@@ -131,7 +137,7 @@ class Distance:
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}({repr(self.interval)}, {self.ascent}, {self.distance}, ' \
-               f'{repr(self.crs)})'
+               f'{self.crs.__class__.__name__}.from_epsg({repr(self.crs.to_epsg())}))'
 
 
 class APRSPacket(LocationPacket):
@@ -147,6 +153,12 @@ class APRSPacket(LocationPacket):
         :param crs: coordinate reference system
         :param time: time of packet, either as datetime object, seconds since Unix epoch, or ISO format date string.
         """
+
+        if 'callsign' in kwargs:
+            kwargs['from'] = kwargs['callsign']
+            del kwargs['callsign']
+        if 'from' not in kwargs:
+            kwargs['from'] = None
 
         super().__init__(time, x, y, z, crs, **kwargs)
 
@@ -202,5 +214,8 @@ class APRSPacket(LocationPacket):
         return f'{self["callsign"]} {super().__str__()} "{self["comment"]}"'
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}(**{repr(self.coordinates)}, {self.crs.__class__.__name__}.from_wkt(' \
-               f'{repr(self.crs.to_wkt())}), **{repr(self.attributes)})'
+        coordinate_string = ', '.join(f'{key}={value}' for key, value in dict(zip(('x', 'y', 'z'), self.coordinates)).items())
+        attribute_string = ', '.join(f'{attribute}={repr(value)}' for attribute, value in self.attributes.items()
+                                     if attribute != 'from')
+        return f'{self.__class__.__name__}(callsign={repr(self.callsign)}, time={repr(self.time)}, {coordinate_string}, ' \
+               f'crs={self.crs.__class__.__name__}.from_epsg({repr(self.crs.to_epsg())}), {attribute_string})'
