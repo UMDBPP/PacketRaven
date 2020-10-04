@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from os import PathLike
 from pathlib import Path
@@ -6,6 +6,7 @@ import re
 import tkinter
 from tkinter import filedialog, messagebox, simpledialog
 from tkinter.ttk import Combobox, Separator
+from typing import Callable
 
 from dateutil.parser import parse
 
@@ -22,8 +23,9 @@ LOGGER = get_logger('packetraven')
 class PacketRavenGUI:
     def __init__(self, callsigns: [str] = None, log_filename: PathLike = None, output_filename: PathLike = None,
                  interval_seconds: int = None, **kwargs):
-        self.__windows = {'main': tkinter.Tk()}
-        self.__windows['main'].title('PacketRaven')
+        main_window = tkinter.Tk()
+        main_window.title('PacketRaven')
+        self.__windows = {'main': main_window}
 
         self.interval_seconds = interval_seconds if interval_seconds is not None else DEFAULT_INTERVAL_SECONDS
 
@@ -61,51 +63,47 @@ class PacketRavenGUI:
 
         self.__frames = {}
         self.__elements = {}
-        self.__last_row = 0
 
-        self.__frames['configuration'] = tkinter.Frame(self.__windows['main'])
-        self.__frames['configuration'].pack(side='top', pady=10)
+        configuration_frame = tkinter.Frame(main_window)
+        configuration_frame.grid(row=main_window.grid_size()[1], column=0, pady=10)
+        self.__frames['configuration'] = configuration_frame
 
-        separator = Separator(self.__windows['main'], orient=tkinter.HORIZONTAL)
-        separator.pack(side='top', fill='x', expand=True)
+        start_date_entry = self.__add_entry_box(configuration_frame, title='start_date', label='Start Date', width=22,
+                                                sticky='w')
+        self.__add_entry_box(configuration_frame, title='end_date', label='End Date', width=22,
+                             row=start_date_entry.grid_info()['row'], column=start_date_entry.grid_info()['column'] + 1,
+                             sticky='e')
 
-        self.__frames['controls'] = tkinter.Frame(self.__windows['main'])
-        self.__frames['controls'].pack(side='top', pady=10)
+        separator = Separator(configuration_frame, orient=tkinter.HORIZONTAL)
+        separator.grid(row=configuration_frame.grid_size()[1], column=0, columnspan=configuration_frame.grid_size()[0] + 1,
+                       sticky='ew', pady=10)
 
-        configuration_top = tkinter.Frame(self.__frames['configuration'])
-        configuration_top.pack(pady=5)
-        configuration_bottom = tkinter.Frame(self.__frames['configuration'])
-        configuration_bottom.pack(pady=5)
-
-        configuration_left = tkinter.Frame(configuration_top)
-        configuration_left.pack(side='left')
-        configuration_right = tkinter.Frame(configuration_top)
-        configuration_right.pack(side='left')
-
-        self.__add_entry_box(configuration_left, title='callsigns', label='Callsigns', width=30)
-
+        self.__add_entry_box(configuration_frame, title='callsigns', label='Callsigns', width=55, columnspan=3)
         self.__file_selection_option = 'select file...'
-        self.__add_combo_box(configuration_left, title='tnc', label='TNC Port / File',
-                             options=list(available_ports()) + [self.__file_selection_option], width=20)
-        self.__elements['tnc'].bind('<<ComboboxSelected>>', self.__select_tnc)
+        self.__add_combo_box(configuration_frame, title='tnc', label='TNC',
+                             options=list(available_ports()) + [self.__file_selection_option], option_select=self.__select_tnc,
+                             width=52, columnspan=3, sticky='w')
 
-        self.__add_entry_box(configuration_right, title='start_date', label='Start Date', width=17)
-        self.__add_entry_box(configuration_right, title='end_date', label='End Date', width=17)
+        separator = Separator(configuration_frame, orient=tkinter.HORIZONTAL)
+        separator.grid(row=configuration_frame.grid_size()[1], column=0, columnspan=configuration_frame.grid_size()[0] + 1,
+                       sticky='ew', pady=10)
 
-        self.__add_entry_box(configuration_bottom, title='log_file', label='Log', width=55)
-        log_file_button = tkinter.Button(configuration_bottom, text='...', command=self.__select_log_file)
-        log_file_button.grid(row=self.__last_row - 1, column=2)
+        self.__add_file_box(configuration_frame, title='log_file', file_select=self.__select_log_file, label='Log', width=55,
+                            columnspan=3, sticky='w')
+        self.__add_file_box(configuration_frame, title='output_file', file_select=self.__select_output_file, label='Output',
+                            width=55, columnspan=3, sticky='w')
 
-        self.__add_entry_box(configuration_bottom, title='output_file', label='Output', width=55)
-        output_file_button = tkinter.Button(configuration_bottom, text='...', command=self.__select_output_file)
-        output_file_button.grid(row=self.__last_row - 1, column=2)
+        separator = Separator(main_window, orient=tkinter.HORIZONTAL)
+        separator.grid(row=main_window.grid_size()[1], column=0, sticky='ew')
+
+        control_frame = tkinter.Frame(main_window)
+        control_frame.grid(row=main_window.grid_size()[1], column=0, pady=10)
+        self.__frames['controls'] = control_frame
 
         self.__toggle_text = tkinter.StringVar()
         self.__toggle_text.set('Start')
-        row = tkinter.Frame(self.__frames['controls'])
-        row.pack()
-        toggle_button = tkinter.Button(row, textvariable=self.__toggle_text, command=self.toggle)
-        toggle_button.pack(fill='both', expand=True)
+        toggle_button = tkinter.Button(control_frame, textvariable=self.__toggle_text, command=self.toggle)
+        toggle_button.grid(row=control_frame.grid_size()[1], column=0, sticky='nsew')
 
         self.callsigns = callsigns
         self.tnc = self.__connection_configuration['tnc']['tnc']
@@ -123,7 +121,7 @@ class PacketRavenGUI:
         if self.output_filename is None:
             self.output_filename = Path('~') / 'Desktop'
 
-        self.__windows['main'].mainloop()
+        main_window.mainloop()
 
     @property
     def callsigns(self) -> [str]:
@@ -283,11 +281,21 @@ class PacketRavenGUI:
             self.tnc = filedialog.askopenfilename(title='Select TNC text file...', defaultextension='.txt',
                                                   filetypes=[('Text', '*.txt')])
 
-    def __add_combo_box(self, frame: tkinter.Frame, title: str, options: [str], **kwargs) -> Combobox:
+    def __add_combo_box(self, frame: tkinter.Frame, title: str, options: [str], option_select: Callable = None,
+                        **kwargs) -> Combobox:
         width = kwargs['width'] if 'width' in kwargs else None
         combo_box = Combobox(frame, width=width)
         combo_box['values'] = options
+        if option_select is not None:
+            combo_box.bind('<<ComboboxSelected>>', option_select)
         return self.__add_text_box(frame, title, text_box=combo_box, **kwargs)
+
+    def __add_file_box(self, frame: tkinter.Frame, title: str, file_select: Callable, **kwargs) -> tkinter.Entry:
+        file_box = self.__add_entry_box(frame, title, **kwargs)
+        log_file_button = tkinter.Button(frame, text='...', command=file_select)
+        log_file_button.grid(row=file_box.grid_info()['row'],
+                             column=file_box.grid_info()['column'] + file_box.grid_info()['columnspan'])
+        return file_box
 
     def __add_entry_box(self, frame: tkinter.Frame, title: str, **kwargs) -> tkinter.Entry:
         width = kwargs['width'] if 'width' in kwargs else None
@@ -295,21 +303,20 @@ class PacketRavenGUI:
         return self.__add_text_box(frame, title, text_box=entry_box, **kwargs)
 
     def __add_text_box(self, frame: tkinter.Frame, title: str, label: str, units: str = None, row: int = None,
-                       column: int = None, width: int = 10, text_box: tkinter.Entry = None) -> tkinter.Text:
+                       column: int = None, width: int = 10, text_box: tkinter.Entry = None, **kwargs) -> tkinter.Text:
         if row is None:
-            row = self.__last_row
-            self.__last_row += 1
+            row = frame.grid_size()[1]
         if column is None:
             column = 0
 
         if label is not None:
             text_label = tkinter.Label(frame, text=label)
-            text_label.grid(row=row, column=column)
+            text_label.grid(row=row, column=column, sticky='w')
             column += 1
 
         if text_box is None:
             text_box = tkinter.Text(frame, width=width, height=1)
-        text_box.grid(row=row, column=column)
+        text_box.grid(row=row, column=column, **kwargs)
         column += 1
 
         if units is not None:
@@ -433,17 +440,17 @@ class PacketRavenGUI:
                 LOGGER.info(f'listening for packets every {self.interval_seconds}s from {len(self.__connections)} '
                             f'connection(s): {", ".join([connection.location for connection in self.__connections])}')
 
-                disable_children(self.__frames['configuration'])
+                set_child_states(self.__frames['configuration'], tkinter.DISABLED)
 
                 for callsign in self.packet_tracks:
-                    enable_children(self.__windows[callsign])
+                    set_child_states(self.__windows[callsign], tkinter.DISABLED)
 
                 self.__toggle_text.set('Stop')
                 self.__active = True
             except Exception as error:
                 messagebox.showerror('PacketRaven Error', error)
                 self.__active = False
-                enable_children(self.__frames['configuration'])
+                set_child_states(self.__frames['configuration'], tkinter.NORMAL)
 
             self.retrieve_packets()
         else:
@@ -456,8 +463,8 @@ class PacketRavenGUI:
             LOGGER.info(f'closed {len(self.__connections)} connections')
 
             for callsign in self.packet_tracks:
-                disable_children(self.__windows[callsign])
-            enable_children(self.__frames['configuration'])
+                set_child_states(self.__windows[callsign], tkinter.DISABLED)
+            set_child_states(self.__frames['configuration'], tkinter.NORMAL)
 
             self.__toggle_text.set('Start')
             self.__active = False
@@ -476,35 +483,92 @@ class PacketRavenGUI:
                 if callsign not in existing_callsigns:
                     window = tkinter.Toplevel()
                     window.title(callsign)
-                    self.__add_text_box(window, title=f'{callsign}.packets', label='Packets')
-                    self.__add_text_box(window, title=f'{callsign}.time', label='Last Time', width=19)
-                    self.__add_text_box(window, title=f'{callsign}.altitude', label='Last Altitude', units='m')
-                    self.__add_text_box(window, title=f'{callsign}.coordinates', label='Last Coordinates', width=19)
-                    self.__add_text_box(window, title=f'{callsign}.ascent', label='Last Ascent', units='m')
-                    self.__add_text_box(window, title=f'{callsign}.distance', label='Last Distance', units='m')
-                    self.__add_text_box(window, title=f'{callsign}.interval', label='Last Interval', units='s')
-                    self.__add_text_box(window, title=f'{callsign}.ascent_rate', label='Last Ascent Rate', units='m/s')
-                    self.__add_text_box(window, title=f'{callsign}.ground_speed', label='Last Ground Speed', units='m/s')
-                    self.__add_text_box(window, title=f'{callsign}.distance_downrange', label='Distance Downrange', units='m')
-                    self.__add_text_box(window, title=f'{callsign}.distance_traveled', label='Distance Traveled', units='m')
+
+                    self.__add_text_box(window, title=f'{callsign}.callsign', label='Callsign', sticky='w')
+                    self.replace_text(self.__elements[f'{callsign}.callsign'], callsign)
+                    self.__add_text_box(window, title=f'{callsign}.packets', label='Packet #', sticky='w')
+
+                    self.__add_text_box(window, title=f'{callsign}.time', label='Time', width=19, sticky='w',
+                                        row=self.__elements[f'{callsign}.callsign'].grid_info()['row'],
+                                        column=self.__elements[f'{callsign}.callsign'].grid_info()['column'] + 3, columnspan=2)
+                    self.__add_text_box(window, title=f'{callsign}.interval', label='Interval', units='s', sticky='w',
+                                        row=self.__elements[f'{callsign}.packets'].grid_info()['row'],
+                                        column=self.__elements[f'{callsign}.packets'].grid_info()['column'] + 3)
+
+                    separator = Separator(window, orient=tkinter.HORIZONTAL)
+                    separator.grid(row=window.grid_size()[1], column=0, columnspan=7, sticky='ew', pady=10)
+
+                    self.__add_text_box(window, title=f'{callsign}.coordinates', label='Coordinates', width=15, sticky='w',
+                                        columnspan=2)
+                    self.__add_text_box(window, title=f'{callsign}.distance', label='Distance', units='m', sticky='w')
+                    self.__add_text_box(window, title=f'{callsign}.ground_speed', label='Ground Speed', units='m/s',
+                                        sticky='w')
+
+                    self.__add_text_box(window, title=f'{callsign}.altitude', label='Altitude', units='m', sticky='w',
+                                        row=self.__elements[f'{callsign}.coordinates'].grid_info()['row'],
+                                        column=self.__elements[f'{callsign}.coordinates'].grid_info()['column'] + 3)
+                    self.__add_text_box(window, title=f'{callsign}.ascent', label='Ascent', units='m', sticky='w',
+                                        row=self.__elements[f'{callsign}.distance'].grid_info()['row'],
+                                        column=self.__elements[f'{callsign}.distance'].grid_info()['column'] + 3)
+                    self.__add_text_box(window, title=f'{callsign}.ascent_rate', label='Ascent Rate', units='m/s',
+                                        sticky='w', row=self.__elements[f'{callsign}.ground_speed'].grid_info()['row'],
+                                        column=self.__elements[f'{callsign}.ground_speed'].grid_info()['column'] + 3)
+
+                    separator = Separator(window, orient=tkinter.HORIZONTAL)
+                    separator.grid(row=window.grid_size()[1], column=0, columnspan=7, sticky='ew', pady=10)
+
+                    self.__add_text_box(window, title=f'{callsign}.distance_downrange', label='Distance Downrange', units='m',
+                                        sticky='w')
+                    self.__add_text_box(window, title=f'{callsign}.distance_traveled', label='Distance Traveled', units='m',
+                                        sticky='w')
+
+                    self.__add_text_box(window, title=f'{callsign}.maximum_altitude', label='Max Altitude', units='m',
+                                        sticky='w', row=self.__elements[f'{callsign}.distance_downrange'].grid_info()['row'],
+                                        column=self.__elements[f'{callsign}.distance_downrange'].grid_info()['column'] + 3)
+                    self.__add_text_box(window, title=f'{callsign}.time_to_ground', label='Time to Ground', units='s',
+                                        sticky='w', row=self.__elements[f'{callsign}.distance_traveled'].grid_info()['row'],
+                                        column=self.__elements[f'{callsign}.distance_traveled'].grid_info()['column'] + 3)
+
+                    separator = Separator(window, orient=tkinter.VERTICAL)
+                    separator.grid(row=0, column=3, rowspan=window.grid_size()[1] + 2, sticky='ns', padx=10)
+
                     self.__windows[callsign] = window
+
+                window = self.__windows[callsign]
+
+                set_child_states(window)
 
                 packet_track = self.packet_tracks[callsign]
                 self.replace_text(self.__elements[f'{callsign}.packets'], len(packet_track))
-                self.replace_text(self.__elements[f'{callsign}.time'], packet_track.times[-1])
-                self.replace_text(self.__elements[f'{callsign}.altitude'], packet_track.coordinates[-1, 2])
+                self.replace_text(self.__elements[f'{callsign}.time'], f'{packet_track.times[-1]}')
+                self.replace_text(self.__elements[f'{callsign}.altitude'], f'{packet_track.coordinates[-1, 2]:.3f}')
                 self.replace_text(self.__elements[f'{callsign}.coordinates'],
-                                  ', '.join(str(value) for value in packet_track.coordinates[-1, :2]))
-                self.replace_text(self.__elements[f'{callsign}.ascent'], packet_track.ascents[-1])
-                self.replace_text(self.__elements[f'{callsign}.distance'], packet_track.distances[-1])
-                self.replace_text(self.__elements[f'{callsign}.interval'], packet_track.intervals[-1])
-                self.replace_text(self.__elements[f'{callsign}.ascent_rate'], packet_track.ascent_rates[-1])
-                self.replace_text(self.__elements[f'{callsign}.ground_speed'], packet_track.ground_speeds[-1])
-                self.replace_text(self.__elements[f'{callsign}.distance_downrange'], packet_track.distance_from_start)
-                self.replace_text(self.__elements[f'{callsign}.distance_traveled'], packet_track.length)
+                                  ', '.join(f'{value:.3f}' for value in packet_track.coordinates[-1, :2]))
+                self.replace_text(self.__elements[f'{callsign}.ascent'], f'{packet_track.ascents[-1]:.2f}')
+                self.replace_text(self.__elements[f'{callsign}.distance'], f'{packet_track.distances[-1]:.2f}')
+                self.replace_text(self.__elements[f'{callsign}.interval'], f'{packet_track.intervals[-1]:.2f}')
+                self.replace_text(self.__elements[f'{callsign}.ascent_rate'], f'{packet_track.ascent_rates[-1]:.2f}')
+                self.replace_text(self.__elements[f'{callsign}.ground_speed'], f'{packet_track.ground_speeds[-1]:.2f}')
+
+                self.replace_text(self.__elements[f'{callsign}.distance_downrange'], f'{packet_track.distance_from_start:.2f}')
+                self.replace_text(self.__elements[f'{callsign}.distance_traveled'], f'{packet_track.length:.2f}')
+
+                self.replace_text(self.__elements[f'{callsign}.maximum_altitude'],
+                                  f'{packet_track.coordinates[:, 2].max():.2f}')
+
+                landing_box = self.__elements[f'{callsign}.time_to_ground']
+
+                if packet_track.time_to_ground >= timedelta(seconds=0):
+                    landing_box.configure(state=tkinter.NORMAL)
+                    self.replace_text(landing_box, f'{packet_track.time_to_ground / timedelta(seconds=1):.2f}')
+                else:
+                    self.replace_text(landing_box, '')
+                    landing_box.configure(state=tkinter.DISABLED)
+
+                set_child_states(window, tkinter.DISABLED, [tkinter.Text])
 
             if self.active:
-                self.__windows['main'].after(self.interval_seconds * 1000, self.retrieve_packets)
+                self.__windows['main'].after(int(self.interval_seconds * 1000), self.retrieve_packets)
 
     @staticmethod
     def replace_text(element: tkinter.Entry, value: str):
@@ -517,17 +581,15 @@ class PacketRavenGUI:
         element.insert(start_index, value)
 
 
-def disable_children(frame: tkinter.Frame):
+def set_child_states(frame: tkinter.Frame, state: str = None, types: [type] = None):
+    if state is None:
+        state = tkinter.NORMAL
     for child in frame.winfo_children():
         if isinstance(child, tkinter.Frame):
-            disable_children(child)
+            set_child_states(child)
         else:
-            child.configure(state=tkinter.DISABLED)
-
-
-def enable_children(frame: tkinter.Frame):
-    for child in frame.winfo_children():
-        if isinstance(child, tkinter.Frame):
-            enable_children(child)
-        else:
-            child.configure(state=tkinter.NORMAL)
+            if types is None or any(isinstance(child, selected_type) for selected_type in types):
+                try:
+                    child.configure(state=state)
+                except tkinter.TclError:
+                    continue
