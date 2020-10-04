@@ -24,8 +24,8 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
                                                 'time'        : f'{packet.time:%Y%m%d%H%M%S}',
                                                 'callsign'    : packet.callsign,
                                                 'altitude'    : packet.coordinates[2],
-                                                'ascent_rate' : packet_track.ascent_rate[packet_index],
-                                                'ground_speed': packet_track.ground_speed[packet_index]
+                                                'ascent_rate' : packet_track.ascent_rates[packet_index],
+                                                'ground_speed': packet_track.ground_speeds[packet_index]
                                             })
                             for packet_index, packet in enumerate(packet_track))
 
@@ -35,8 +35,8 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
                                     'time'             : f'{packet_track.packets[-1].time:%Y%m%d%H%M%S}',
                                     'callsign'         : packet_track.callsign,
                                     'altitude'         : packet_track.coordinates[-1, -1],
-                                    'ascent_rate'      : packet_track.ascent_rate[-1],
-                                    'ground_speed'     : packet_track.ground_speed[-1],
+                                    'ascent_rate'      : packet_track.ascent_rates[-1],
+                                    'ground_speed'     : packet_track.ground_speeds[-1],
                                     'seconds_to_impact': packet_track.seconds_to_impact
                                 }))
 
@@ -56,15 +56,15 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
                 placemark = kml.Placemark(KML_STANDARD, f'1 {packet_track_index} {packet_index}',
                                           f'{packet_track.callsign} {packet.time:%Y%m%d%H%M%S}',
                                           f'altitude={packet.coordinates[2]} ascent_rate='
-                                          f'{packet_track.ascent_rate[packet_index]} ground_speed='
-                                          f'{packet_track.ground_speed[packet_index]}')
+                                          f'{packet_track.ascent_rates[packet_index]} ground_speed='
+                                          f'{packet_track.ground_speeds[packet_index]}')
                 placemark.geometry = Point(packet.coordinates.tolist())
                 document.append(placemark)
 
             placemark = kml.Placemark(KML_STANDARD, f'1 {packet_track_index}', packet_track.callsign,
                                       f'altitude={packet_track.coordinates[-1, -1]} ascent_rate='
-                                      f'{packet_track.ascent_rate[-1]} ground_speed='
-                                      f'{packet_track.ground_speed[-1]} seconds_to_impact={packet_track.seconds_to_impact}')
+                                      f'{packet_track.ascent_rates[-1]} ground_speed='
+                                      f'{packet_track.ground_speeds[-1]} seconds_to_impact={packet_track.seconds_to_impact}')
             placemark.geometry = LineString(packet_track.coordinates)
             document.append(placemark)
 

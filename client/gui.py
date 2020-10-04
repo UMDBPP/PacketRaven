@@ -13,6 +13,7 @@ from client import DEFAULT_INTERVAL_SECONDS
 from client.retrieve import retrieve_packets
 from packetraven.connections import APRSPacketDatabaseTable, APRSfiConnection, SerialTNC, TextFileTNC, available_ports, \
     next_available_port
+from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
 
 LOGGER = get_logger('packetraven')
@@ -21,8 +22,8 @@ LOGGER = get_logger('packetraven')
 class PacketRavenGUI:
     def __init__(self, callsigns: [str] = None, log_filename: PathLike = None, output_filename: PathLike = None,
                  interval_seconds: int = None, **kwargs):
-        self.__window = tkinter.Tk()
-        self.__window.title('PacketRaven')
+        self.__windows = {'main': tkinter.Tk()}
+        self.__windows['main'].title('PacketRaven')
 
         self.interval_seconds = interval_seconds if interval_seconds is not None else DEFAULT_INTERVAL_SECONDS
 
@@ -62,20 +63,14 @@ class PacketRavenGUI:
         self.__elements = {}
         self.__last_row = 0
 
-        self.__frames['configuration'] = tkinter.Frame(self.__window)
-        self.__frames['configuration'].pack(side='left')
+        self.__frames['configuration'] = tkinter.Frame(self.__windows['main'])
+        self.__frames['configuration'].pack(side='top', pady=10)
 
-        separator = Separator(self.__window, orient=tkinter.VERTICAL)
-        separator.pack(side='left', padx=10, fill='y', expand=True)
+        separator = Separator(self.__windows['main'], orient=tkinter.HORIZONTAL)
+        separator.pack(side='top', fill='x', expand=True)
 
-        self.__frames['controls'] = tkinter.Frame(self.__window)
-        self.__frames['controls'].pack(side='left')
-
-        separator = Separator(self.__window, orient=tkinter.VERTICAL)
-        separator.pack(side='left', padx=10, fill='y', expand=True)
-
-        self.__frames['data'] = tkinter.Frame(self.__window)
-        self.__frames['data'].pack(side='left')
+        self.__frames['controls'] = tkinter.Frame(self.__windows['main'])
+        self.__frames['controls'].pack(side='top', pady=10)
 
         configuration_top = tkinter.Frame(self.__frames['configuration'])
         configuration_top.pack(pady=5)
@@ -110,15 +105,7 @@ class PacketRavenGUI:
         row = tkinter.Frame(self.__frames['controls'])
         row.pack()
         toggle_button = tkinter.Button(row, textvariable=self.__toggle_text, command=self.toggle)
-        toggle_button.pack()
-
-        self.__add_text_box(self.__frames['data'], title='longitude', label='Longitude', units='°')
-        self.__add_text_box(self.__frames['data'], title='latitude', label='Latitude', units='°')
-        self.__add_text_box(self.__frames['data'], title='altitude', label='Altitude', units='m')
-        self.__add_text_box(self.__frames['data'], title='ground_speed', label='Ground Speed', units='m/s')
-        self.__add_text_box(self.__frames['data'], title='ascent_rate', label='Ascent Rate', units='m/s')
-
-        disable_children(self.__frames['data'])
+        toggle_button.pack(fill='both', expand=True)
 
         self.callsigns = callsigns
         self.tnc = self.__connection_configuration['tnc']['tnc']
@@ -136,7 +123,7 @@ class PacketRavenGUI:
         if self.output_filename is None:
             self.output_filename = Path('~') / 'Desktop'
 
-        self.__window.mainloop()
+        self.__windows['main'].mainloop()
 
     @property
     def callsigns(self) -> [str]:
@@ -272,6 +259,10 @@ class PacketRavenGUI:
         if active is not self.active:
             self.toggle()
 
+    @property
+    def packet_tracks(self) -> {str: APRSTrack}:
+        return self.__packet_tracks
+
     def __select_log_file(self):
         self.log_filename = filedialog.asksaveasfilename(title='Create log file...',
                                                          initialdir=self.log_filename.parent,
@@ -383,7 +374,7 @@ class PacketRavenGUI:
                 api_key = self.__connection_configuration['aprs_fi']['api_key']
                 if api_key is None:
                     api_key = simpledialog.askstring('APRS.fi API Key', 'enter API key for https://aprs.fi',
-                                                     parent=self.__window, show='*')
+                                                     parent=self.__windows['main'], show='*')
                 try:
                     aprs_api = APRSfiConnection(self.callsigns, api_key=api_key)
                     LOGGER.info(f'established connection to {aprs_api.location}')
@@ -406,21 +397,22 @@ class PacketRavenGUI:
                             if 'ssh_username' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_username'] is None:
                                 ssh_tunnel_kwargs['ssh_username'] = simpledialog.askstring('SSH Tunnel Username',
                                                                                            'enter SSH username for tunnel',
-                                                                                           parent=self.__window)
+                                                                                           parent=self.__windows['main'])
                             if 'ssh_password' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_password'] is None:
                                 ssh_tunnel_kwargs['ssh_password'] = simpledialog.askstring('SSH Tunnel Password',
                                                                                            'enter SSH password for tunnel',
-                                                                                           parent=self.__window, show='*')
+                                                                                           parent=self.__windows['main'],
+                                                                                           show='*')
 
                     database_kwargs = self.__connection_configuration['database']
                     if 'username' not in database_kwargs or database_kwargs['username'] is None:
                         database_kwargs['username'] = simpledialog.askstring('Database Username',
                                                                              'enter database username',
-                                                                             parent=self.__window)
+                                                                             parent=self.__windows['main'])
                     if 'password' not in database_kwargs or database_kwargs['password'] is None:
                         database_kwargs['password'] = simpledialog.askstring('Database Password',
                                                                              'enter database password',
-                                                                             parent=self.__window, show='*')
+                                                                             parent=self.__windows['main'], show='*')
 
                     try:
                         self.database = APRSPacketDatabaseTable(**database_kwargs, **ssh_tunnel_kwargs,
@@ -442,7 +434,9 @@ class PacketRavenGUI:
                             f'connection(s): {", ".join([connection.location for connection in self.__connections])}')
 
                 disable_children(self.__frames['configuration'])
-                enable_children(self.__frames['data'])
+
+                for callsign in self.packet_tracks:
+                    enable_children(self.__windows[callsign])
 
                 self.__toggle_text.set('Stop')
                 self.__active = True
@@ -461,7 +455,8 @@ class PacketRavenGUI:
 
             LOGGER.info(f'closed {len(self.__connections)} connections')
 
-            disable_children(self.__frames['data'])
+            for callsign in self.packet_tracks:
+                disable_children(self.__windows[callsign])
             enable_children(self.__frames['configuration'])
 
             self.__toggle_text.set('Start')
@@ -472,10 +467,44 @@ class PacketRavenGUI:
 
     def retrieve_packets(self):
         if self.active:
-            retrieve_packets(self.__connections, self.__packet_tracks, self.database, self.output_filename, self.start_date,
-                             self.end_date, logger=LOGGER)
+            existing_callsigns = list(self.packet_tracks)
+            parsed_packets = retrieve_packets(self.__connections, self.__packet_tracks, self.database, self.output_filename,
+                                              self.start_date, self.end_date, logger=LOGGER)
+
+            updated_callsigns = {packet.callsign for packet in parsed_packets}
+            for callsign in updated_callsigns:
+                if callsign not in existing_callsigns:
+                    window = tkinter.Toplevel()
+                    window.title(callsign)
+                    self.__add_text_box(window, title=f'{callsign}.time', label='Packet Time', width=19)
+                    self.__add_text_box(window, title=f'{callsign}.altitude', label='Altitude', units='m')
+                    self.__add_text_box(window, title=f'{callsign}.coordinates', label='Coordinates', width=19)
+                    self.__add_text_box(window, title=f'{callsign}.ascent_rate', label='Ascent Rate', units='m/s')
+                    self.__add_text_box(window, title=f'{callsign}.ground_speed', label='Ground Speed', units='m/s')
+                    self.__add_text_box(window, title=f'{callsign}.interval', label='Interval',
+                                        units='s')
+                    self.__add_text_box(window, title=f'{callsign}.ascent', label='Ascent', units='m')
+                    self.__add_text_box(window, title=f'{callsign}.distance', label='Distance',
+                                        units='m')
+                    self.__add_text_box(window, title=f'{callsign}.distance_downrange', label='Distance Downrange', units='m')
+                    self.__add_text_box(window, title=f'{callsign}.distance_traveled', label='Distance Traveled', units='m')
+                    self.__windows[callsign] = window
+
+                packet_track = self.packet_tracks[callsign]
+                self.replace_text(self.__elements[f'{callsign}.time'], packet_track.times[-1])
+                self.replace_text(self.__elements[f'{callsign}.altitude'], packet_track.coordinates[-1, 2])
+                self.replace_text(self.__elements[f'{callsign}.coordinates'],
+                                  ', '.join(str(value) for value in packet_track.coordinates[-1, :2]))
+                self.replace_text(self.__elements[f'{callsign}.ascent_rate'], packet_track.ascent_rates[-1])
+                self.replace_text(self.__elements[f'{callsign}.ground_speed'], packet_track.ground_speeds[-1])
+                self.replace_text(self.__elements[f'{callsign}.interval'], packet_track.intervals[-1])
+                self.replace_text(self.__elements[f'{callsign}.ascent'], packet_track.ascents[-1])
+                self.replace_text(self.__elements[f'{callsign}.distance'], packet_track.distances[-1])
+                self.replace_text(self.__elements[f'{callsign}.distance_downrange'], packet_track.distance_from_start)
+                self.replace_text(self.__elements[f'{callsign}.distance_traveled'], packet_track.length)
+
             if self.active:
-                self.__window.after(self.interval_seconds * 1000, self.retrieve_packets)
+                self.__windows['main'].after(self.interval_seconds * 1000, self.retrieve_packets)
 
     @staticmethod
     def replace_text(element: tkinter.Entry, value: str):
