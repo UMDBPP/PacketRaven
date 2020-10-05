@@ -13,7 +13,7 @@ def parse_raw_aprs(raw_aprs: Union[str, dict]) -> dict:
     :return: dictionary of APRS fields
     """
 
-    if type(raw_aprs) is not dict:
+    if not isinstance(raw_aprs, dict):
         try:
             parsed_packet = aprslib.parse(raw_aprs)
         except aprslib.ParseError as error:
@@ -28,8 +28,8 @@ def parse_raw_aprs(raw_aprs: Union[str, dict]) -> dict:
             'symbol_table': raw_aprs['symbol'][0],
             'latitude'    : float(raw_aprs['lat']),
             'longitude'   : float(raw_aprs['lng']),
-            'altitude'    : float(raw_aprs['altitude']),
-            'comment'     : raw_aprs['comment']
+            'altitude'    : float(raw_aprs['altitude']) if 'altitude' in raw_aprs else 0,
+            'comment'     : raw_aprs['comment'] if 'comment' in raw_aprs else 'comment'
         }
 
     # parsed_packet = {'raw':str(raw_aprs)}

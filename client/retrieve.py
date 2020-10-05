@@ -72,8 +72,7 @@ def retrieve_packets(connections: [APRSPacketConnection], packet_tracks: [APRSTr
         for callsign in updated_callsigns:
             packet_track = packet_tracks[callsign]
             coordinate_string = ', '.join(f'{coordinate:.3f}°' for coordinate in packet_track.coordinates[-1, :2])
-            message = f'{callsign:8} #{len(packet_track)} ({coordinate_string}), ' \
-                      f'{packet_track.coordinates[-1, 2]:.2f} m); ' \
+            message = f'{callsign:8} #{len(packet_track)} ({coordinate_string}, {packet_track.coordinates[-1, 2]:.2f} m); ' \
                       f'{packet_track.intervals[-1]:.2f} s since last packet: ' \
                       f'{packet_track.distances[-1]:.2f} m distance over ground ({packet_track.ascent_rates[-1]:.2f} m/s), ' \
                       f'{packet_track.ascents[-1]:.2f} m ascent ({packet_track.ground_speeds[-1]:.2f} m/s)'
