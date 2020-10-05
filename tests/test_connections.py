@@ -3,7 +3,7 @@ import os
 import unittest
 
 from client import CREDENTIALS_FILENAME
-from packetraven.connections import APRSPacketDatabaseTable, APRSfiConnection
+from packetraven.connections import APRSPacketDatabaseTable, APRSfi
 from packetraven.database import database_has_table
 from packetraven.packets import APRSPacket
 from packetraven.utilities import read_configuration
@@ -17,7 +17,7 @@ class TestAPRS_fi(unittest.TestCase):
         if 'aprs_fi' not in credentials:
             credentials['aprs_fi'] = {'api_key': os.environ['APRS_FI_API_KEY']}
 
-        aprs_api = APRSfiConnection(balloon_callsigns, credentials['aprs_fi']['api_key'])
+        aprs_api = APRSfi(balloon_callsigns, credentials['aprs_fi']['api_key'])
 
         with aprs_api:
             packets = aprs_api.packets

@@ -11,7 +11,7 @@ from dateutil.parser import parse
 from client import CREDENTIALS_FILENAME, DEFAULT_INTERVAL_SECONDS
 from client.gui import PacketRavenGUI
 from client.retrieve import retrieve_packets
-from packetraven.connections import APRSPacketDatabaseTable, APRSfiConnection, SerialTNC, TextFileTNC
+from packetraven.connections import APRSPacketDatabaseTable, APRSfi, SerialTNC, TextFileTNC
 from packetraven.utilities import get_logger, read_configuration
 
 LOGGER = get_logger('packetraven')
@@ -59,10 +59,10 @@ def main():
             kwargs['ssh_username'], kwargs['ssh_hostname'] = kwargs['ssh_hostname'].split('@', 1)
 
     if args.start is not None:
-        kwargs['start_date'] = parse(args.startdate.strip('"'))
+        kwargs['start_date'] = parse(args.start.strip('"'))
 
     if args.end is not None:
-        kwargs['end_date'] = parse(args.enddate.strip('"'))
+        kwargs['end_date'] = parse(args.end.strip('"'))
 
     if 'start_date' in kwargs and 'end_date' in kwargs:
         if kwargs['start_date'] > kwargs['end_date']:
@@ -137,32 +137,45 @@ def main():
         if 'api_key' in kwargs:
             aprs_fi_kwargs = {key: kwargs[key] for key in ['api_key'] if key in kwargs}
             try:
-                aprs_api = APRSfiConnection(callsigns=callsigns, **aprs_fi_kwargs)
+                aprs_api = APRSfi(callsigns=callsigns, **aprs_fi_kwargs)
                 LOGGER.info(f'connected to {aprs_api.location}')
                 connections.append(aprs_api)
             except ConnectionError as error:
                 LOGGER.warning(f'{error.__class__.__name__} - {error}')
 
         if 'hostname' in kwargs:
-            database_kwargs = {key: kwargs[key]
-                               for key in ['hostname', 'database', 'table', 'username', 'password', ]
+            database_kwargs = {key: kwargs[key] for key in ['hostname', 'database', 'table', 'username', 'password', ]
                                if key in kwargs}
-            ssh_tunnel_kwargs = {key: kwargs[key]
-                                 for key in ['ssh_hostname', 'ssh_username', 'ssh_password']
+            ssh_tunnel_kwargs = {key: kwargs[key] for key in ['ssh_hostname', 'ssh_username', 'ssh_password']
                                  if key in kwargs}
-            if 'ssh_username' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_username'] is None:
-                ssh_tunnel_kwargs['ssh_username'] = input('enter SSH username: ')
-            if 'ssh_password' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_password'] is None:
-                ssh_tunnel_kwargs['ssh_password'] = getpass('enter SSH password: ')
 
-            if 'username' not in database_kwargs or database_kwargs['username'] is None:
-                database_kwargs['username'] = input(f'enter database username: ')
-            if 'password' not in database_kwargs or database_kwargs['password'] is None:
-                database_kwargs['password'] = getpass('enter database password: ')
+            try:
+                if 'ssh_hostname' in ssh_tunnel_kwargs:
+                    if 'ssh_username' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_username'] is None:
+                        ssh_tunnel_kwargs['ssh_username'] = input('enter SSH username: ')
+                        if database_kwargs['ssh_username'] is None or len(database_kwargs['ssh_username']) == 0:
+                            raise ConnectionError('missing SSH username')
 
-            database = APRSPacketDatabaseTable(**database_kwargs, **ssh_tunnel_kwargs, callsigns=callsigns)
-            LOGGER.info(f'connected to {database.location}')
-            connections.append(database)
+                    if 'ssh_password' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_password'] is None:
+                        ssh_tunnel_kwargs['ssh_password'] = getpass('enter SSH password: ')
+                        if database_kwargs['ssh_password'] is None or len(database_kwargs['ssh_password']) == 0:
+                            raise ConnectionError('missing SSH password')
+
+                if 'username' not in database_kwargs or database_kwargs['username'] is None:
+                    database_kwargs['username'] = input(f'enter database username: ')
+                    if database_kwargs['username'] is None or len(database_kwargs['username']) == 0:
+                        raise ConnectionError('missing database username')
+
+                if 'password' not in database_kwargs or database_kwargs['password'] is None:
+                    database_kwargs['password'] = getpass('enter database password: ')
+                    if database_kwargs['password'] is None or len(database_kwargs['password']) == 0:
+                        raise ConnectionError('missing database password')
+
+                database = APRSPacketDatabaseTable(**database_kwargs, **ssh_tunnel_kwargs, callsigns=callsigns)
+                LOGGER.info(f'connected to {database.location}')
+                connections.append(database)
+            except ConnectionError:
+                database = None
         else:
             database = None
 

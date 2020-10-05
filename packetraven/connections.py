@@ -12,7 +12,7 @@ from serial.tools import list_ports
 from shapely.geometry import Point
 
 from client import CREDENTIALS_FILENAME
-from .database import DatabaseTable, database_table_has_record
+from .database import DatabaseTable, NetworkConnection
 from .packets import APRSPacket, LocationPacket
 from .utilities import get_logger, read_configuration
 
@@ -167,7 +167,7 @@ class TextFileTNC(APRSPacketConnection):
         return f'{self.__class__.__name__}("{self.location}")'
 
 
-class APRSfiConnection(APRSPacketConnection):
+class APRSfi(APRSPacketConnection, NetworkConnection):
     def __init__(self, callsigns: [str], api_key: str = None):
         """
         connect to https://aprs.fi
@@ -228,12 +228,6 @@ class APRSfiConnection(APRSPacketConnection):
 
     @property
     def connected(self) -> bool:
-        """
-        test network connection
-
-        :return: whether current session has a network connection to https://api.aprs.fi/api/get
-        """
-
         try:
             requests.get(self.location, timeout=2)
             return True
@@ -273,6 +267,9 @@ class PacketDatabaseTable(DatabaseTable, PacketConnection):
         DatabaseTable.__init__(self, hostname, database, table, **kwargs)
         PacketConnection.__init__(self, f'postgresql://{self.hostname}:{self.port}/{self.database}/{self.table}')
 
+        if not self.connected:
+            raise ConnectionError(f'cannot connect to {self.location}')
+
     @property
     def packets(self) -> [LocationPacket]:
         return [LocationPacket(**{key: value for key, value in record.items() if key != 'point'}, source=self.location)
@@ -296,11 +293,7 @@ class PacketDatabaseTable(DatabaseTable, PacketConnection):
         super().insert(records)
 
     def __contains__(self, packet: LocationPacket) -> bool:
-        with self.connection:
-            with self.connection.cursor() as cursor:
-                return database_table_has_record(cursor, self.table, {key: packet[key.replace('packet_', '')]
-                                                                      for key in self.primary_key},
-                                                 self.primary_key)
+        super().__contains__([packet[key.replace('packet_', '')] for key in self.primary_key])
 
     def __enter__(self):
         return self.connection
@@ -366,17 +359,13 @@ class APRSPacketDatabaseTable(PacketDatabaseTable, APRSPacketConnection):
         return APRSPacket(packet.time, *packet.coordinates, packet.crs, **packet.attributes)
 
     def __setitem__(self, key: (datetime, str), packet: APRSPacket):
-        PacketDatabaseTable.__setitem__(self, key, packet)
+        super().__setitem__(key, packet)
 
     def __contains__(self, packet: APRSPacket) -> bool:
-        with self.connection:
-            with self.connection.cursor() as cursor:
-                return database_table_has_record(cursor, self.table, {key: packet[key.replace('packet_', '')]
-                                                                      for key in self.primary_key},
-                                                 self.primary_key)
+        super().__contains__(packet)
 
     def insert(self, packets: [APRSPacket]):
-        PacketDatabaseTable.insert(self, packets)
+        super().insert(packets)
 
     @property
     def records(self) -> [{str: Any}]:

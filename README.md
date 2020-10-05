@@ -63,7 +63,7 @@ optional arguments:
 #### Python API:
 to retrieve packets directly from https://aprs.fi:
 ```python
-from packetraven import APRSfiConnection
+from packetraven import APRSfi
 
 callsigns = ['W3EAX-8', 'W3EAX-12', 'KC3FXX', 'KC3ZRB']
 api_key = '<api_key>' # enter your APRS.fi API key here - you can get one from https://aprs.fi/page/api
