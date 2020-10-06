@@ -80,7 +80,7 @@ def retrieve_packets(connections: [APRSPacketConnection], packet_tracks: [APRSTr
                     database.insert(new_packets)
                 except ConnectionError as error:
                     logger.info(f'could not send packet(s) ({error}); reattempting on next iteration')
-                    PACKET_SEND_BUFFER.extend(packets)
+                    PACKET_SEND_BUFFER.extend(new_packets)
 
         for callsign in updated_callsigns:
             packet_track = packet_tracks[callsign]
