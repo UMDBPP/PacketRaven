@@ -75,7 +75,7 @@ def retrieve_packets(connections: [APRSPacketConnection], packet_tracks: [APRSTr
                 new_packets.extend(PACKET_SEND_BUFFER)
                 PACKET_SEND_BUFFER.clear()
             if len(new_packets) > 0:
-                logger.info(f'sending {len(new_packets)} packet(s) to {database.location}')
+                logger.info(f'sending {len(new_packets)} packet(s) to {database.location}: {new_packets}')
                 try:
                     database.insert(new_packets)
                 except ConnectionError as error:
