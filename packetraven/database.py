@@ -54,9 +54,11 @@ class NetworkConnection:
 class DatabaseTable(NetworkConnection):
     def __init__(self, hostname: str, database: str, table: str, fields: {str: type}, primary_key: str = None, crs: CRS = None,
                  username: str = None, password: str = None, users: [str] = None, **kwargs):
-        self.__username = None
+        # parse port from URL
+        self.hostname, self.port = split_URL_port(hostname)
+        if self.port is None:
+            self.port = POSTGRES_DEFAULT_PORT
 
-        self.hostname = hostname
         self.database = database
         self.table = table
 
@@ -66,6 +68,7 @@ class DatabaseTable(NetworkConnection):
         self.primary_key = primary_key
         self.crs = crs if crs is not None else DEFAULT_CRS
 
+        self.__username = None
         if username is not None:
             self.username = username
         if password is not None:
@@ -74,20 +77,22 @@ class DatabaseTable(NetworkConnection):
         if users is None:
             users = []
 
-        # parse port from URL
-        self.hostname, self.port = split_URL_port(hostname)
-        if self.port is None:
-            self.port = POSTGRES_DEFAULT_PORT
-
         connector = partial(psycopg2.connect, database=self.database, user=self.username, password=self.password)
         if 'ssh_hostname' in kwargs:
             ssh_hostname, ssh_port = split_URL_port(kwargs['ssh_hostname'])
             if ssh_port is None:
                 ssh_port = SSH_DEFAULT_PORT
+
             if '@' in ssh_hostname:
-                ssh_username, ssh_hostname = ssh_hostname.split('@')
+                ssh_username, ssh_hostname = ssh_hostname.split('@', 1)
+
             ssh_username = kwargs['ssh_username'] if 'ssh_username' in kwargs else None
+
+            if ssh_username is not None and ':' in ssh_username:
+                ssh_username, ssh_password = ssh_hostname.split(':', 1)
+
             ssh_password = kwargs['ssh_password'] if 'ssh_password' in kwargs else None
+
             self.tunnel = SSHTunnelForwarder((ssh_hostname, ssh_port),
                                              ssh_username=ssh_username, ssh_password=ssh_password,
                                              remote_bind_address=('localhost', self.port),
