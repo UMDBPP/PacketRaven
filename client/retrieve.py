@@ -5,7 +5,7 @@ from os import PathLike
 from aprslib.packets.base import APRSPacket
 
 from packetraven import APRSPacketDatabaseTable
-from packetraven.connections import APRSPacketConnection
+from packetraven.connections import APRSPacketConnection, TimeIntervalError
 from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
 from packetraven.writer import write_aprs_packet_tracks
@@ -30,6 +30,8 @@ def retrieve_packets(connections: [APRSPacketConnection], packet_tracks: [APRSTr
             parsed_packets.extend(connection_packets)
         except ConnectionError as error:
             LOGGER.error(f'{connection.__class__.__name__} - {error}')
+        except TimeIntervalError:
+            pass
 
     logger.debug(f'received {len(parsed_packets)} packets')
 

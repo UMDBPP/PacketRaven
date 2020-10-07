@@ -31,7 +31,7 @@ def main():
     args_parser.add_argument('-l', '--log', help='path to log file to save log messages')
     args_parser.add_argument('-o', '--output', help='path to output file to save packets')
     args_parser.add_argument('-i', '--interval', default=DEFAULT_INTERVAL_SECONDS, type=float,
-                             help='seconds between each main loop (default: 10)')
+                             help='seconds between each main loop (default: 5)')
     args_parser.add_argument('-g', '--gui', action='store_true', help='start the graphical interface')
     args = args_parser.parse_args()
 
@@ -52,11 +52,15 @@ def main():
             kwargs['hostname'], kwargs['database'], kwargs['table'] = database.split('/')
             if '@' in kwargs['hostname']:
                 kwargs['username'], kwargs['hostname'] = kwargs['hostname'].split('@', 1)
+                if ':' in kwargs['username']:
+                    kwargs['username'], kwargs['password'] = kwargs['username'].split(':', 1)
 
     if args.tunnel is not None:
         kwargs['ssh_hostname'] = args.tunnel
         if '@' in kwargs['ssh_hostname']:
             kwargs['ssh_username'], kwargs['ssh_hostname'] = kwargs['ssh_hostname'].split('@', 1)
+            if ':' in kwargs['ssh_username']:
+                kwargs['ssh_username'], kwargs['ssh_password'] = kwargs['ssh_username'].split(':', 1)
 
     if args.start is not None:
         kwargs['start_date'] = parse(args.start.strip('"'))
@@ -90,7 +94,7 @@ def main():
     else:
         output_filename = None
 
-    interval_seconds = args.interval
+    interval_seconds = args.interval if args.interval >= 1 else 1
 
     if CREDENTIALS_FILENAME.exists():
         credentials = {}
@@ -153,12 +157,12 @@ def main():
                 if 'ssh_hostname' in ssh_tunnel_kwargs:
                     if 'ssh_username' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_username'] is None:
                         ssh_tunnel_kwargs['ssh_username'] = input('enter SSH username: ')
-                        if database_kwargs['ssh_username'] is None or len(database_kwargs['ssh_username']) == 0:
+                        if ssh_tunnel_kwargs['ssh_username'] is None or len(ssh_tunnel_kwargs['ssh_username']) == 0:
                             raise ConnectionError('missing SSH username')
 
                     if 'ssh_password' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_password'] is None:
                         ssh_tunnel_kwargs['ssh_password'] = getpass('enter SSH password: ')
-                        if database_kwargs['ssh_password'] is None or len(database_kwargs['ssh_password']) == 0:
+                        if ssh_tunnel_kwargs['ssh_password'] is None or len(ssh_tunnel_kwargs['ssh_password']) == 0:
                             raise ConnectionError('missing SSH password')
 
                 if 'username' not in database_kwargs or database_kwargs['username'] is None:

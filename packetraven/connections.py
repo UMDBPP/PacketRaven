@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from os import PathLike
 from pathlib import Path
+import re
 from typing import Any
 
 from dateutil.parser import parse
@@ -19,7 +20,13 @@ from .utilities import get_logger, read_configuration
 LOGGER = get_logger('packetraven.connection')
 
 
+class TimeIntervalError(Exception):
+    pass
+
+
 class PacketConnection(ABC):
+    interval: timedelta = None
+
     def __init__(self, location: str):
         """
         Create a new generic packet connection.
@@ -33,9 +40,9 @@ class PacketConnection(ABC):
     @abstractmethod
     def packets(self) -> [LocationPacket]:
         """
-        List the most recent packets available from this connection.
+        most recent available location packets, since the last minimum time interval if applicable
 
-        :return: list of packets
+        :return: list of location packets
         """
 
         raise NotImplementedError
@@ -58,7 +65,7 @@ class APRSPacketConnection(PacketConnection):
         """
         Create a new generic APRS packet connection.
 
-        :param location:
+        :param location: location of APRS packets
         :param callsigns: list of callsigns to return from source
         """
 
@@ -69,7 +76,7 @@ class APRSPacketConnection(PacketConnection):
     @abstractmethod
     def packets(self) -> [APRSPacket]:
         """
-        List the most recent packets available from this connection.
+        most recent available APRS packets, since the last minimum time interval if applicable
 
         :return: list of APRS packets
         """
@@ -96,14 +103,19 @@ class SerialTNC(APRSPacketConnection):
 
         self.connection = Serial(serial_port, baudrate=9600, timeout=1)
         super().__init__(self.connection.port, callsigns)
+        self.__last_access_time = None
 
     @property
     def packets(self) -> [APRSPacket]:
+        if self.__last_access_time is not None and self.interval is not None:
+            interval = datetime.now() - self.__last_access_time
+            if interval < self.interval:
+                raise TimeIntervalError(f'interval {interval} less than minimum interval {self.interval}')
         packets = [APRSPacket.from_raw_aprs(line, source=self.location) for line in self.connection.readlines()]
         if self.callsigns is not None:
-            return [packet for packet in packets if packet.callsign in self.callsigns]
-        else:
-            return packets
+            packets = [packet for packet in packets if packet.callsign in self.callsigns]
+        self.__last_access_time = datetime.now()
+        return packets
 
     def __enter__(self):
         return self.connection
@@ -135,9 +147,14 @@ class TextFileTNC(APRSPacketConnection):
 
         super().__init__(filename, callsigns)
         self.connection = open(filename)
+        self.__last_access_time = None
 
     @property
     def packets(self) -> [APRSPacket]:
+        if self.__last_access_time is not None and self.interval is not None:
+            interval = datetime.now() - self.__last_access_time
+            if interval < self.interval:
+                raise TimeIntervalError(f'interval {interval} less than minimum interval {self.interval}')
         packets = []
         for line in self.connection.readlines():
             if len(line) > 0:
@@ -150,9 +167,9 @@ class TextFileTNC(APRSPacketConnection):
                 raw_aprs = raw_aprs.strip()
                 packets.append(APRSPacket.from_raw_aprs(raw_aprs, packet_time, source=self.location))
         if self.callsigns is not None:
-            return [packet for packet in packets if packet.callsign in self.callsigns]
-        else:
-            return packets
+            packets = [packet for packet in packets if packet.callsign in self.callsigns]
+        self.__last_access_time = datetime.now()
+        return packets
 
     def __enter__(self):
         return self.connection
@@ -168,6 +185,8 @@ class TextFileTNC(APRSPacketConnection):
 
 
 class APRSfi(APRSPacketConnection, NetworkConnection):
+    interval = timedelta(seconds=10)
+
     def __init__(self, callsigns: [str], api_key: str = None):
         """
         connect to https://aprs.fi
@@ -194,6 +213,8 @@ class APRSfi(APRSPacketConnection, NetworkConnection):
         if not self.connected:
             raise ConnectionError(f'no network connection')
 
+        self.__last_access_time = None
+
     @property
     def api_key(self) -> str:
         return self.__api_key
@@ -207,6 +228,11 @@ class APRSfi(APRSPacketConnection, NetworkConnection):
 
     @property
     def packets(self) -> [APRSPacket]:
+        if self.__last_access_time is not None and self.interval is not None:
+            interval = datetime.now() - self.__last_access_time
+            if interval < self.interval:
+                raise TimeIntervalError(f'interval {interval} less than minimum interval {self.interval}')
+
         query = {
             'name'  : ','.join(self.callsigns),
             'what'  : 'loc',
@@ -224,6 +250,7 @@ class APRSfi(APRSPacketConnection, NetworkConnection):
             logging.warning(f'query failure "{response["code"]}: {response["description"]}"')
             packets = []
 
+        self.__last_access_time = datetime.now()
         return packets
 
     @property
@@ -245,8 +272,7 @@ class APRSfi(APRSPacketConnection, NetworkConnection):
         pass
 
     def __repr__(self):
-        callsigns_string = ','.join(f'"{callsign}"' for callsign in self.callsigns)
-        return f'{self.__class__.__name__}([{callsigns_string}], r"{self.api_key}")'
+        return f'{self.__class__.__name__}({repr(self.callsigns)}, {repr(re.sub(".", "*", self.api_key))})'
 
 
 class PacketDatabaseTable(DatabaseTable, PacketConnection):
@@ -270,10 +296,18 @@ class PacketDatabaseTable(DatabaseTable, PacketConnection):
         if not self.connected:
             raise ConnectionError(f'cannot connect to {self.location}')
 
+        self.__last_access_time = None
+
     @property
     def packets(self) -> [LocationPacket]:
-        return [LocationPacket(**{key: value for key, value in record.items() if key != 'point'}, source=self.location)
-                for record in self.records]
+        if self.__last_access_time is not None and self.interval is not None:
+            interval = datetime.now() - self.__last_access_time
+            if interval < self.interval:
+                raise TimeIntervalError(f'interval {interval} less than minimum interval {self.interval}')
+        packets = [LocationPacket(**{key: value for key, value in record.items() if key != 'point'}, source=self.location)
+                   for record in self.records]
+        self.__last_access_time = datetime.now()
+        return packets
 
     def __getitem__(self, key: Any) -> LocationPacket:
         record = super().__getitem__(key)
@@ -333,6 +367,15 @@ class APRSPacketDatabaseTable(PacketDatabaseTable, APRSPacketConnection):
     }
 
     def __init__(self, hostname: str, database: str, table: str, callsigns: [str] = None, **kwargs):
+        """
+        Create a new database connection to a table containing APRS packet data.
+
+        :param hostname: hostname of database
+        :param database: database name
+        :param table: table name
+        :param callsigns: list of callsigns to return from source
+        """
+
         if 'fields' not in kwargs:
             kwargs['fields'] = self.__aprs_fields
         if 'primary_key' not in kwargs:
@@ -341,18 +384,20 @@ class APRSPacketDatabaseTable(PacketDatabaseTable, APRSPacketConnection):
             kwargs['primary_key'][kwargs['primary_key'].index('callsign')] = 'packet_from'
         kwargs['fields'] = {f'packet_{field}': field_type for field, field_type in kwargs['fields'].items()}
         PacketDatabaseTable.__init__(self, hostname, database, table, **kwargs)
-        APRSPacketConnection.__init__(self, f'postgresql://{self.hostname}:{self.port}/{self.database}/{self.table}',
-                                      callsigns)
+        APRSPacketConnection.__init__(self, f'postgres://{self.hostname}:{self.port}/{self.database}/{self.table}', callsigns)
+        self.__last_access_time = None
 
     @property
     def packets(self) -> [APRSPacket]:
-        return [
-            APRSPacket(
-                **{field if field in ['time', 'x', 'y', 'z'] else field.replace('packet_', ''): value
-                   for field, value in record.items() if field not in ['point']},
-                source=self.location
-            ) for record in self.records
-        ]
+        if self.__last_access_time is not None and self.interval is not None:
+            interval = datetime.now() - self.__last_access_time
+            if interval < self.interval:
+                raise TimeIntervalError(f'interval {interval} less than minimum interval {self.interval}')
+        packets = [APRSPacket(**{field if field in ['time', 'x', 'y', 'z'] else field.replace('packet_', ''): value
+                                 for field, value in record.items() if field not in ['point']},
+                              source=self.location) for record in self.records]
+        self.__last_access_time = datetime.now()
+        return packets
 
     def __getitem__(self, key: (datetime, str)) -> APRSPacket:
         packet = super().__getitem__(key)

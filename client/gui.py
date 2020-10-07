@@ -353,9 +353,8 @@ class PacketRavenGUI:
                 filter_message += f' from {len(callsigns)} callsigns: {callsigns}'
             LOGGER.info(filter_message)
 
+            connection_errors = []
             try:
-                connection_errors = []
-
                 tnc_location = self.tnc
                 self.__elements['tnc'].configure(state=tkinter.DISABLED)
 
@@ -367,7 +366,6 @@ class PacketRavenGUI:
                             self.__connections.append(text_file_tnc)
                         except Exception as error:
                             connection_errors.append(f'file TNC - {error}')
-                            LOGGER.error(f'{error.__class__.__name__} - {error}')
                     else:
                         try:
                             serial_tnc = SerialTNC(tnc_location, self.callsigns)
@@ -376,7 +374,6 @@ class PacketRavenGUI:
                             self.__connections.append(serial_tnc)
                         except Exception as error:
                             connection_errors.append(f'serial TNC - {error}')
-                            LOGGER.error(f'{error.__class__.__name__} - {error}')
 
                 api_key = self.__connection_configuration['aprs_fi']['api_key']
                 if api_key is None:
@@ -389,7 +386,6 @@ class PacketRavenGUI:
                     self.__connection_configuration['aprs_fi']['api_key'] = api_key
                 except Exception as error:
                     connection_errors.append(f'aprs.fi - {error}')
-                    LOGGER.error(f'{error.__class__.__name__} - {error}')
 
                 if 'database' in self.__connection_configuration \
                         and self.__connection_configuration['database']['hostname'] is not None:
@@ -447,7 +443,7 @@ class PacketRavenGUI:
                     self.database = None
 
                 if len(self.__connections) == 0:
-                    connection_errors = '\n'.join(str(error) for error in connection_errors)
+                    connection_errors = '\n'.join(connection_errors)
                     raise ConnectionError(f'no connections started\n{connection_errors}')
 
                 LOGGER.info(f'listening for packets every {self.interval_seconds}s from {len(self.__connections)} '
@@ -461,7 +457,12 @@ class PacketRavenGUI:
                 self.__toggle_text.set('Stop')
                 self.__active = True
             except Exception as error:
-                messagebox.showerror('PacketRaven Error', error)
+                messagebox.showerror(error.__class__.__name__, error)
+                if '\n' in str(error):
+                    for connection_error in str(error).split('\n'):
+                        LOGGER.error(connection_error)
+                else:
+                    LOGGER.error(error)
                 self.__active = False
                 set_child_states(self.__frames['configuration'], tkinter.NORMAL)
 

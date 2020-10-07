@@ -2,6 +2,7 @@ from abc import abstractmethod
 from ast import literal_eval
 from datetime import date, datetime
 from functools import partial
+import re
 from socket import socket
 from typing import Any, Sequence, Union
 
@@ -53,6 +54,8 @@ class NetworkConnection:
 class DatabaseTable(NetworkConnection):
     def __init__(self, hostname: str, database: str, table: str, fields: {str: type}, primary_key: str = None, crs: CRS = None,
                  username: str = None, password: str = None, users: [str] = None, **kwargs):
+        self.__username = None
+
         self.hostname = hostname
         self.database = database
         self.table = table
@@ -63,11 +66,11 @@ class DatabaseTable(NetworkConnection):
         self.primary_key = primary_key
         self.crs = crs if crs is not None else DEFAULT_CRS
 
-        if '@' in self.hostname:
-            self.username, self.hostname = self.hostname.split('@')
+        if username is not None:
+            self.username = username
+        if password is not None:
+            self.password = password
 
-        self.username = username
-        self.password = password
         if users is None:
             users = []
 
@@ -89,7 +92,10 @@ class DatabaseTable(NetworkConnection):
                                              ssh_username=ssh_username, ssh_password=ssh_password,
                                              remote_bind_address=('localhost', self.port),
                                              local_bind_address=('localhost', open_tcp_port()))
-            self.tunnel.start()
+            try:
+                self.tunnel.start()
+            except Exception as error:
+                raise ConnectionError(error)
             self.connection = connector(host=self.tunnel.local_bind_host, port=self.tunnel.local_bind_port)
         else:
             self.tunnel = None
@@ -168,6 +174,26 @@ class DatabaseTable(NetworkConnection):
 
                     for user in users:
                         cursor.execute(f'GRANT INSERT, SELECT, UPDATE, DELETE ON TABLE public.{self.table} TO {user};')
+
+    @property
+    def hostname(self) -> str:
+        return self.__hostname
+
+    @hostname.setter
+    def hostname(self, hostname: str):
+        if '@' in hostname:
+            self.username, hostname = hostname.split('@', 1)
+        self.__hostname = hostname
+
+    @property
+    def username(self) -> str:
+        return self.__username
+
+    @username.setter
+    def username(self, username: str):
+        if ':' in username:
+            username, self.password = username.split(':', 1)
+        self.__username = username
 
     def __getitem__(self, key: Any) -> {str: Any}:
         """
@@ -421,7 +447,7 @@ class DatabaseTable(NetworkConnection):
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}({repr(self.hostname)}, {repr(self.database)}, {repr(self.table)}, ' \
                f'{repr(self.fields)}, {repr(self.primary_key)}, {repr(self.crs)}, {repr(self.username)}, ' \
-               f'{repr(self.password)})'
+               f'{repr(re.sub(".", "*", self.password))})'
 
 
 class InheritedTableError(Exception):
