@@ -3,7 +3,7 @@ import os
 import unittest
 
 from client import CREDENTIALS_FILENAME
-from packetraven.connections import APRSPacketDatabaseTable, APRSfi
+from packetraven.connections import APRSDatabaseTable, APRSfi
 from packetraven.database import database_has_table
 from packetraven.packets import APRSPacket
 from packetraven.utilities import read_configuration
@@ -61,7 +61,7 @@ class TestDatabase(unittest.TestCase):
 
         credentials['database']['table'] = 'test_table'
 
-        packet_table = APRSPacketDatabaseTable(**credentials['database'], fields={field: str for field in packet_1})
+        packet_table = APRSDatabaseTable(**credentials['database'], fields={field: str for field in packet_1})
         packet_table.insert(input_packets)
 
         assert packet_1 == packet_table[packet_1.time, packet_1.callsign]

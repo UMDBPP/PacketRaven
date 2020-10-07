@@ -12,7 +12,7 @@ from dateutil.parser import parse
 
 from client import DEFAULT_INTERVAL_SECONDS
 from client.retrieve import retrieve_packets
-from packetraven.connections import APRSPacketDatabaseTable, APRSfi, SerialTNC, TextFileTNC, available_ports, \
+from packetraven.connections import APRSDatabaseTable, APRSfi, SerialTNC, TextFileTNC, available_ports, \
     next_available_port
 from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
@@ -430,8 +430,8 @@ class PacketRavenGUI:
                             if database_kwargs['password'] is None or len(database_kwargs['password']) == 0:
                                 raise ConnectionError('missing database password')
 
-                        self.database = APRSPacketDatabaseTable(**database_kwargs, **ssh_tunnel_kwargs,
-                                                                callsigns=self.callsigns)
+                        self.database = APRSDatabaseTable(**database_kwargs, **ssh_tunnel_kwargs,
+                                                          callsigns=self.callsigns)
                         LOGGER.info(f'connected to {self.database.location}')
                         self.__connections.append(self.database)
                         self.__connection_configuration['database'].update(database_kwargs)

@@ -11,30 +11,40 @@ PacketRaven is a front-end data aggregator / dashboard, designed to track the pr
 pip install packetraven
 ```
 
-#### Examples:
-###### listen to a TNC sending raw APRS strings over USB port COM4:
+## Examples:
+##### listen to a TNC sending raw APRS strings over USB port COM4:
 ```cmd
 packetraven --tnc COM4
 ```
-###### listen to APRS.fi, watching specific callsigns:
+
+##### listen to APRS.fi, watching specific callsigns:
 you need an API key to connect to APRS.fi; you can get one from https://aprs.fi/page/api
 ```cmd
 packetraven --apikey <api_key> --callsigns W3EAX-8,W3EAX-14
 ```
-###### listen to a PostGIS database table:
+##### listen to a PostGIS database table:
 ```cmd
 packetraven --database <username>@<hostname>:5432/<database_name>/<table_name>
 ```
-###### watch a text file for new lines containing raw APRS strings:
+##### watch a text file for new lines containing raw APRS strings:
 ```cmd
 packetraven --tnc ~\Desktop\aprs_packets.txt
 ```
-###### listen to a TNC on COM3, watching specific callsigns, and synchronize new packets with a database table, using an SSH tunnel to connect:
+##### listen to a TNC on COM3, watching specific callsigns, and synchronize new packets with a database table via SSH tunnel:
 ```cmd
 packetraven --tnc COM3 --callsigns W3EAX-8,W3EAX-14 --database <username>@<hostname>:5432/<database_name>/<table_name> --tunnel <ssh_username>@<hostname>:22
 ```
 
-#### Usage:
+## Graphical Interface
+to start the GUI, add `--gui` to any `packetraven` command
+```cmd
+packetraven --gui
+```
+```cmd
+packetraven --callsigns W3EAX-8,W3EAX-14 --apikey <api_key> --gui
+```
+
+## Usage:
 ```text
 usage: packetraven [-h] [-c CALLSIGNS] [-k APIKEY] [-p TNC] [-d DATABASE] [-t TUNNEL] [-s START] [-e END] [-l LOG] [-o OUTPUT] [-i INTERVAL] [-g]
 
@@ -60,7 +70,7 @@ optional arguments:
   -g, --gui             start the graphical interface
 ```
 
-#### Python API:
+## Python API:
 to retrieve packets directly from https://aprs.fi:
 ```python
 from packetraven import APRSfi
@@ -68,7 +78,7 @@ from packetraven import APRSfi
 callsigns = ['W3EAX-8', 'W3EAX-12', 'KC3FXX', 'KC3ZRB']
 api_key = '<api_key>' # enter your APRS.fi API key here - you can get one from https://aprs.fi/page/api
 
-aprs_fi = APRSfiConnection(callsigns, api_key)
+aprs_fi = APRSfi(callsigns, api_key)
 aprs_fi_packets = aprs_fi.packets
 
 print(aprs_fi_packets)
@@ -86,7 +96,7 @@ print(tnc_packets)
 ```
 or connect to a PostGreSQL database running PostGIS:
 ```python
-from packetraven import APRSPacketDatabaseTable
+from packetraven import APRSDatabaseTable
 
 callsigns = ['W3EAX-8', 'W3EAX-12', 'KC3FXX', 'KC3ZRB']
 
@@ -102,9 +112,9 @@ ssh_hostname = None
 ssh_username = None
 ssh_password = None
 
-table = APRSPacketDatabaseTable(hostname, database, table, callsigns, 
-                                username=username, password=password, 
-                                ssh_hostname=ssh_hostname, ssh_username=ssh_hostname, ssh_password=ssh_password)
+table = APRSDatabaseTable(hostname, database, table, callsigns, 
+                          username=username, password=password, 
+                          ssh_hostname=ssh_hostname, ssh_username=ssh_hostname, ssh_password=ssh_password)
 table_packets = table.packets
 
 print(table_packets)

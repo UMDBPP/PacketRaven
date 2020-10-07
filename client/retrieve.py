@@ -4,7 +4,7 @@ from os import PathLike
 
 from aprslib.packets.base import APRSPacket
 
-from packetraven import APRSPacketDatabaseTable
+from packetraven import APRSDatabaseTable
 from packetraven.connections import APRSPacketConnection, TimeIntervalError
 from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
@@ -15,7 +15,7 @@ LOGGER = get_logger('packetraven')
 PACKET_SEND_BUFFER = []
 
 
-def retrieve_packets(connections: [APRSPacketConnection], packet_tracks: [APRSTrack], database: APRSPacketDatabaseTable = None,
+def retrieve_packets(connections: [APRSPacketConnection], packet_tracks: [APRSTrack], database: APRSDatabaseTable = None,
                      output_filename: PathLike = None, start_date: datetime = None, end_date: datetime = None,
                      logger: Logger = None) -> [APRSPacket]:
     if logger is None:

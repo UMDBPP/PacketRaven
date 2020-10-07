@@ -352,7 +352,7 @@ class PacketDatabaseTable(DatabaseTable, PacketConnection):
         }
 
 
-class APRSPacketDatabaseTable(PacketDatabaseTable, APRSPacketConnection):
+class APRSDatabaseTable(PacketDatabaseTable, APRSPacketConnection):
     __aprs_fields = {
         'from'        : str,
         'to'          : str,
