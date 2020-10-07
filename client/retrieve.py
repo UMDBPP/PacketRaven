@@ -48,7 +48,7 @@ def retrieve_packets(connections: [APRSPacketConnection], packet_tracks: [APRSTr
 
             if callsign not in packet_tracks:
                 packet_tracks[callsign] = APRSTrack(callsign, [parsed_packet])
-                logger.debug(f'started tracking {callsign:8}')
+                logger.debug(f'started tracking callsign {callsign:8}')
             else:
                 packet_track = packet_tracks[callsign]
                 if parsed_packet not in packet_track:

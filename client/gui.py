@@ -121,6 +121,8 @@ class PacketRavenGUI:
         if self.output_filename is None:
             self.output_filename = Path('~') / 'Desktop'
 
+        self.__windows['main'].protocol("WM_DELETE_WINDOW", self.close)
+
         main_window.mainloop()
 
     @property
@@ -548,9 +550,16 @@ class PacketRavenGUI:
                     separator = Separator(window, orient=tkinter.VERTICAL)
                     separator.grid(row=0, column=3, rowspan=window.grid_size()[1] + 2, sticky='ns', padx=10)
 
+                    window.protocol("WM_DELETE_WINDOW", window.iconify)
+
                     self.__windows[callsign] = window
 
                 window = self.__windows[callsign]
+
+                if window.state() == 'iconic':
+                    window.deiconify()
+                if window.focus_get() is None:
+                    window.focus_force()
 
                 set_child_states(window)
 
@@ -595,6 +604,11 @@ class PacketRavenGUI:
 
         element.delete(start_index, tkinter.END)
         element.insert(start_index, value)
+
+    def close(self):
+        if self.active:
+            self.toggle()
+        self.__windows['main'].destroy()
 
 
 def set_child_states(frame: tkinter.Frame, state: str = None, types: [type] = None):
