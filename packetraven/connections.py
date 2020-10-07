@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
-import logging
 from os import PathLike
 from pathlib import Path
 import re
@@ -247,7 +246,7 @@ class APRSfi(APRSPacketConnection, NetworkConnection):
             packets = [APRSPacket.from_raw_aprs(packet_candidate, source=self.location)
                        for packet_candidate in response['entries']]
         else:
-            logging.warning(f'query failure "{response["code"]}: {response["description"]}"')
+            LOGGER.warning(f'query failure "{response["code"]}: {response["description"]}"')
             packets = []
 
         self.__last_access_time = datetime.now()
