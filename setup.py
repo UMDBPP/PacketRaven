@@ -25,7 +25,7 @@ setup(
         'fastkml',
         'requests',
         'pyproj',
-        'psycopg2',
+        'psycopg2-binary',
         'shapely',
         'sshtunnel'
     ],
