@@ -142,26 +142,28 @@ class PacketRavenGUI:
         self.replace_text(self.__elements['callsigns'], callsigns)
 
     @property
-    def tnc(self) -> Path:
-        tnc_location = self.__elements['tnc'].get()
+    def tnc(self) -> str:
+        tnc_location = self.__elements['tnc'].get().upper()
         if len(tnc_location) > 0:
-            if tnc_location == 'auto':
+            if tnc_location.upper() == 'AUTO':
                 try:
                     tnc_location = next_available_port()
                 except OSError:
                     LOGGER.warning(f'no open serial ports')
                     tnc_location = None
                 self.tnc = tnc_location
-            tnc_location = Path(tnc_location)
         else:
             tnc_location = None
         return tnc_location
 
     @tnc.setter
-    def tnc(self, filename: PathLike):
+    def tnc(self, filename: str):
+        filename = filename
         self.__connection_configuration['tnc']['tnc'] = filename
         if filename is None:
             filename = ''
+        else:
+            filename = filename.upper()
         self.replace_text(self.__elements['tnc'], filename)
 
     @property
