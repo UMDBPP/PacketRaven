@@ -110,7 +110,13 @@ class SerialTNC(APRSPacketConnection):
             interval = datetime.now() - self.__last_access_time
             if interval < self.interval:
                 raise TimeIntervalError(f'interval {interval} less than minimum interval {self.interval}')
-        packets = [APRSPacket.from_raw_aprs(line, source=self.location) for line in self.connection.readlines()]
+        packets = []
+        for line in self.connection.readlines():
+            try:
+                packet = APRSPacket.from_raw_aprs(line, source=self.location)
+                packets.append(packet)
+            except Exception as error:
+                LOGGER.error(f'{error.__class__.__name__} - {error}')
         if self.callsigns is not None:
             packets = [packet for packet in packets if packet.callsign in self.callsigns]
         self.__last_access_time = datetime.now()
@@ -164,7 +170,10 @@ class TextFileTNC(APRSPacketConnection):
                     raw_aprs = line
                     packet_time = datetime.now()
                 raw_aprs = raw_aprs.strip()
-                packets.append(APRSPacket.from_raw_aprs(raw_aprs, packet_time, source=self.location))
+                try:
+                    packets.append(APRSPacket.from_raw_aprs(raw_aprs, packet_time, source=self.location))
+                except Exception as error:
+                    LOGGER.error(f'{error.__class__.__name__} - {error}')
         if self.callsigns is not None:
             packets = [packet for packet in packets if packet.callsign in self.callsigns]
         self.__last_access_time = datetime.now()
@@ -243,8 +252,13 @@ class APRSfi(APRSPacketConnection, NetworkConnection):
 
         response = requests.get(f'{self.location}?{query}').json()
         if response['result'] != 'fail':
-            packets = [APRSPacket.from_raw_aprs(packet_candidate, source=self.location)
-                       for packet_candidate in response['entries']]
+            packets = []
+            for packet_candidate in response['entries']:
+                try:
+                    packet = APRSPacket.from_raw_aprs(packet_candidate, source=self.location)
+                    packets.append(packet)
+                except Exception as error:
+                    LOGGER.error(f'{error.__class__.__name__} - {error}')
         else:
             LOGGER.warning(f'query failure "{response["code"]}: {response["description"]}"')
             packets = []
