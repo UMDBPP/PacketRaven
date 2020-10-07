@@ -1,6 +1,8 @@
+from abc import abstractmethod
 from ast import literal_eval
 from datetime import date, datetime
 from functools import partial
+import re
 from socket import socket
 from typing import Any, Sequence, Union
 
@@ -41,10 +43,22 @@ DEFAULT_CRS = CRS.from_epsg(4326)
 GEOMETRY_TYPES = (Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon)
 
 
-class DatabaseTable:
+class NetworkConnection:
+    @property
+    @abstractmethod
+    def connected(self) -> bool:
+        """ whether current session has a network connection """
+        raise NotImplementedError
+
+
+class DatabaseTable(NetworkConnection):
     def __init__(self, hostname: str, database: str, table: str, fields: {str: type}, primary_key: str = None, crs: CRS = None,
                  username: str = None, password: str = None, users: [str] = None, **kwargs):
-        self.hostname = hostname
+        # parse port from URL
+        self.hostname, self.port = split_URL_port(hostname)
+        if self.port is None:
+            self.port = POSTGRES_DEFAULT_PORT
+
         self.database = database
         self.table = table
 
@@ -54,37 +68,48 @@ class DatabaseTable:
         self.primary_key = primary_key
         self.crs = crs if crs is not None else DEFAULT_CRS
 
-        if '@' in self.hostname:
-            self.username, self.hostname = self.hostname.split('@')
+        self.__username = None
+        if username is not None:
+            self.username = username
+        if password is not None:
+            self.password = password
 
-        self.username = username
-        self.password = password
         if users is None:
             users = []
-
-        # parse port from URL
-        self.hostname, self.port = split_URL_port(hostname)
-        if self.port is None:
-            self.port = POSTGRES_DEFAULT_PORT
 
         connector = partial(psycopg2.connect, database=self.database, user=self.username, password=self.password)
         if 'ssh_hostname' in kwargs:
             ssh_hostname, ssh_port = split_URL_port(kwargs['ssh_hostname'])
             if ssh_port is None:
                 ssh_port = SSH_DEFAULT_PORT
+
             if '@' in ssh_hostname:
-                ssh_username, ssh_hostname = ssh_hostname.split('@')
+                ssh_username, ssh_hostname = ssh_hostname.split('@', 1)
+
             ssh_username = kwargs['ssh_username'] if 'ssh_username' in kwargs else None
+
+            if ssh_username is not None and ':' in ssh_username:
+                ssh_username, ssh_password = ssh_hostname.split(':', 1)
+
             ssh_password = kwargs['ssh_password'] if 'ssh_password' in kwargs else None
+
             self.tunnel = SSHTunnelForwarder((ssh_hostname, ssh_port),
                                              ssh_username=ssh_username, ssh_password=ssh_password,
                                              remote_bind_address=('localhost', self.port),
                                              local_bind_address=('localhost', open_tcp_port()))
-            self.tunnel.start()
+            try:
+                self.tunnel.start()
+            except Exception as error:
+                raise ConnectionError(error)
             self.connection = connector(host=self.tunnel.local_bind_host, port=self.tunnel.local_bind_port)
         else:
             self.tunnel = None
             self.connection = connector(host=self.hostname, port=self.port)
+
+        self.location = f'{self.username}@{self.hostname}:{self.port}/{self.database}/{self.table}'
+
+        if not self.connected:
+            raise ConnectionError(f'no connection to {self.location}')
 
         with self.connection:
             with self.connection.cursor() as cursor:
@@ -155,6 +180,26 @@ class DatabaseTable:
                     for user in users:
                         cursor.execute(f'GRANT INSERT, SELECT, UPDATE, DELETE ON TABLE public.{self.table} TO {user};')
 
+    @property
+    def hostname(self) -> str:
+        return self.__hostname
+
+    @hostname.setter
+    def hostname(self, hostname: str):
+        if '@' in hostname:
+            self.username, hostname = hostname.split('@', 1)
+        self.__hostname = hostname
+
+    @property
+    def username(self) -> str:
+        return self.__username
+
+    @username.setter
+    def username(self, username: str):
+        if ':' in username:
+            username, self.password = username.split(':', 1)
+        self.__username = username
+
     def __getitem__(self, key: Any) -> {str: Any}:
         """
         Query table for the given value of the primary key.
@@ -174,6 +219,10 @@ class DatabaseTable:
             key = [key]
 
         where = dict(zip(self.primary_key, key))
+
+        if not self.connected:
+            raise ConnectionError(f'no connection to {self.location}')
+
         records = self.records_where(where)
 
         if len(records) > 1:
@@ -200,6 +249,9 @@ class DatabaseTable:
         for key_index, primary_key in enumerate(self.primary_key):
             record[primary_key] = key[key_index]
 
+        if not self.connected:
+            raise ConnectionError(f'no connection to {self.location}')
+
         self.insert([record])
 
     @property
@@ -222,6 +274,9 @@ class DatabaseTable:
         """
 
         matching_records = []
+
+        if not self.connected:
+            raise ConnectionError(f'no connection to {self.location}')
 
         with self.connection:
             with self.connection.cursor() as cursor:
@@ -268,6 +323,9 @@ class DatabaseTable:
 
         assert all(primary_key in record for primary_key in self.primary_key for record in records), \
             f'one or more records does not contain primary key "{self.primary_key}"'
+
+        if not self.connected:
+            raise ConnectionError(f'no connection to {self.location}')
 
         with self.connection:
             with self.connection.cursor() as cursor:
@@ -325,9 +383,7 @@ class DatabaseTable:
                 field_type = field_type[0]
                 dimensions += 1
 
-            field_definition = f'{field} {POSTGRES_TYPES[field_type.__name__]}{"[]" * dimensions}'
-
-            schema.append(field_definition)
+            schema.append(f'{field} {POSTGRES_TYPES[field_type.__name__]}{"[]" * dimensions}')
 
         schema.append(f'PRIMARY KEY({", ".join(self.primary_key)})')
 
@@ -335,6 +391,9 @@ class DatabaseTable:
 
     @property
     def remote_fields(self) -> {str: type}:
+        if not self.connected:
+            raise ConnectionError(f'no connection to {self.location}')
+
         with self.connection:
             with self.connection.cursor() as cursor:
                 if database_has_table(cursor, self.table):
@@ -369,9 +428,23 @@ class DatabaseTable:
     def geometry_fields(self) -> {str: type}:
         return {field: field_type for field, field_type in self.fields.items() if field_type in GEOMETRY_TYPES}
 
+    @property
+    def connected(self) -> bool:
+        with self.connection:
+            try:
+                with self.connection.cursor() as cursor:
+                    cursor.execute('SELECT 1;')
+                return True
+            except psycopg2.OperationalError:
+                return False
+
     def __contains__(self, key: Any) -> bool:
         if not isinstance(key, Sequence) or isinstance(key, str):
             key = [key]
+
+        if not self.connected:
+            raise ConnectionError(f'no connection to {self.location}')
+
         with self.connection:
             with self.connection.cursor() as cursor:
                 return database_table_has_record(cursor, self.table, dict(zip(self.primary_key, key)), self.primary_key)
@@ -379,7 +452,7 @@ class DatabaseTable:
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}({repr(self.hostname)}, {repr(self.database)}, {repr(self.table)}, ' \
                f'{repr(self.fields)}, {repr(self.primary_key)}, {repr(self.crs)}, {repr(self.username)}, ' \
-               f'{repr(self.password)})'
+               f'{repr(re.sub(".", "*", self.password))})'
 
 
 class InheritedTableError(Exception):

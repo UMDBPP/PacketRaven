@@ -12,7 +12,7 @@ from dateutil.parser import parse
 
 from client import DEFAULT_INTERVAL_SECONDS
 from client.retrieve import retrieve_packets
-from packetraven.connections import APRSPacketDatabaseTable, APRSfiConnection, SerialTNC, TextFileTNC, available_ports, \
+from packetraven.connections import APRSDatabaseTable, APRSfi, SerialTNC, TextFileTNC, available_ports, \
     next_available_port
 from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
@@ -355,9 +355,8 @@ class PacketRavenGUI:
                 filter_message += f' from {len(callsigns)} callsigns: {callsigns}'
             LOGGER.info(filter_message)
 
+            connection_errors = []
             try:
-                connection_errors = []
-
                 tnc_location = self.tnc
                 self.__elements['tnc'].configure(state=tkinter.DISABLED)
 
@@ -369,7 +368,6 @@ class PacketRavenGUI:
                             self.__connections.append(text_file_tnc)
                         except Exception as error:
                             connection_errors.append(f'file TNC - {error}')
-                            LOGGER.error(f'{error.__class__.__name__} - {error}')
                     else:
                         try:
                             serial_tnc = SerialTNC(tnc_location, self.callsigns)
@@ -378,65 +376,76 @@ class PacketRavenGUI:
                             self.__connections.append(serial_tnc)
                         except Exception as error:
                             connection_errors.append(f'serial TNC - {error}')
-                            LOGGER.error(f'{error.__class__.__name__} - {error}')
 
                 api_key = self.__connection_configuration['aprs_fi']['api_key']
                 if api_key is None:
                     api_key = simpledialog.askstring('APRS.fi API Key', 'enter API key for https://aprs.fi',
                                                      parent=self.__windows['main'], show='*')
                 try:
-                    aprs_api = APRSfiConnection(self.callsigns, api_key=api_key)
+                    aprs_api = APRSfi(self.callsigns, api_key=api_key)
                     LOGGER.info(f'established connection to {aprs_api.location}')
                     self.__connections.append(aprs_api)
                     self.__connection_configuration['aprs_fi']['api_key'] = api_key
                 except Exception as error:
                     connection_errors.append(f'aprs.fi - {error}')
-                    LOGGER.error(f'{error.__class__.__name__} - {error}')
 
                 if 'database' in self.__connection_configuration \
                         and self.__connection_configuration['database']['hostname'] is not None:
-                    ssh_tunnel_kwargs = {}
-                    if 'ssh_tunnel' in self.__connection_configuration:
-                        ssh_hostname = self.__connection_configuration['ssh_tunnel']['ssh_hostname']
-                        if ssh_hostname is not None:
-                            ssh_tunnel_kwargs.update(self.__connection_configuration['ssh_tunnel'])
-                            if '@' in ssh_hostname:
-                                ssh_tunnel_kwargs['ssh_username'], ssh_tunnel_kwargs['ssh_hostname'] = ssh_hostname.split('@',
-                                                                                                                          1)
-                            if 'ssh_username' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_username'] is None:
-                                ssh_tunnel_kwargs['ssh_username'] = simpledialog.askstring('SSH Tunnel Username',
-                                                                                           'enter SSH username for tunnel',
-                                                                                           parent=self.__windows['main'])
-                            if 'ssh_password' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_password'] is None:
-                                ssh_tunnel_kwargs['ssh_password'] = simpledialog.askstring('SSH Tunnel Password',
-                                                                                           'enter SSH password for tunnel',
-                                                                                           parent=self.__windows['main'],
-                                                                                           show='*')
-
-                    database_kwargs = self.__connection_configuration['database']
-                    if 'username' not in database_kwargs or database_kwargs['username'] is None:
-                        database_kwargs['username'] = simpledialog.askstring('Database Username',
-                                                                             'enter database username',
-                                                                             parent=self.__windows['main'])
-                    if 'password' not in database_kwargs or database_kwargs['password'] is None:
-                        database_kwargs['password'] = simpledialog.askstring('Database Password',
-                                                                             'enter database password',
-                                                                             parent=self.__windows['main'], show='*')
-
                     try:
-                        self.database = APRSPacketDatabaseTable(**database_kwargs, **ssh_tunnel_kwargs,
-                                                                callsigns=self.callsigns)
+                        ssh_tunnel_kwargs = {}
+                        if 'ssh_tunnel' in self.__connection_configuration:
+                            ssh_hostname = self.__connection_configuration['ssh_tunnel']['ssh_hostname']
+                            if ssh_hostname is not None:
+                                ssh_tunnel_kwargs.update(self.__connection_configuration['ssh_tunnel'])
+                                if '@' in ssh_hostname:
+                                    ssh_tunnel_kwargs['ssh_username'], ssh_tunnel_kwargs['ssh_hostname'] = ssh_hostname.split(
+                                        '@', 1)
+                                if 'ssh_username' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_username'] is None:
+                                    ssh_tunnel_kwargs['ssh_username'] = simpledialog.askstring('SSH Tunnel Username',
+                                                                                               'enter SSH username for tunnel',
+                                                                                               parent=self.__windows['main'])
+                                    if ssh_tunnel_kwargs['ssh_username'] is None or \
+                                            len(ssh_tunnel_kwargs['ssh_username']) == 0:
+                                        raise ConnectionError('missing SSH username')
+
+                                if 'ssh_password' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_password'] is None:
+                                    ssh_tunnel_kwargs['ssh_password'] = simpledialog.askstring('SSH Tunnel Password',
+                                                                                               'enter SSH password for tunnel',
+                                                                                               parent=self.__windows['main'],
+                                                                                               show='*')
+                                    if ssh_tunnel_kwargs['ssh_password'] is None or \
+                                            len(ssh_tunnel_kwargs['ssh_password']) == 0:
+                                        raise ConnectionError('missing SSH password')
+
+                        database_kwargs = self.__connection_configuration['database']
+                        if 'username' not in database_kwargs or database_kwargs['username'] is None:
+                            database_kwargs['username'] = simpledialog.askstring('Database Username',
+                                                                                 'enter database username',
+                                                                                 parent=self.__windows['main'])
+                            if database_kwargs['username'] is None or len(database_kwargs['username']) == 0:
+                                raise ConnectionError('missing database username')
+
+                        if 'password' not in database_kwargs or database_kwargs['password'] is None:
+                            database_kwargs['password'] = simpledialog.askstring('Database Password',
+                                                                                 'enter database password',
+                                                                                 parent=self.__windows['main'], show='*')
+                            if database_kwargs['password'] is None or len(database_kwargs['password']) == 0:
+                                raise ConnectionError('missing database password')
+
+                        self.database = APRSDatabaseTable(**database_kwargs, **ssh_tunnel_kwargs,
+                                                          callsigns=self.callsigns)
                         LOGGER.info(f'connected to {self.database.location}')
                         self.__connections.append(self.database)
                         self.__connection_configuration['database'].update(database_kwargs)
                         self.__connection_configuration['ssh_tunnel'].update(ssh_tunnel_kwargs)
-                    except Exception as error:
+                    except ConnectionError as error:
                         connection_errors.append(f'database - {error}')
+                        self.database = None
                 else:
                     self.database = None
 
                 if len(self.__connections) == 0:
-                    connection_errors = '\n'.join(str(error) for error in connection_errors)
+                    connection_errors = '\n'.join(connection_errors)
                     raise ConnectionError(f'no connections started\n{connection_errors}')
 
                 LOGGER.info(f'listening for packets every {self.interval_seconds}s from {len(self.__connections)} '
@@ -450,7 +459,12 @@ class PacketRavenGUI:
                 self.__toggle_text.set('Stop')
                 self.__active = True
             except Exception as error:
-                messagebox.showerror('PacketRaven Error', error)
+                messagebox.showerror(error.__class__.__name__, error)
+                if '\n' in str(error):
+                    for connection_error in str(error).split('\n'):
+                        LOGGER.error(connection_error)
+                else:
+                    LOGGER.error(error)
                 self.__active = False
                 set_child_states(self.__frames['configuration'], tkinter.NORMAL)
 
