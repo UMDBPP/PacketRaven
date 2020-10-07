@@ -34,7 +34,7 @@ jobs:
                     TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
                 run: twine upload dist/* --verbose
     install:
-        name: test wheel installation in Python ${{ matrix.python-version }} on ${{ matrix.os }}
+        name: install with Python ${{ matrix.python-version }} on ${{ matrix.os }}
         runs-on: ${{ matrix.os }}
         needs: deploy
         strategy:
