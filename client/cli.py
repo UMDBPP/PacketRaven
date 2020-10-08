@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 import time
 
-from dateutil.parser import parse
+from dateutil.parser import parse as parse_date
 
 from client import CREDENTIALS_FILENAME, DEFAULT_INTERVAL_SECONDS
 from client.gui import PacketRavenGUI
@@ -39,7 +39,10 @@ def main():
 
     callsigns = [callsign.upper() for callsign in args.callsigns.strip('"').split(',')] if args.callsigns is not None else None
 
-    kwargs = {'api_key': args.apikey}
+    kwargs = {}
+
+    if args.apikey is not None:
+        kwargs['api_key'] = args.apikey
 
     if args.tnc is not None:
         kwargs['tnc'] = args.tnc
@@ -63,10 +66,10 @@ def main():
                 kwargs['ssh_username'], kwargs['ssh_password'] = kwargs['ssh_username'].split(':', 1)
 
     if args.start is not None:
-        kwargs['start_date'] = parse(args.start.strip('"'))
+        kwargs['start_date'] = parse_date(args.start.strip('"'))
 
     if args.end is not None:
-        kwargs['end_date'] = parse(args.end.strip('"'))
+        kwargs['end_date'] = parse_date(args.end.strip('"'))
 
     if 'start_date' in kwargs and 'end_date' in kwargs:
         if kwargs['start_date'] > kwargs['end_date']:
