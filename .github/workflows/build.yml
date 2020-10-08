@@ -58,10 +58,9 @@ jobs:
                 uses: mtkennerly/dunamai-action@v1
                 with:
                     env-var: VERSION
-            -   name: Wait several seconds for PyPI distribution to become available
-                uses: jakejarvis/wait-action@v0.1.0
-                with:
-                    time: '10s'
+            -   name: Wait 5 seconds
+                run: sleep 5
+                shell: bash
             -   name: Install wheel
                 run: pip install packetraven==$VERSION
                 shell: bash
