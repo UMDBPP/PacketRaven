@@ -159,13 +159,13 @@ def main():
             try:
                 if 'ssh_hostname' in ssh_tunnel_kwargs:
                     if 'ssh_username' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_username'] is None:
-                        ssh_username = input(f'enter username for SSH host "{database_kwargs["ssh_hostname"]}": ')
+                        ssh_username = input(f'enter username for SSH host "{ssh_tunnel_kwargs["ssh_hostname"]}": ')
                         if ssh_username is None or len(ssh_username) == 0:
                             raise ConnectionError('missing SSH username')
                         ssh_tunnel_kwargs['ssh_username'] = ssh_username
 
                     if 'ssh_password' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_password'] is None:
-                        ssh_password = getpass(f'enter password for SSH user "{database_kwargs["ssh_username"]}": ')
+                        ssh_password = getpass(f'enter password for SSH user "{ssh_tunnel_kwargs["ssh_username"]}": ')
                         if ssh_password is None or len(ssh_password) == 0:
                             raise ConnectionError('missing SSH password')
                         ssh_tunnel_kwargs['ssh_password'] = ssh_password
