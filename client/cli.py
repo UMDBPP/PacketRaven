@@ -159,28 +159,29 @@ def main():
             try:
                 if 'ssh_hostname' in ssh_tunnel_kwargs:
                     if 'ssh_username' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_username'] is None:
-                        ssh_tunnel_kwargs['ssh_username'] = input(f'enter username for SSH host '
-                                                                  f'"{database_kwargs["ssh_hostname"]}": ')
-                        if ssh_tunnel_kwargs['ssh_username'] is None or len(ssh_tunnel_kwargs['ssh_username']) == 0:
+                        ssh_username = input(f'enter username for SSH host "{database_kwargs["ssh_hostname"]}": ')
+                        if ssh_username is None or len(ssh_username) == 0:
                             raise ConnectionError('missing SSH username')
+                        ssh_tunnel_kwargs['ssh_username'] = ssh_username
 
                     if 'ssh_password' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_password'] is None:
-                        ssh_tunnel_kwargs['ssh_password'] = getpass(f'enter password for SSH user '
-                                                                    f'"{database_kwargs["ssh_username"]}": ')
-                        if ssh_tunnel_kwargs['ssh_password'] is None or len(ssh_tunnel_kwargs['ssh_password']) == 0:
+                        ssh_password = getpass(f'enter password for SSH user "{database_kwargs["ssh_username"]}": ')
+                        if ssh_password is None or len(ssh_password) == 0:
                             raise ConnectionError('missing SSH password')
+                        ssh_tunnel_kwargs['ssh_password'] = ssh_password
 
                 if 'username' not in database_kwargs or database_kwargs['username'] is None:
-                    database_kwargs['username'] = input(f'enter username for database '
-                                                        f'"{database_kwargs["hostname"]}/{database_kwargs["database"]}": ')
-                    if database_kwargs['username'] is None or len(database_kwargs['username']) == 0:
+                    database_username = input(f'enter username for database '
+                                              f'"{database_kwargs["hostname"]}/{database_kwargs["database"]}": ')
+                    if database_username is None or len(database_username) == 0:
                         raise ConnectionError('missing database username')
+                    database_kwargs['username'] = database_username
 
                 if 'password' not in database_kwargs or database_kwargs['password'] is None:
-                    database_kwargs['password'] = getpass(f'enter password for database user '
-                                                          f'"{database_kwargs["username"]}": ')
-                    if database_kwargs['password'] is None or len(database_kwargs['password']) == 0:
+                    database_password = getpass(f'enter password for database user "{database_kwargs["username"]}": ')
+                    if database_password is None or len(database_password) == 0:
                         raise ConnectionError('missing database password')
+                    database_kwargs['password'] = database_password
 
                 database = APRSDatabaseTable(**database_kwargs, **ssh_tunnel_kwargs, callsigns=callsigns)
                 LOGGER.info(f'connected to {database.location}')
