@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 import time
 
-from dateutil.parser import parse
+from dateutil.parser import parse as parse_date
 
 from client import CREDENTIALS_FILENAME, DEFAULT_INTERVAL_SECONDS
 from client.gui import PacketRavenGUI
@@ -39,7 +39,10 @@ def main():
 
     callsigns = [callsign.upper() for callsign in args.callsigns.strip('"').split(',')] if args.callsigns is not None else None
 
-    kwargs = {'api_key': args.apikey}
+    kwargs = {}
+
+    if args.apikey is not None:
+        kwargs['api_key'] = args.apikey
 
     if args.tnc is not None:
         kwargs['tnc'] = args.tnc
@@ -63,10 +66,10 @@ def main():
                 kwargs['ssh_username'], kwargs['ssh_password'] = kwargs['ssh_username'].split(':', 1)
 
     if args.start is not None:
-        kwargs['start_date'] = parse(args.start.strip('"'))
+        kwargs['start_date'] = parse_date(args.start.strip('"'))
 
     if args.end is not None:
-        kwargs['end_date'] = parse(args.end.strip('"'))
+        kwargs['end_date'] = parse_date(args.end.strip('"'))
 
     if 'start_date' in kwargs and 'end_date' in kwargs:
         if kwargs['start_date'] > kwargs['end_date']:
@@ -156,24 +159,29 @@ def main():
             try:
                 if 'ssh_hostname' in ssh_tunnel_kwargs:
                     if 'ssh_username' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_username'] is None:
-                        ssh_tunnel_kwargs['ssh_username'] = input('enter SSH username: ')
-                        if ssh_tunnel_kwargs['ssh_username'] is None or len(ssh_tunnel_kwargs['ssh_username']) == 0:
+                        ssh_username = input(f'enter username for SSH host "{ssh_tunnel_kwargs["ssh_hostname"]}": ')
+                        if ssh_username is None or len(ssh_username) == 0:
                             raise ConnectionError('missing SSH username')
+                        ssh_tunnel_kwargs['ssh_username'] = ssh_username
 
                     if 'ssh_password' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_password'] is None:
-                        ssh_tunnel_kwargs['ssh_password'] = getpass('enter SSH password: ')
-                        if ssh_tunnel_kwargs['ssh_password'] is None or len(ssh_tunnel_kwargs['ssh_password']) == 0:
+                        ssh_password = getpass(f'enter password for SSH user "{ssh_tunnel_kwargs["ssh_username"]}": ')
+                        if ssh_password is None or len(ssh_password) == 0:
                             raise ConnectionError('missing SSH password')
+                        ssh_tunnel_kwargs['ssh_password'] = ssh_password
 
                 if 'username' not in database_kwargs or database_kwargs['username'] is None:
-                    database_kwargs['username'] = input(f'enter database username: ')
-                    if database_kwargs['username'] is None or len(database_kwargs['username']) == 0:
+                    database_username = input(f'enter username for database '
+                                              f'"{database_kwargs["hostname"]}/{database_kwargs["database"]}": ')
+                    if database_username is None or len(database_username) == 0:
                         raise ConnectionError('missing database username')
+                    database_kwargs['username'] = database_username
 
                 if 'password' not in database_kwargs or database_kwargs['password'] is None:
-                    database_kwargs['password'] = getpass('enter database password: ')
-                    if database_kwargs['password'] is None or len(database_kwargs['password']) == 0:
+                    database_password = getpass(f'enter password for database user "{database_kwargs["username"]}": ')
+                    if database_password is None or len(database_password) == 0:
                         raise ConnectionError('missing database password')
+                    database_kwargs['password'] = database_password
 
                 database = APRSDatabaseTable(**database_kwargs, **ssh_tunnel_kwargs, callsigns=callsigns)
                 LOGGER.info(f'connected to {database.location}')

@@ -403,36 +403,42 @@ class PacketRavenGUI:
                                     ssh_tunnel_kwargs['ssh_username'], ssh_tunnel_kwargs['ssh_hostname'] = ssh_hostname.split(
                                         '@', 1)
                                 if 'ssh_username' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_username'] is None:
-                                    ssh_tunnel_kwargs['ssh_username'] = simpledialog.askstring('SSH Tunnel Username',
-                                                                                               'enter SSH username for tunnel',
-                                                                                               parent=self.__windows['main'])
-                                    if ssh_tunnel_kwargs['ssh_username'] is None or \
-                                            len(ssh_tunnel_kwargs['ssh_username']) == 0:
+                                    ssh_username = simpledialog.askstring('SSH Tunnel Username',
+                                                                          f'enter username for SSH host '
+                                                                          f'"{ssh_tunnel_kwargs["ssh_hostname"]}"',
+                                                                          parent=self.__windows['main'])
+                                    if ssh_username is None or len(ssh_username) == 0:
                                         raise ConnectionError('missing SSH username')
+                                    ssh_tunnel_kwargs['ssh_username'] = ssh_username
 
                                 if 'ssh_password' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_password'] is None:
-                                    ssh_tunnel_kwargs['ssh_password'] = simpledialog.askstring('SSH Tunnel Password',
-                                                                                               'enter SSH password for tunnel',
-                                                                                               parent=self.__windows['main'],
-                                                                                               show='*')
-                                    if ssh_tunnel_kwargs['ssh_password'] is None or \
-                                            len(ssh_tunnel_kwargs['ssh_password']) == 0:
+                                    password = simpledialog.askstring('SSH Tunnel Password',
+                                                                      f'enter password for SSH user '
+                                                                      f'"{ssh_tunnel_kwargs["ssh_username"]}"',
+                                                                      parent=self.__windows['main'], show='*')
+                                    if password is None or len(password) == 0:
                                         raise ConnectionError('missing SSH password')
+                                    ssh_tunnel_kwargs['ssh_password'] = password
 
                         database_kwargs = self.__connection_configuration['database']
                         if 'username' not in database_kwargs or database_kwargs['username'] is None:
-                            database_kwargs['username'] = simpledialog.askstring('Database Username',
-                                                                                 'enter database username',
-                                                                                 parent=self.__windows['main'])
-                            if database_kwargs['username'] is None or len(database_kwargs['username']) == 0:
+                            database_username = simpledialog.askstring('Database Username',
+                                                                       f'enter username for database '
+                                                                       f'"{database_kwargs["hostname"]}/'
+                                                                       f'{database_kwargs["database"]}"',
+                                                                       parent=self.__windows['main'])
+                            if database_username is None or len(database_username) == 0:
                                 raise ConnectionError('missing database username')
+                            database_kwargs['username'] = database_username
 
                         if 'password' not in database_kwargs or database_kwargs['password'] is None:
-                            database_kwargs['password'] = simpledialog.askstring('Database Password',
-                                                                                 'enter database password',
-                                                                                 parent=self.__windows['main'], show='*')
-                            if database_kwargs['password'] is None or len(database_kwargs['password']) == 0:
+                            database_password = simpledialog.askstring('Database Password',
+                                                                       f'enter password for database user '
+                                                                       f'"{database_kwargs["username"]}"',
+                                                                       parent=self.__windows['main'], show='*')
+                            if database_password is None or len(database_password) == 0:
                                 raise ConnectionError('missing database password')
+                            database_kwargs['password'] = database_password
 
                         self.database = APRSDatabaseTable(**database_kwargs, **ssh_tunnel_kwargs,
                                                           callsigns=self.callsigns)

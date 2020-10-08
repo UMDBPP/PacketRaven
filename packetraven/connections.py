@@ -5,7 +5,7 @@ from pathlib import Path
 import re
 from typing import Any
 
-from dateutil.parser import parse
+from dateutil.parser import parse as parse_date
 import requests
 from serial import Serial
 from serial.tools import list_ports
@@ -153,6 +153,7 @@ class TextFileTNC(APRSPacketConnection):
         super().__init__(filename, callsigns)
         self.connection = open(filename)
         self.__last_access_time = None
+        self.__parsed_lines = []
 
     @property
     def packets(self) -> [APRSPacket]:
@@ -163,17 +164,19 @@ class TextFileTNC(APRSPacketConnection):
         packets = []
         for line in self.connection.readlines():
             if len(line) > 0:
-                try:
-                    packet_time, raw_aprs = line.split(' ', 1)
-                    packet_time = parse(packet_time)
-                except:
-                    raw_aprs = line
-                    packet_time = datetime.now()
-                raw_aprs = raw_aprs.strip()
-                try:
-                    packets.append(APRSPacket.from_raw_aprs(raw_aprs, packet_time, source=self.location))
-                except Exception as error:
-                    LOGGER.error(f'{error.__class__.__name__} - {error}')
+                if line not in self.__parsed_lines:
+                    self.__parsed_lines.append(line)
+                    try:
+                        packet_time, raw_aprs = line.split(' ', 1)
+                        packet_time = parse_date(packet_time)
+                    except:
+                        raw_aprs = line
+                        packet_time = datetime.now()
+                    raw_aprs = raw_aprs.strip()
+                    try:
+                        packets.append(APRSPacket.from_raw_aprs(raw_aprs, packet_time, source=self.location))
+                    except Exception as error:
+                        LOGGER.error(f'{error.__class__.__name__} - {error}')
         if self.callsigns is not None:
             packets = [packet for packet in packets if packet.callsign in self.callsigns]
         self.__last_access_time = datetime.now()
