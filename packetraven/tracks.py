@@ -136,7 +136,7 @@ class APRSTrack(LocationPacketTrack):
             raise ValueError(f'Packet callsign {packet_callsign} does not match ground track callsign {self.callsign}.')
 
     def __eq__(self, other) -> bool:
-        return self.callsign == other.callsign and super().__eq__(other)
+        return self.callsign == other.__callsign and super().__eq__(other)
 
     def __str__(self) -> str:
         return f'{self.callsign}: {super().__str__()}'

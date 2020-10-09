@@ -12,8 +12,8 @@ from dateutil.parser import parse
 
 from client import DEFAULT_INTERVAL_SECONDS
 from client.retrieve import retrieve_packets
-from packetraven.connections import APRSDatabaseTable, APRSfi, SerialTNC, TextFileTNC, available_ports, \
-    next_available_port
+from packetraven.connections import available_serial_ports, next_open_serial_port
+from packetraven.sources import APRSDatabaseTable, APRSfi, IGate, SerialTNC, TextFileTNC
 from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
 
@@ -31,22 +31,26 @@ class PacketRavenGUI:
 
         self.__connection_configuration = {
             'aprs_fi'   : {
-                'api_key': None
+                'api_key': None,
             },
             'tnc'       : {
-                'tnc': None
+                'tnc': None,
             },
             'database'  : {
                 'hostname': None,
                 'database': None,
                 'table'   : None,
                 'username': None,
-                'password': None
+                'password': None,
             },
             'ssh_tunnel': {
                 'ssh_hostname': None,
                 'ssh_username': None,
-                'ssh_password': None
+                'ssh_password': None,
+            },
+            'aprs_is'   : {
+                'igate_callsign': None,
+                'igate_passcode': None,
             }
         }
 
@@ -56,6 +60,7 @@ class PacketRavenGUI:
             })
 
         self.database = None
+        self.igate = None
         self.__connections = []
 
         self.__active = False
@@ -81,7 +86,8 @@ class PacketRavenGUI:
         self.__add_entry_box(configuration_frame, title='callsigns', label='Callsigns', width=55, columnspan=3)
         self.__file_selection_option = 'select file...'
         self.__add_combo_box(configuration_frame, title='tnc', label='TNC',
-                             options=list(available_ports()) + [self.__file_selection_option], option_select=self.__select_tnc,
+                             options=list(available_serial_ports()) + [self.__file_selection_option],
+                             option_select=self.__select_tnc,
                              width=52, columnspan=3, sticky='w')
 
         separator = Separator(configuration_frame, orient=tkinter.HORIZONTAL)
@@ -149,7 +155,7 @@ class PacketRavenGUI:
         if len(tnc_location) > 0:
             if tnc_location.upper() == 'AUTO':
                 try:
-                    tnc_location = next_available_port()
+                    tnc_location = next_open_serial_port()
                 except OSError:
                     LOGGER.warning(f'no open serial ports')
                     tnc_location = None
@@ -452,6 +458,32 @@ class PacketRavenGUI:
                 else:
                     self.database = None
 
+                if 'aprs_is' in self.__connection_configuration \
+                        and self.__connection_configuration['aprs_is']['igate_callsign'] is not None:
+                    try:
+                        igate_kwargs = self.__connection_configuration['aprs_is']
+                        if 'igate_callsign' not in igate_kwargs or igate_kwargs['igate_callsign'] is None:
+                            igate_callsign = simpledialog.askstring('IGate Username',
+                                                                    f'enter username for IGate',
+                                                                    parent=self.__windows['main'])
+                            if igate_callsign is None or len(igate_callsign) == 0:
+                                raise ConnectionError('missing IGate username')
+                            igate_kwargs['igate_callsign'] = igate_callsign
+
+                        if 'igate_password' not in igate_kwargs or igate_kwargs['igate_password'] is None:
+                            igate_password = simpledialog.askstring('IGate Password',
+                                                                    f'enter password for IGate user "'
+                                                                    f'{igate_kwargs["igate_callsign"]}"',
+                                                                    parent=self.__windows['main'], show='*')
+                            if igate_password is None or len(igate_password) == 0:
+                                raise ConnectionError('missing IGate password')
+                            igate_kwargs['igate_password'] = igate_password
+
+                        self.igate = IGate(igate_kwargs['igate_callsign'], igate_kwargs['igate_password'])
+                    except ConnectionError as error:
+                        connection_errors.append(f'igate - {error}')
+                        self.igate = None
+
                 if len(self.__connections) == 0:
                     connection_errors = '\n'.join(connection_errors)
                     raise ConnectionError(f'no connections started\n{connection_errors}')
@@ -502,7 +534,7 @@ class PacketRavenGUI:
             parsed_packets = retrieve_packets(self.__connections, self.__packet_tracks, self.database, self.output_filename,
                                               self.start_date, self.end_date, logger=LOGGER)
 
-            updated_callsigns = {packet.callsign for packet in parsed_packets}
+            updated_callsigns = {packet.__callsign for packet in parsed_packets}
             for callsign in updated_callsigns:
                 if callsign not in existing_callsigns:
                     window = tkinter.Toplevel()

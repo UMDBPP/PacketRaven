@@ -163,36 +163,40 @@ class APRSPacket(LocationPacket):
         super().__init__(time, x, y, z, crs, **kwargs)
 
     @classmethod
-    def from_raw_aprs(cls, raw_aprs: Union[str, bytes, dict], time: datetime = None, **kwargs) -> 'APRSPacket':
+    def from_frame(cls, frame: Union[str, bytes, dict], packet_time: datetime = None, **kwargs) -> 'APRSPacket':
         """
         APRS packet object from raw packet and given datetime
 
-        :param raw_aprs: string containing raw packet
-        :param time: Time of packet, either as datetime object, seconds since Unix epoch, or ISO format date string.
+        :param frame: string containing raw packet
+        :param packet_time: Time of packet, either as datetime object, seconds since Unix epoch, or ISO format date string.
         """
 
         # parse packet with metric units
-        parsed_packet = parse_raw_aprs(raw_aprs)
+        parsed_packet = parse_raw_aprs(frame)
 
         if 'longitude' in parsed_packet and 'latitude' in parsed_packet:
-            if time is None:
+            if packet_time is None:
                 if 'timestamp' in parsed_packet:
                     # extract time from Unix epoch
-                    time = datetime.fromtimestamp(float(parsed_packet['timestamp']))
+                    packet_time = datetime.fromtimestamp(float(parsed_packet['timestamp']))
                 else:
                     # TODO make HABduino add timestamp to packet upon transmission
                     # otherwise default to time the packet was received (now)
-                    time = datetime.now()
+                    packet_time = datetime.now()
 
-            return cls(time, parsed_packet['longitude'], parsed_packet['latitude'],
+            return cls(packet_time, parsed_packet['longitude'], parsed_packet['latitude'],
                        parsed_packet['altitude'] if 'altitude' in parsed_packet else None, crs=DEFAULT_CRS, **parsed_packet,
                        **kwargs)
         else:
-            raise ValueError(f'Input packet does not contain location data: {raw_aprs}')
+            raise ValueError(f'Input packet does not contain location data: {frame}')
 
     @property
     def callsign(self) -> str:
         return self['callsign']
+
+    @property
+    def frame(self) -> str:
+        return self['raw']
 
     def __getitem__(self, field: str):
         if field == 'callsign':

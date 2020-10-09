@@ -1,9 +1,7 @@
-from abc import abstractmethod
 from ast import literal_eval
 from datetime import date, datetime
 from functools import partial
 import re
-from socket import socket
 from typing import Any, Sequence, Union
 
 import psycopg2
@@ -15,6 +13,7 @@ from shapely.geometry import LineString, LinearRing, MultiLineString, MultiPoint
 from shapely.geometry.base import BaseGeometry
 from sshtunnel import SSHTunnelForwarder
 
+from .connections import NetworkConnection, random_open_tcp_port, split_URL_port
 from .utilities import get_logger
 
 LOGGER = get_logger('packetraven.connection')
@@ -43,17 +42,9 @@ DEFAULT_CRS = CRS.from_epsg(4326)
 GEOMETRY_TYPES = (Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon)
 
 
-class NetworkConnection:
-    @property
-    @abstractmethod
-    def connected(self) -> bool:
-        """ whether current session has a network connection """
-        raise NotImplementedError
-
-
 class DatabaseTable(NetworkConnection):
-    def __init__(self, hostname: str, database: str, table: str, fields: {str: type}, primary_key: str = None, crs: CRS = None,
-                 username: str = None, password: str = None, users: [str] = None, **kwargs):
+    def __init__(self, hostname: str, database: str, table: str, fields: {str: type}, location: str, primary_key: str = None,
+                 crs: CRS = None, username: str = None, password: str = None, users: [str] = None, **kwargs):
         # parse port from URL
         self.hostname, self.port = split_URL_port(hostname)
         if self.port is None:
@@ -61,6 +52,8 @@ class DatabaseTable(NetworkConnection):
 
         self.database = database
         self.table = table
+
+        super().__init__(f'{hostname}/{database}/{table}')
 
         self.fields = fields
         if not isinstance(primary_key, Sequence) or isinstance(primary_key, str):
@@ -96,7 +89,7 @@ class DatabaseTable(NetworkConnection):
             self.tunnel = SSHTunnelForwarder((ssh_hostname, ssh_port),
                                              ssh_username=ssh_username, ssh_password=ssh_password,
                                              remote_bind_address=('localhost', self.port),
-                                             local_bind_address=('localhost', open_tcp_port()))
+                                             local_bind_address=('localhost', random_open_tcp_port()))
             try:
                 self.tunnel.start()
             except Exception as error:
@@ -459,12 +452,6 @@ class InheritedTableError(Exception):
     pass
 
 
-def open_tcp_port() -> int:
-    open_socket = socket()
-    open_socket.bind(('', 0))
-    return open_socket.getsockname()[1]
-
-
 def parse_record_values(record: {str: Any}, field_types: {str: type}) -> {str: Any}:
     """
     Parse the values in the given record into their respective field types.
@@ -668,33 +655,3 @@ def postgis_geometry(geometry: Union[Point, LineString, Polygon, MultiPoint, Mul
         epsg = 4326
 
     return f'ST_SetSRID(\'{geometry.wkb_hex}\'::geometry, {epsg})'
-
-
-def split_URL_port(url: str) -> (str, Union[str, None]):
-    """
-    Split the given URL into host and port, assuming port is appended after a colon.
-
-    Parameters
-    ----------
-    url
-        URL string
-
-    Returns
-    ----------
-    str, Union[str, None]
-        URL and port (if found)
-    """
-
-    port = None
-
-    if url.count(':') > 0:
-        url = url.split(':')
-        if 'http' in url:
-            url = ':'.join(url[:2])
-            if len(url) > 2:
-                port = int(url[2])
-        else:
-            url, port = url
-            port = int(port)
-
-    return url, port

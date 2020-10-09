@@ -11,7 +11,7 @@ from dateutil.parser import parse as parse_date
 from client import CREDENTIALS_FILENAME, DEFAULT_INTERVAL_SECONDS
 from client.gui import PacketRavenGUI
 from client.retrieve import retrieve_packets
-from packetraven.connections import APRSDatabaseTable, APRSfi, SerialTNC, TextFileTNC
+from packetraven.sources import APRSDatabaseTable, APRSfi, SerialTNC, TextFileTNC
 from packetraven.utilities import get_logger, read_configuration
 
 LOGGER = get_logger('packetraven')
@@ -26,6 +26,7 @@ def main():
                                                  'port)')
     args_parser.add_argument('-d', '--database', help='PostGres database table `user@hostname:port/database/table`')
     args_parser.add_argument('-t', '--tunnel', help='SSH tunnel `user@hostname:port`')
+    args_parser.add_argument('-a', '--igate', help='APRS-IS IGate callsign')
     args_parser.add_argument('-s', '--start', help='start date / time, in any common date format')
     args_parser.add_argument('-e', '--end', help='end date / time, in any common date format')
     args_parser.add_argument('-l', '--log', help='path to log file to save log messages')
@@ -64,6 +65,9 @@ def main():
             kwargs['ssh_username'], kwargs['ssh_hostname'] = kwargs['ssh_hostname'].split('@', 1)
             if ':' in kwargs['ssh_username']:
                 kwargs['ssh_username'], kwargs['ssh_password'] = kwargs['ssh_username'].split(':', 1)
+
+    if args.igate is not None:
+        kwargs['igate_callsign'] = args.igate
 
     if args.start is not None:
         kwargs['start_date'] = parse_date(args.start.strip('"'))
@@ -111,17 +115,6 @@ def main():
     else:
         start_date = kwargs['start_date'] if 'start_date' in kwargs else None
         end_date = kwargs['end_date'] if 'end_date' in kwargs else None
-
-        filter_message = 'retrieving packets'
-        if start_date is not None and end_date is None:
-            filter_message += f' sent after {start_date:%Y-%m-%d %H:%M:%S}'
-        elif start_date is None and end_date is not None:
-            filter_message += f' sent before {end_date:%Y-%m-%d %H:%M:%S}'
-        elif start_date is not None and end_date is not None:
-            filter_message += f' sent between {start_date:%Y-%m-%d %H:%M:%S} and {end_date:%Y-%m-%d %H:%M:%S}'
-        if callsigns is not None:
-            filter_message += f' from {len(callsigns)} callsigns: {callsigns}'
-        LOGGER.info(filter_message)
 
         connections = []
         if 'tnc' in kwargs:
@@ -194,6 +187,17 @@ def main():
         if len(connections) == 0:
             LOGGER.error(f'no connections started')
             sys.exit(1)
+
+        filter_message = 'retrieving packets'
+        if start_date is not None and end_date is None:
+            filter_message += f' sent after {start_date:%Y-%m-%d %H:%M:%S}'
+        elif start_date is None and end_date is not None:
+            filter_message += f' sent before {end_date:%Y-%m-%d %H:%M:%S}'
+        elif start_date is not None and end_date is not None:
+            filter_message += f' sent between {start_date:%Y-%m-%d %H:%M:%S} and {end_date:%Y-%m-%d %H:%M:%S}'
+        if callsigns is not None:
+            filter_message += f' from {len(callsigns)} callsigns: {callsigns}'
+        LOGGER.info(filter_message)
 
         LOGGER.info(f'listening for packets every {interval_seconds}s from {len(connections)} connection(s): '
                     f'{", ".join([connection.location for connection in connections])}')

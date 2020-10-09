@@ -5,17 +5,15 @@ from os import PathLike
 from aprslib.packets.base import APRSPacket
 
 from packetraven import APRSDatabaseTable
-from packetraven.connections import APRSPacketConnection, TimeIntervalError
+from packetraven.sources import APRSPacketSource, TimeIntervalError
 from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
 from packetraven.writer import write_aprs_packet_tracks
 
 LOGGER = get_logger('packetraven')
 
-PACKET_SEND_BUFFER = []
 
-
-def retrieve_packets(connections: [APRSPacketConnection], packet_tracks: [APRSTrack], database: APRSDatabaseTable = None,
+def retrieve_packets(connections: [APRSPacketSource], packet_tracks: [APRSTrack], database: APRSDatabaseTable = None,
                      output_filename: PathLike = None, start_date: datetime = None, end_date: datetime = None,
                      logger: Logger = None) -> [APRSPacket]:
     if logger is None:
@@ -69,21 +67,10 @@ def retrieve_packets(connections: [APRSPacketConnection], packet_tracks: [APRSTr
             parsed_packets.extend(packets)
 
         parsed_packets = sorted(parsed_packets)
-        updated_callsigns = sorted(updated_callsigns)
-
         if database is not None:
-            new_packets = [packet for packet in parsed_packets if packet not in database]
-            if len(PACKET_SEND_BUFFER) > 0:
-                new_packets.extend(PACKET_SEND_BUFFER)
-                PACKET_SEND_BUFFER.clear()
-            if len(new_packets) > 0:
-                logger.info(f'sending {len(new_packets)} packet(s) to {database.location}: {new_packets}')
-                try:
-                    database.insert(new_packets)
-                except ConnectionError as error:
-                    logger.info(f'could not send packet(s) ({error}); reattempting on next iteration')
-                    PACKET_SEND_BUFFER.extend(new_packets)
+            database.update(parsed_packets)
 
+        updated_callsigns = sorted(updated_callsigns)
         for callsign in updated_callsigns:
             packet_track = packet_tracks[callsign]
             coordinate_string = ', '.join(f'{coordinate:.3f}°' for coordinate in packet_track.coordinates[-1, :2])
