@@ -3,6 +3,7 @@ import logging
 from os import PathLike
 from pathlib import Path
 import re
+import sys
 import tkinter
 from tkinter import filedialog, messagebox, simpledialog
 from tkinter.ttk import Combobox, Separator
@@ -13,7 +14,7 @@ from dateutil.parser import parse
 from client import DEFAULT_INTERVAL_SECONDS
 from client.retrieve import retrieve_packets
 from packetraven.connections import available_serial_ports, next_open_serial_port
-from packetraven.sources import APRSDatabaseTable, APRSfi, IGate, SerialTNC, TextFileTNC
+from packetraven.sources import APRSDatabaseTable, APRSfi, APRSis, SerialTNC, TextFileTNC
 from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
 
@@ -60,7 +61,7 @@ class PacketRavenGUI:
             })
 
         self.database = None
-        self.igate = None
+        self.aprs_is = None
         self.__connections = []
 
         self.__active = False
@@ -459,30 +460,30 @@ class PacketRavenGUI:
                     self.database = None
 
                 if 'aprs_is' in self.__connection_configuration \
-                        and self.__connection_configuration['aprs_is']['igate_callsign'] is not None:
+                        and self.__connection_configuration['aprs_is']['aprs_is_username'] is not None:
                     try:
-                        igate_kwargs = self.__connection_configuration['aprs_is']
-                        if 'igate_callsign' not in igate_kwargs or igate_kwargs['igate_callsign'] is None:
-                            igate_callsign = simpledialog.askstring('IGate Username',
-                                                                    f'enter username for IGate',
-                                                                    parent=self.__windows['main'])
-                            if igate_callsign is None or len(igate_callsign) == 0:
-                                raise ConnectionError('missing IGate username')
-                            igate_kwargs['igate_callsign'] = igate_callsign
+                        aprs_is_kwargs = self.__connection_configuration['aprs_is']
+                        if 'aprs_is_username' not in aprs_is_kwargs or aprs_is_kwargs['aprs_is_username'] is None:
+                            aprs_is_username = simpledialog.askstring('APRS-IS Username',
+                                                                      f'enter username for APRS-IS',
+                                                                      parent=self.__windows['main'])
+                            if aprs_is_username is None or len(aprs_is_username) == 0:
+                                raise ConnectionError('missing APRS-IS username')
+                            aprs_is_kwargs['aprs_is_username'] = aprs_is_username
 
-                        if 'igate_password' not in igate_kwargs or igate_kwargs['igate_password'] is None:
-                            igate_password = simpledialog.askstring('IGate Password',
-                                                                    f'enter password for IGate user "'
-                                                                    f'{igate_kwargs["igate_callsign"]}"',
-                                                                    parent=self.__windows['main'], show='*')
-                            if igate_password is None or len(igate_password) == 0:
-                                raise ConnectionError('missing IGate password')
-                            igate_kwargs['igate_password'] = igate_password
+                        if 'aprs_is_password' not in aprs_is_kwargs or aprs_is_kwargs['aprs_is_password'] is None:
+                            aprs_is_password = simpledialog.askstring('APRS-IS Password',
+                                                                      f'enter password for APRS-IS user "'
+                                                                      f'{aprs_is_kwargs["aprs_is_username"]}"',
+                                                                      parent=self.__windows['main'], show='*')
+                            if aprs_is_password is None or len(aprs_is_password) == 0:
+                                raise ConnectionError('missing APRS-IS password')
+                            aprs_is_kwargs['aprs_is_password'] = aprs_is_password
 
-                        self.igate = IGate(igate_kwargs['igate_callsign'], igate_kwargs['igate_password'])
+                        self.aprs_is = APRSis(aprs_is_kwargs['aprs_is_username'], aprs_is_kwargs['aprs_is_password'])
                     except ConnectionError as error:
                         connection_errors.append(f'igate - {error}')
-                        self.igate = None
+                        self.aprs_is = None
 
                 if len(self.__connections) == 0:
                     connection_errors = '\n'.join(connection_errors)
@@ -530,108 +531,121 @@ class PacketRavenGUI:
 
     def retrieve_packets(self):
         if self.active:
-            existing_callsigns = list(self.packet_tracks)
-            parsed_packets = retrieve_packets(self.__connections, self.__packet_tracks, self.database, self.output_filename,
-                                              self.start_date, self.end_date, logger=LOGGER)
+            try:
+                existing_callsigns = list(self.packet_tracks)
+                parsed_packets = retrieve_packets(self.__connections, self.__packet_tracks, self.database,
+                                                  self.output_filename,
+                                                  self.start_date, self.end_date, logger=LOGGER)
 
-            updated_callsigns = {packet.__callsign for packet in parsed_packets}
-            for callsign in updated_callsigns:
-                if callsign not in existing_callsigns:
-                    window = tkinter.Toplevel()
-                    window.title(callsign)
+                if self.aprs_is is not None:
+                    self.aprs_is.upload(parsed_packets)
 
-                    self.__add_text_box(window, title=f'{callsign}.callsign', label='Callsign', sticky='w')
-                    self.replace_text(self.__elements[f'{callsign}.callsign'], callsign)
-                    self.__add_text_box(window, title=f'{callsign}.packets', label='Packet #', sticky='w')
+                updated_callsigns = {packet.__callsign for packet in parsed_packets}
+                for callsign in updated_callsigns:
+                    if callsign not in existing_callsigns:
+                        window = tkinter.Toplevel()
+                        window.title(callsign)
 
-                    self.__add_text_box(window, title=f'{callsign}.time', label='Time', width=19, sticky='w',
-                                        row=self.__elements[f'{callsign}.callsign'].grid_info()['row'],
-                                        column=self.__elements[f'{callsign}.callsign'].grid_info()['column'] + 3, columnspan=2)
-                    self.__add_text_box(window, title=f'{callsign}.interval', label='Interval', units='s', sticky='w',
-                                        row=self.__elements[f'{callsign}.packets'].grid_info()['row'],
-                                        column=self.__elements[f'{callsign}.packets'].grid_info()['column'] + 3)
+                        self.__add_text_box(window, title=f'{callsign}.callsign', label='Callsign', sticky='w')
+                        self.replace_text(self.__elements[f'{callsign}.callsign'], callsign)
+                        self.__add_text_box(window, title=f'{callsign}.packets', label='Packet #', sticky='w')
 
-                    separator = Separator(window, orient=tkinter.HORIZONTAL)
-                    separator.grid(row=window.grid_size()[1], column=0, columnspan=7, sticky='ew', pady=10)
+                        self.__add_text_box(window, title=f'{callsign}.time', label='Time', width=19, sticky='w',
+                                            row=self.__elements[f'{callsign}.callsign'].grid_info()['row'],
+                                            column=self.__elements[f'{callsign}.callsign'].grid_info()['column'] + 3,
+                                            columnspan=2)
+                        self.__add_text_box(window, title=f'{callsign}.interval', label='Interval', units='s', sticky='w',
+                                            row=self.__elements[f'{callsign}.packets'].grid_info()['row'],
+                                            column=self.__elements[f'{callsign}.packets'].grid_info()['column'] + 3)
 
-                    self.__add_text_box(window, title=f'{callsign}.coordinates', label='Coordinates', width=15, sticky='w',
-                                        columnspan=2)
-                    self.__add_text_box(window, title=f'{callsign}.distance', label='Distance', units='m', sticky='w')
-                    self.__add_text_box(window, title=f'{callsign}.ground_speed', label='Ground Speed', units='m/s',
-                                        sticky='w')
+                        separator = Separator(window, orient=tkinter.HORIZONTAL)
+                        separator.grid(row=window.grid_size()[1], column=0, columnspan=7, sticky='ew', pady=10)
 
-                    self.__add_text_box(window, title=f'{callsign}.altitude', label='Altitude', units='m', sticky='w',
-                                        row=self.__elements[f'{callsign}.coordinates'].grid_info()['row'],
-                                        column=self.__elements[f'{callsign}.coordinates'].grid_info()['column'] + 3)
-                    self.__add_text_box(window, title=f'{callsign}.ascent', label='Ascent', units='m', sticky='w',
-                                        row=self.__elements[f'{callsign}.distance'].grid_info()['row'],
-                                        column=self.__elements[f'{callsign}.distance'].grid_info()['column'] + 3)
-                    self.__add_text_box(window, title=f'{callsign}.ascent_rate', label='Ascent Rate', units='m/s',
-                                        sticky='w', row=self.__elements[f'{callsign}.ground_speed'].grid_info()['row'],
-                                        column=self.__elements[f'{callsign}.ground_speed'].grid_info()['column'] + 3)
+                        self.__add_text_box(window, title=f'{callsign}.coordinates', label='Coordinates', width=15, sticky='w',
+                                            columnspan=2)
+                        self.__add_text_box(window, title=f'{callsign}.distance', label='Distance', units='m', sticky='w')
+                        self.__add_text_box(window, title=f'{callsign}.ground_speed', label='Ground Speed', units='m/s',
+                                            sticky='w')
 
-                    separator = Separator(window, orient=tkinter.HORIZONTAL)
-                    separator.grid(row=window.grid_size()[1], column=0, columnspan=7, sticky='ew', pady=10)
+                        self.__add_text_box(window, title=f'{callsign}.altitude', label='Altitude', units='m', sticky='w',
+                                            row=self.__elements[f'{callsign}.coordinates'].grid_info()['row'],
+                                            column=self.__elements[f'{callsign}.coordinates'].grid_info()['column'] + 3)
+                        self.__add_text_box(window, title=f'{callsign}.ascent', label='Ascent', units='m', sticky='w',
+                                            row=self.__elements[f'{callsign}.distance'].grid_info()['row'],
+                                            column=self.__elements[f'{callsign}.distance'].grid_info()['column'] + 3)
+                        self.__add_text_box(window, title=f'{callsign}.ascent_rate', label='Ascent Rate', units='m/s',
+                                            sticky='w', row=self.__elements[f'{callsign}.ground_speed'].grid_info()['row'],
+                                            column=self.__elements[f'{callsign}.ground_speed'].grid_info()['column'] + 3)
 
-                    self.__add_text_box(window, title=f'{callsign}.distance_downrange', label='Distance Downrange', units='m',
-                                        sticky='w')
-                    self.__add_text_box(window, title=f'{callsign}.distance_traveled', label='Distance Traveled', units='m',
-                                        sticky='w')
+                        separator = Separator(window, orient=tkinter.HORIZONTAL)
+                        separator.grid(row=window.grid_size()[1], column=0, columnspan=7, sticky='ew', pady=10)
 
-                    self.__add_text_box(window, title=f'{callsign}.maximum_altitude', label='Max Altitude', units='m',
-                                        sticky='w', row=self.__elements[f'{callsign}.distance_downrange'].grid_info()['row'],
-                                        column=self.__elements[f'{callsign}.distance_downrange'].grid_info()['column'] + 3)
-                    self.__add_text_box(window, title=f'{callsign}.time_to_ground', label='Time to Ground', units='s',
-                                        sticky='w', row=self.__elements[f'{callsign}.distance_traveled'].grid_info()['row'],
-                                        column=self.__elements[f'{callsign}.distance_traveled'].grid_info()['column'] + 3)
+                        self.__add_text_box(window, title=f'{callsign}.distance_downrange', label='Distance Downrange',
+                                            units='m',
+                                            sticky='w')
+                        self.__add_text_box(window, title=f'{callsign}.distance_traveled', label='Distance Traveled',
+                                            units='m',
+                                            sticky='w')
 
-                    separator = Separator(window, orient=tkinter.VERTICAL)
-                    separator.grid(row=0, column=3, rowspan=window.grid_size()[1] + 2, sticky='ns', padx=10)
+                        self.__add_text_box(window, title=f'{callsign}.maximum_altitude', label='Max Altitude', units='m',
+                                            sticky='w',
+                                            row=self.__elements[f'{callsign}.distance_downrange'].grid_info()['row'],
+                                            column=self.__elements[f'{callsign}.distance_downrange'].grid_info()['column'] + 3)
+                        self.__add_text_box(window, title=f'{callsign}.time_to_ground', label='Time to Ground', units='s',
+                                            sticky='w',
+                                            row=self.__elements[f'{callsign}.distance_traveled'].grid_info()['row'],
+                                            column=self.__elements[f'{callsign}.distance_traveled'].grid_info()['column'] + 3)
 
-                    window.protocol("WM_DELETE_WINDOW", window.iconify)
+                        separator = Separator(window, orient=tkinter.VERTICAL)
+                        separator.grid(row=0, column=3, rowspan=window.grid_size()[1] + 2, sticky='ns', padx=10)
 
-                    self.__windows[callsign] = window
+                        window.protocol("WM_DELETE_WINDOW", window.iconify)
 
-                window = self.__windows[callsign]
+                        self.__windows[callsign] = window
 
-                if window.state() == 'iconic':
-                    window.deiconify()
-                if window.focus_get() is None:
-                    window.focus_force()
+                    window = self.__windows[callsign]
 
-                set_child_states(window)
+                    if window.state() == 'iconic':
+                        window.deiconify()
+                    if window.focus_get() is None:
+                        window.focus_force()
 
-                packet_track = self.packet_tracks[callsign]
-                self.replace_text(self.__elements[f'{callsign}.packets'], len(packet_track))
-                self.replace_text(self.__elements[f'{callsign}.time'], f'{packet_track.times[-1]}')
-                self.replace_text(self.__elements[f'{callsign}.altitude'], f'{packet_track.coordinates[-1, 2]:.3f}')
-                self.replace_text(self.__elements[f'{callsign}.coordinates'],
-                                  ', '.join(f'{value:.3f}' for value in packet_track.coordinates[-1, :2]))
-                self.replace_text(self.__elements[f'{callsign}.ascent'], f'{packet_track.ascents[-1]:.2f}')
-                self.replace_text(self.__elements[f'{callsign}.distance'], f'{packet_track.distances[-1]:.2f}')
-                self.replace_text(self.__elements[f'{callsign}.interval'], f'{packet_track.intervals[-1]:.2f}')
-                self.replace_text(self.__elements[f'{callsign}.ascent_rate'], f'{packet_track.ascent_rates[-1]:.2f}')
-                self.replace_text(self.__elements[f'{callsign}.ground_speed'], f'{packet_track.ground_speeds[-1]:.2f}')
+                    set_child_states(window)
 
-                self.replace_text(self.__elements[f'{callsign}.distance_downrange'], f'{packet_track.distance_from_start:.2f}')
-                self.replace_text(self.__elements[f'{callsign}.distance_traveled'], f'{packet_track.length:.2f}')
+                    packet_track = self.packet_tracks[callsign]
+                    self.replace_text(self.__elements[f'{callsign}.packets'], len(packet_track))
+                    self.replace_text(self.__elements[f'{callsign}.time'], f'{packet_track.times[-1]}')
+                    self.replace_text(self.__elements[f'{callsign}.altitude'], f'{packet_track.coordinates[-1, 2]:.3f}')
+                    self.replace_text(self.__elements[f'{callsign}.coordinates'],
+                                      ', '.join(f'{value:.3f}' for value in packet_track.coordinates[-1, :2]))
+                    self.replace_text(self.__elements[f'{callsign}.ascent'], f'{packet_track.ascents[-1]:.2f}')
+                    self.replace_text(self.__elements[f'{callsign}.distance'], f'{packet_track.distances[-1]:.2f}')
+                    self.replace_text(self.__elements[f'{callsign}.interval'], f'{packet_track.intervals[-1]:.2f}')
+                    self.replace_text(self.__elements[f'{callsign}.ascent_rate'], f'{packet_track.ascent_rates[-1]:.2f}')
+                    self.replace_text(self.__elements[f'{callsign}.ground_speed'], f'{packet_track.ground_speeds[-1]:.2f}')
 
-                self.replace_text(self.__elements[f'{callsign}.maximum_altitude'],
-                                  f'{packet_track.coordinates[:, 2].max():.2f}')
+                    self.replace_text(self.__elements[f'{callsign}.distance_downrange'],
+                                      f'{packet_track.distance_from_start:.2f}')
+                    self.replace_text(self.__elements[f'{callsign}.distance_traveled'], f'{packet_track.length:.2f}')
 
-                landing_box = self.__elements[f'{callsign}.time_to_ground']
+                    self.replace_text(self.__elements[f'{callsign}.maximum_altitude'],
+                                      f'{packet_track.coordinates[:, 2].max():.2f}')
 
-                if packet_track.time_to_ground >= timedelta(seconds=0):
-                    landing_box.configure(state=tkinter.NORMAL)
-                    self.replace_text(landing_box, f'{packet_track.time_to_ground / timedelta(seconds=1):.2f}')
-                else:
-                    self.replace_text(landing_box, '')
-                    landing_box.configure(state=tkinter.DISABLED)
+                    landing_box = self.__elements[f'{callsign}.time_to_ground']
 
-                set_child_states(window, tkinter.DISABLED, [tkinter.Text])
+                    if packet_track.time_to_ground >= timedelta(seconds=0):
+                        landing_box.configure(state=tkinter.NORMAL)
+                        self.replace_text(landing_box, f'{packet_track.time_to_ground / timedelta(seconds=1):.2f}')
+                    else:
+                        self.replace_text(landing_box, '')
+                        landing_box.configure(state=tkinter.DISABLED)
 
-            if self.active:
-                self.__windows['main'].after(int(self.interval_seconds * 1000), self.retrieve_packets)
+                    set_child_states(window, tkinter.DISABLED, [tkinter.Text])
+
+                if self.active:
+                    self.__windows['main'].after(int(self.interval_seconds * 1000), self.retrieve_packets)
+            except KeyboardInterrupt:
+                self.close()
 
     @staticmethod
     def replace_text(element: tkinter.Entry, value: str):
@@ -647,6 +661,7 @@ class PacketRavenGUI:
         if self.active:
             self.toggle()
         self.__windows['main'].destroy()
+        sys.exit(0)
 
 
 def set_child_states(frame: tkinter.Frame, state: str = None, types: [type] = None):

@@ -1,4 +1,3 @@
-from abc import abstractmethod
 from datetime import datetime, timedelta
 from os import PathLike
 from pathlib import Path
@@ -13,7 +12,9 @@ from serial import Serial
 from shapely.geometry import Point
 
 from client import CREDENTIALS_FILENAME
-from .connections import Connection, NetworkConnection, next_open_serial_port
+from .connections import APRSPacketSink, APRSPacketSource, NetworkConnection, PacketSink, PacketSource, \
+    next_open_serial_port, \
+    split_URL_port
 from .database import DatabaseTable
 from .packets import APRSPacket, LocationPacket
 from .utilities import get_logger, read_configuration
@@ -25,54 +26,6 @@ __version__ = Version.from_any_vcs().serialize()
 
 class TimeIntervalError(Exception):
     pass
-
-
-class PacketSource(Connection):
-    interval: timedelta = None
-
-    def __init__(self, location: str):
-        """
-        Create a new generic packet connection.
-
-        :param location: location of packets
-        """
-
-        super().__init__(location)
-
-    @property
-    @abstractmethod
-    def packets(self) -> [LocationPacket]:
-        """
-        most recent available location packets, since the last minimum time interval if applicable
-
-        :return: list of location packets
-        """
-
-        raise NotImplementedError
-
-
-class APRSPacketSource(PacketSource):
-    def __init__(self, location: str, callsigns: [str]):
-        """
-        Create a new generic APRS packet connection.
-
-        :param location: location of APRS packets
-        :param callsigns: list of callsigns to return from source
-        """
-
-        super().__init__(location)
-        self.callsigns = callsigns
-
-    @property
-    @abstractmethod
-    def packets(self) -> [APRSPacket]:
-        """
-        most recent available APRS packets, since the last minimum time interval if applicable
-
-        :return: list of APRS packets
-        """
-
-        raise NotImplementedError
 
 
 class SerialTNC(APRSPacketSource):
@@ -113,12 +66,6 @@ class SerialTNC(APRSPacketSource):
             packets = [packet for packet in packets if packet.callsign in self.callsigns]
         self.__last_access_time = datetime.now()
         return packets
-
-    def __enter__(self):
-        return self.connection
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
 
     def close(self):
         self.connection.close()
@@ -173,12 +120,6 @@ class TextFileTNC(APRSPacketSource):
             packets = [packet for packet in packets if packet.callsign in self.callsigns]
         self.__last_access_time = datetime.now()
         return packets
-
-    def __enter__(self):
-        return self.connection
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
 
     def close(self):
         self.connection.close()
@@ -261,13 +202,6 @@ class APRSfi(APRSPacketSource, NetworkConnection):
         self.__last_access_time = datetime.now()
         return packets
 
-    def __enter__(self):
-        if not self.connected:
-            raise ConnectionError(f'No network connection.')
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
-
     def close(self):
         pass
 
@@ -275,7 +209,7 @@ class APRSfi(APRSPacketSource, NetworkConnection):
         return f'{self.__class__.__name__}({repr(self.callsigns)}, {repr(re.sub(".", "*", self.api_key))})'
 
 
-class PacketDatabaseTable(DatabaseTable, PacketSource):
+class PacketDatabaseTable(DatabaseTable, PacketSource, PacketSink):
     __default_fields = {
         'time' : datetime,
         'x'    : float,
@@ -343,12 +277,6 @@ class PacketDatabaseTable(DatabaseTable, PacketSource):
                 LOGGER.info(f'could not send packet(s) ({error}); reattempting on next iteration')
                 self.__send_buffer.extend(new_packets)
 
-    def __enter__(self):
-        return self.connection
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
-
     def close(self):
         self.connection.close()
         if self.tunnel is not None:
@@ -366,7 +294,7 @@ class PacketDatabaseTable(DatabaseTable, PacketSource):
         }
 
 
-class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource):
+class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
     __aprs_fields = {
         'from'        : str,
         'to'          : str,
@@ -399,6 +327,7 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource):
         kwargs['fields'] = {f'packet_{field}': field_type for field, field_type in kwargs['fields'].items()}
         PacketDatabaseTable.__init__(self, hostname, database, table, **kwargs)
         APRSPacketSource.__init__(self, f'postgres://{self.hostname}:{self.port}/{self.database}/{self.table}', callsigns)
+        APRSPacketSink.__init__(self, f'postgres://{self.hostname}:{self.port}/{self.database}/{self.table}', callsigns)
         self.__last_access_time = None
 
     @property
@@ -446,12 +375,15 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource):
         }
 
 
-class IGate(NetworkConnection):
-    def __init__(self, callsign: str, password: str, hostname: str = None, port: int = None):
-        self.__callsign = callsign
+class APRSis(APRSPacketSource, NetworkConnection):
+    def __init__(self, password: str = None, hostname: str = None):
         self.__password = password
+        if hostname is not None:
+            self.__hostname, self.__port = split_URL_port(hostname)
+        else:
+            self.__hostname = None
+            self.__port = None
 
-        self.connection = aprslib.IS(self.__callsign, self.__password, hostname, port)
         super().__init__(self.connection.server)
 
         if not self.connected:
@@ -467,22 +399,30 @@ class IGate(NetworkConnection):
 
     @property
     def hostname(self) -> str:
-        return self.connection.server[0]
+        return self.__hostname
 
     @property
     def port(self) -> int:
-        return self.connection.server[1]
+        return self.__port
 
-    def upload(self, packet: APRSPacket):
-        self.connection.connect()
-        self.connection.sendall(packet.frame)
-        self.connection.close()
+    def upload(self, packets: [APRSPacket]):
+        callsigns = {packet.callsign for packet in packets}
+        packets = {callsign: [packet for packet in packets if packet.callsign == callsign] for callsign in callsigns}
 
-    def __enter__(self):
-        self.connection.connect()
+        for callsign, callsign_packets in packets.items():
+            frames = [packet.frame for packet in callsign_packets]
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
+            def check_packets(frame: str):
+                if frame in frames:
+                    frames.remove(frames.index(frame))
+
+            aprs_is = aprslib.IS(callsign, self.password if self.password is not None else '-1', self.hostname, self.port)
+
+            aprs_is.connect()
+            aprs_is.consumer(callback=check_packets, raw=True)
+            if len(frames) > 0:
+                aprs_is.sendall(r'\rn'.join(frames))
+            aprs_is.close()
 
     def close(self):
-        self.connection.close()
+        pass

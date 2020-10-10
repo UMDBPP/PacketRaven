@@ -1,22 +1,19 @@
 from abc import ABC, abstractmethod
+from datetime import timedelta
 from socket import socket
 from typing import Union
 
 import requests
 from serial.tools import list_ports
 
+from packetraven.packets import APRSPacket, LocationPacket
+
 
 class Connection(ABC):
+    interval: timedelta = None
+
     def __init__(self, location: str):
         self.location = location
-
-    @abstractmethod
-    def __enter__(self):
-        raise NotImplementedError
-
-    @abstractmethod
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        raise NotImplementedError
 
     @abstractmethod
     def close(self):
@@ -24,9 +21,6 @@ class Connection(ABC):
 
 
 class NetworkConnection(Connection):
-    def __init__(self, location: str):
-        super().__init__(location)
-
     @property
     def connected(self) -> bool:
         """ whether current session has a network connection """
@@ -35,6 +29,61 @@ class NetworkConnection(Connection):
             return True
         except (requests.ConnectionError, requests.Timeout):
             return False
+
+
+class PacketSource(Connection):
+
+    @property
+    @abstractmethod
+    def packets(self) -> [LocationPacket]:
+        """
+        most recent available location packets, since the last minimum time interval if applicable
+
+        :return: list of location packets
+        """
+
+        raise NotImplementedError
+
+
+class APRSPacketSource(PacketSource):
+    def __init__(self, location: str, callsigns: [str]):
+        """
+        Create a new generic APRS packet connection.
+
+        :param location: location of APRS packets
+        :param callsigns: list of callsigns to return from source
+        """
+
+        super().__init__(location)
+        self.callsigns = callsigns
+
+    @property
+    @abstractmethod
+    def packets(self) -> [APRSPacket]:
+        """
+        most recent available APRS packets, since the last minimum time interval if applicable
+
+        :return: list of APRS packets
+        """
+
+        raise NotImplementedError
+
+
+class PacketSink(Connection):
+    @property
+    @abstractmethod
+    def update(self, packets: [LocationPacket]):
+        """
+        send given packets to remote
+        """
+
+        raise NotImplementedError
+
+
+class APRSPacketSink(PacketSink):
+    @property
+    def update(self, packets: [APRSPacket]):
+        super().update(packets)
 
 
 def random_open_tcp_port() -> int:

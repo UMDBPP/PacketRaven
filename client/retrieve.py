@@ -5,7 +5,8 @@ from os import PathLike
 from aprslib.packets.base import APRSPacket
 
 from packetraven import APRSDatabaseTable
-from packetraven.sources import APRSPacketSource, TimeIntervalError
+from packetraven.connections import APRSPacketSource
+from packetraven.sources import TimeIntervalError
 from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
 from packetraven.writer import write_aprs_packet_tracks

@@ -5,11 +5,11 @@ import unittest
 from client import CREDENTIALS_FILENAME
 from packetraven.database import database_has_table
 from packetraven.packets import APRSPacket
-from packetraven.sources import APRSDatabaseTable, APRSfi
+from packetraven.sources import APRSDatabaseTable, APRSfi, APRSis
 from packetraven.utilities import read_configuration
 
 
-class TestAPRS_fi(unittest.TestCase):
+class TestNetworkConnections(unittest.TestCase):
     def test_aprs_fi(self):
         balloon_callsigns = ['W3EAX-10', 'W3EAX-11', 'W3EAX-13', 'W3EAX-14']
 
@@ -24,8 +24,23 @@ class TestAPRS_fi(unittest.TestCase):
 
         assert all(type(packet) is APRSPacket for packet in packets)
 
+    def test_aprs_is(self):
+        balloon_callsigns = ['W3EAX-10', 'W3EAX-11', 'W3EAX-13', 'W3EAX-14']
 
-class TestDatabase(unittest.TestCase):
+        credentials = read_configuration(CREDENTIALS_FILENAME)
+        if 'aprs_is' not in credentials:
+            credentials['aprs_is'] = {
+                'aprs_is_username': os.environ['APRS_IS_USERNAME'],
+                'aprs_is_password': os.environ['APRS_IS_PASSWORD']
+            }
+
+        aprs_is = APRSis(balloon_callsigns, credentials['aprs_fi']['api_key'])
+
+        with aprs_api:
+            packets = aprs_api.packets
+
+        assert all(type(packet) is APRSPacket for packet in packets)
+
     def test_packet_database(self):
         packet_1 = APRSPacket.from_frame(
             "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,"
