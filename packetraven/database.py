@@ -324,6 +324,8 @@ class DatabaseTable(NetworkConnection):
         assert all(primary_key in record for primary_key in self.primary_key for record in records), \
             f'one or more records does not contain primary key "{self.primary_key}"'
 
+        records = [record for record in records if (record[key] for key in self.primary_key) not in self]
+
         if not self.connected:
             raise ConnectionError(f'no connection to {self.location}')
 
