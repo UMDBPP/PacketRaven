@@ -3,6 +3,7 @@ from datetime import timedelta
 from socket import socket
 from typing import Union
 
+from dateutil.parser import parse as parse_date
 import requests
 from serial.tools import list_ports
 

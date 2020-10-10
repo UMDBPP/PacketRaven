@@ -189,7 +189,7 @@ class PacketRavenGUI:
         if start_date is not None:
             if isinstance(start_date, str):
                 start_date = parse(start_date)
-            start_date = f'{start_date:%Y-%m-%s %H:%M:%S}'
+            start_date = f'{start_date:%Y-%m-%d %H:%M:%S}'
         else:
             start_date = ''
         self.replace_text(self.__elements['start_date'], start_date)
@@ -208,7 +208,7 @@ class PacketRavenGUI:
         if end_date is not None:
             if isinstance(end_date, str):
                 end_date = parse(end_date)
-            end_date = f'{end_date:%Y-%m-%s %H:%M:%S}'
+            end_date = f'{end_date:%Y-%m-%d %H:%M:%S}'
         else:
             end_date = ''
         self.replace_text(self.__elements['start_date'], end_date)
