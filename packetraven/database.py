@@ -204,15 +204,8 @@ class DatabaseTable(NetworkConnection):
         """
         Query table for the given value of the primary key.
 
-        Parameters
-        ----------
-        key
-            value to query from primary key
-
-        Returns
-        -------
-        {str: Any}
-            dictionary record
+        :param key: value to query from primary key
+        :return: dictionary record
         """
 
         if not isinstance(key, Sequence) or isinstance(key, str):
@@ -235,12 +228,8 @@ class DatabaseTable(NetworkConnection):
         """
         Insert the given record into the table with the given primary key value.
 
-        Parameters
-        ----------
-        key
-            value of primary key at which to insert record
-        record
-            dictionary record
+        :param key: value of primary key at which to insert record
+        :param record: dictionary record
         """
 
         if not isinstance(key, Sequence) or isinstance(key, str):
@@ -262,15 +251,8 @@ class DatabaseTable(NetworkConnection):
         """
         records in the table that match the given key-value pairs
 
-        Parameters
-        ----------
-        where
-            dictionary mapping keys to values, with which to match records
-
-        Returns
-        -------
-        [{str: Any}]
-            dictionaries of matching records
+        :param where: dictionary mapping keys to values, with which to match records
+        :return: dictionaries of matching records
         """
 
         matching_records = []
@@ -312,10 +294,7 @@ class DatabaseTable(NetworkConnection):
         """
         Insert the list of records into the table.
 
-        Parameters
-        ----------
-        records
-            dictionary records
+        :param records: dictionary records
         """
 
         if type(records) is dict:
@@ -471,17 +450,9 @@ def parse_record_values(record: {str: Any}, field_types: {str: type}) -> {str: A
     """
     Parse the values in the given record into their respective field types.
 
-    Parameters
-    ----------
-    record
-        dictionary mapping fields to values
-    field_types
-        dictionary mapping fields to types
-
-    Returns
-    -------
-    {str: Any}
-        record with values parsed into their respective types
+    :param record: dictionary mapping fields to values
+    :param field_types: dictionary mapping fields to types
+    :return: record with values parsed into their respective types
     """
 
     for field, value in record.items():
@@ -541,17 +512,9 @@ def database_has_table(cursor: psycopg2._psycopg.cursor, table: str) -> bool:
     """
     Whether the given table exists within the given database.
 
-    Parameters
-    ----------
-    cursor
-        psycopg2 cursor
-    table
-        name of table
-
-    Returns
-    -------
-    bool
-        whether table exists
+    :param cursor: psycopg2 cursor
+    :param table: name of table
+    :return: whether table exists
     """
 
     cursor.execute(f'SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name=%s);', [table.lower()])
@@ -563,21 +526,11 @@ def database_table_has_record(cursor: psycopg2._psycopg.cursor, table: str, reco
     """
     Whether the given record exists within the given table.
 
-    Parameters
-    ----------
-    cursor
-        psycopg2 cursor
-    table
-        name of table
-    record
-        dictionary record
-    primary_key
-        name of primary key
-
-    Returns
-    -------
-    bool
-        whether record exists in table
+    :param cursor: psycopg2 cursor
+    :param table: name of table
+    :param record: dictionary record
+    :param primary_key: name of primary key
+    :return: whether record exists in table
     """
 
     if primary_key is None:
@@ -610,17 +563,9 @@ def database_table_is_inherited(cursor: psycopg2._psycopg.cursor, table: str) ->
     """
     Whether the given table is inherited.
 
-    Parameters
-    ----------
-    cursor
-        psycopg2 cursor
-    table
-        name of table
-
-    Returns
-    -------
-    bool
-        whether table is inherited
+    :param cursor: psycopg2 cursor
+    :param table: name of table
+    :return: whether table is inherited
     """
 
     cursor.execute(f'SELECT EXISTS(SELECT 1 FROM pg_catalog.pg_inherits WHERE inhrelid=%s::regclass);', [f'public.{table}'])
@@ -631,17 +576,9 @@ def database_table_columns(cursor: psycopg2._psycopg.cursor, table: str) -> {str
     """
     Get column names and data types of the given table, within the given database.
 
-    Parameters
-    ----------
-    cursor
-        psycopg2 cursor
-    table
-        name of table
-
-    Returns
-    -------
-    {str: str}
-        mapping of column names to the PostGres data type
+    :param cursor: psycopg2 cursor
+    :param table: name of table
+    :return: mapping of column names to the PostGres data type
     """
 
     cursor.execute(f'SELECT column_name, udt_name FROM information_schema.columns WHERE table_name=%s;', [table])
@@ -653,17 +590,9 @@ def postgis_geometry(geometry: Union[Point, LineString, Polygon, MultiPoint, Mul
     """
     Convert Shapely geometry to a PostGIS geometry string.
 
-    Parameters
-    ----------
-    geometry
-        Shapely geometry
-    epsg
-        EPSG code of CRS
-
-    Returns
-    -------
-    str
-        PostGIS input string
+    :param geometry: Shapely geometry
+    :param epsg: EPSG code of CRS
+    :return: PostGIS input string
     """
 
     if epsg is None:
@@ -676,15 +605,8 @@ def split_URL_port(url: str) -> (str, Union[str, None]):
     """
     Split the given URL into host and port, assuming port is appended after a colon.
 
-    Parameters
-    ----------
-    url
-        URL string
-
-    Returns
-    ----------
-    str, Union[str, None]
-        URL and port (if found)
+    :param url: URL string
+    :return: URL and port (if found)
     """
 
     port = None
