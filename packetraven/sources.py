@@ -338,7 +338,7 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
                 raise TimeIntervalError(f'interval {interval} less than minimum interval {self.interval}')
         packets = [APRSPacket(**{field if field in ['time', 'x', 'y', 'z'] else field.replace('packet_', ''): value
                                  for field, value in record.items() if field not in ['point']},
-                              source=self.location) for record in self.records]
+            source=self.location) for record in self.records]
         self.__last_access_time = datetime.now()
         return packets
 

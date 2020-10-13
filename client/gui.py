@@ -75,30 +75,30 @@ class PacketRavenGUI:
         self.__frames['configuration'] = configuration_frame
 
         start_date_entry = self.__add_entry_box(configuration_frame, title='start_date', label='Start Date', width=22,
-                                                sticky='w')
+            sticky='w')
         self.__add_entry_box(configuration_frame, title='end_date', label='End Date', width=22,
-                             row=start_date_entry.grid_info()['row'], column=start_date_entry.grid_info()['column'] + 1,
-                             sticky='e')
+            row=start_date_entry.grid_info()['row'], column=start_date_entry.grid_info()['column'] + 1,
+            sticky='e')
 
         separator = Separator(configuration_frame, orient=tkinter.HORIZONTAL)
         separator.grid(row=configuration_frame.grid_size()[1], column=0, columnspan=configuration_frame.grid_size()[0] + 1,
-                       sticky='ew', pady=10)
+            sticky='ew', pady=10)
 
         self.__add_entry_box(configuration_frame, title='callsigns', label='Callsigns', width=55, columnspan=3)
         self.__file_selection_option = 'select file...'
         self.__add_combo_box(configuration_frame, title='tnc', label='TNC',
-                             options=list(available_serial_ports()) + [self.__file_selection_option],
-                             option_select=self.__select_tnc,
-                             width=52, columnspan=3, sticky='w')
+            options=list(available_serial_ports()) + [self.__file_selection_option],
+            option_select=self.__select_tnc,
+            width=52, columnspan=3, sticky='w')
 
         separator = Separator(configuration_frame, orient=tkinter.HORIZONTAL)
         separator.grid(row=configuration_frame.grid_size()[1], column=0, columnspan=configuration_frame.grid_size()[0] + 1,
-                       sticky='ew', pady=10)
+            sticky='ew', pady=10)
 
         self.__add_file_box(configuration_frame, title='log_file', file_select=self.__select_log_file, label='Log', width=55,
-                            columnspan=3, sticky='w')
+            columnspan=3, sticky='w')
         self.__add_file_box(configuration_frame, title='output_file', file_select=self.__select_output_file, label='Output',
-                            width=55, columnspan=3, sticky='w')
+            width=55, columnspan=3, sticky='w')
 
         separator = Separator(main_window, orient=tkinter.HORIZONTAL)
         separator.grid(row=main_window.grid_size()[1], column=0, sticky='ew')
@@ -274,23 +274,23 @@ class PacketRavenGUI:
 
     def __select_log_file(self):
         self.log_filename = filedialog.asksaveasfilename(title='Create log file...',
-                                                         initialdir=self.log_filename.parent,
-                                                         initialfile=self.log_filename.stem,
-                                                         defaultextension='.txt',
-                                                         filetypes=[('Text', '*.txt')])
+            initialdir=self.log_filename.parent,
+            initialfile=self.log_filename.stem,
+            defaultextension='.txt',
+            filetypes=[('Text', '*.txt')])
 
     def __select_output_file(self):
         self.output_filename = filedialog.asksaveasfilename(title='Create output file...',
-                                                            initialdir=self.output_filename.parent,
-                                                            initialfile=self.output_filename.stem,
-                                                            defaultextension='.geojson',
-                                                            filetypes=[('GeoJSON', '*.geojson'),
-                                                                       ('Keyhole Markup Language', '*.kml')])
+            initialdir=self.output_filename.parent,
+            initialfile=self.output_filename.stem,
+            defaultextension='.geojson',
+            filetypes=[('GeoJSON', '*.geojson'),
+                       ('Keyhole Markup Language', '*.kml')])
 
     def __select_tnc(self, event):
         if event.widget.get() == self.__file_selection_option:
             self.tnc = filedialog.askopenfilename(title='Select TNC text file...', defaultextension='.txt',
-                                                  filetypes=[('Text', '*.txt')])
+                filetypes=[('Text', '*.txt')])
 
     def __add_combo_box(self, frame: tkinter.Frame, title: str, options: [str], option_select: Callable = None,
                         **kwargs) -> Combobox:
@@ -305,7 +305,7 @@ class PacketRavenGUI:
         file_box = self.__add_entry_box(frame, title, **kwargs)
         log_file_button = tkinter.Button(frame, text='...', command=file_select)
         log_file_button.grid(row=file_box.grid_info()['row'],
-                             column=file_box.grid_info()['column'] + file_box.grid_info()['columnspan'])
+            column=file_box.grid_info()['column'] + file_box.grid_info()['columnspan'])
         return file_box
 
     def __add_entry_box(self, frame: tkinter.Frame, title: str, **kwargs) -> tkinter.Entry:
@@ -389,7 +389,7 @@ class PacketRavenGUI:
                 api_key = self.__connection_configuration['aprs_fi']['api_key']
                 if api_key is None:
                     api_key = simpledialog.askstring('APRS.fi API Key', 'enter API key for https://aprs.fi',
-                                                     parent=self.__windows['main'], show='*')
+                        parent=self.__windows['main'], show='*')
                 try:
                     aprs_api = APRSfi(self.callsigns, api_key=api_key)
                     LOGGER.info(f'established connection to {aprs_api.location}')
@@ -411,18 +411,18 @@ class PacketRavenGUI:
                                         '@', 1)
                                 if 'ssh_username' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_username'] is None:
                                     ssh_username = simpledialog.askstring('SSH Tunnel Username',
-                                                                          f'enter username for SSH host '
-                                                                          f'"{ssh_tunnel_kwargs["ssh_hostname"]}"',
-                                                                          parent=self.__windows['main'])
+                                        f'enter username for SSH host '
+                                        f'"{ssh_tunnel_kwargs["ssh_hostname"]}"',
+                                        parent=self.__windows['main'])
                                     if ssh_username is None or len(ssh_username) == 0:
                                         raise ConnectionError('missing SSH username')
                                     ssh_tunnel_kwargs['ssh_username'] = ssh_username
 
                                 if 'ssh_password' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_password'] is None:
                                     password = simpledialog.askstring('SSH Tunnel Password',
-                                                                      f'enter password for SSH user '
-                                                                      f'"{ssh_tunnel_kwargs["ssh_username"]}"',
-                                                                      parent=self.__windows['main'], show='*')
+                                        f'enter password for SSH user '
+                                        f'"{ssh_tunnel_kwargs["ssh_username"]}"',
+                                        parent=self.__windows['main'], show='*')
                                     if password is None or len(password) == 0:
                                         raise ConnectionError('missing SSH password')
                                     ssh_tunnel_kwargs['ssh_password'] = password
@@ -430,25 +430,25 @@ class PacketRavenGUI:
                         database_kwargs = self.__connection_configuration['database']
                         if 'username' not in database_kwargs or database_kwargs['username'] is None:
                             database_username = simpledialog.askstring('Database Username',
-                                                                       f'enter username for database '
-                                                                       f'"{database_kwargs["hostname"]}/'
-                                                                       f'{database_kwargs["database"]}"',
-                                                                       parent=self.__windows['main'])
+                                f'enter username for database '
+                                f'"{database_kwargs["hostname"]}/'
+                                f'{database_kwargs["database"]}"',
+                                parent=self.__windows['main'])
                             if database_username is None or len(database_username) == 0:
                                 raise ConnectionError('missing database username')
                             database_kwargs['username'] = database_username
 
                         if 'password' not in database_kwargs or database_kwargs['password'] is None:
                             database_password = simpledialog.askstring('Database Password',
-                                                                       f'enter password for database user '
-                                                                       f'"{database_kwargs["username"]}"',
-                                                                       parent=self.__windows['main'], show='*')
+                                f'enter password for database user '
+                                f'"{database_kwargs["username"]}"',
+                                parent=self.__windows['main'], show='*')
                             if database_password is None or len(database_password) == 0:
                                 raise ConnectionError('missing database password')
                             database_kwargs['password'] = database_password
 
                         self.database = APRSDatabaseTable(**database_kwargs, **ssh_tunnel_kwargs,
-                                                          callsigns=self.callsigns)
+                            callsigns=self.callsigns)
                         LOGGER.info(f'connected to {self.database.location}')
                         self.__connections.append(self.database)
                         self.__connection_configuration['database'].update(database_kwargs)
@@ -465,17 +465,17 @@ class PacketRavenGUI:
                         aprs_is_kwargs = self.__connection_configuration['aprs_is']
                         if 'aprs_is_username' not in aprs_is_kwargs or aprs_is_kwargs['aprs_is_username'] is None:
                             aprs_is_username = simpledialog.askstring('APRS-IS Username',
-                                                                      f'enter username for APRS-IS',
-                                                                      parent=self.__windows['main'])
+                                f'enter username for APRS-IS',
+                                parent=self.__windows['main'])
                             if aprs_is_username is None or len(aprs_is_username) == 0:
                                 raise ConnectionError('missing APRS-IS username')
                             aprs_is_kwargs['aprs_is_username'] = aprs_is_username
 
                         if 'aprs_is_password' not in aprs_is_kwargs or aprs_is_kwargs['aprs_is_password'] is None:
                             aprs_is_password = simpledialog.askstring('APRS-IS Password',
-                                                                      f'enter password for APRS-IS user "'
-                                                                      f'{aprs_is_kwargs["aprs_is_username"]}"',
-                                                                      parent=self.__windows['main'], show='*')
+                                f'enter password for APRS-IS user "'
+                                f'{aprs_is_kwargs["aprs_is_username"]}"',
+                                parent=self.__windows['main'], show='*')
                             if aprs_is_password is None or len(aprs_is_password) == 0:
                                 raise ConnectionError('missing APRS-IS password')
                             aprs_is_kwargs['aprs_is_password'] = aprs_is_password
@@ -534,8 +534,8 @@ class PacketRavenGUI:
             try:
                 existing_callsigns = list(self.packet_tracks)
                 parsed_packets = retrieve_packets(self.__connections, self.__packet_tracks, self.database,
-                                                  self.output_filename,
-                                                  self.start_date, self.end_date, logger=LOGGER)
+                    self.output_filename,
+                    self.start_date, self.end_date, logger=LOGGER)
 
                 if self.aprs_is is not None:
                     self.aprs_is.upload(parsed_packets)
@@ -551,50 +551,50 @@ class PacketRavenGUI:
                         self.__add_text_box(window, title=f'{callsign}.packets', label='Packet #', sticky='w')
 
                         self.__add_text_box(window, title=f'{callsign}.time', label='Time', width=19, sticky='w',
-                                            row=self.__elements[f'{callsign}.callsign'].grid_info()['row'],
-                                            column=self.__elements[f'{callsign}.callsign'].grid_info()['column'] + 3,
-                                            columnspan=2)
+                            row=self.__elements[f'{callsign}.callsign'].grid_info()['row'],
+                            column=self.__elements[f'{callsign}.callsign'].grid_info()['column'] + 3,
+                            columnspan=2)
                         self.__add_text_box(window, title=f'{callsign}.interval', label='Interval', units='s', sticky='w',
-                                            row=self.__elements[f'{callsign}.packets'].grid_info()['row'],
-                                            column=self.__elements[f'{callsign}.packets'].grid_info()['column'] + 3)
+                            row=self.__elements[f'{callsign}.packets'].grid_info()['row'],
+                            column=self.__elements[f'{callsign}.packets'].grid_info()['column'] + 3)
 
                         separator = Separator(window, orient=tkinter.HORIZONTAL)
                         separator.grid(row=window.grid_size()[1], column=0, columnspan=7, sticky='ew', pady=10)
 
                         self.__add_text_box(window, title=f'{callsign}.coordinates', label='Coordinates', width=15, sticky='w',
-                                            columnspan=2)
+                            columnspan=2)
                         self.__add_text_box(window, title=f'{callsign}.distance', label='Distance', units='m', sticky='w')
                         self.__add_text_box(window, title=f'{callsign}.ground_speed', label='Ground Speed', units='m/s',
-                                            sticky='w')
+                            sticky='w')
 
                         self.__add_text_box(window, title=f'{callsign}.altitude', label='Altitude', units='m', sticky='w',
-                                            row=self.__elements[f'{callsign}.coordinates'].grid_info()['row'],
-                                            column=self.__elements[f'{callsign}.coordinates'].grid_info()['column'] + 3)
+                            row=self.__elements[f'{callsign}.coordinates'].grid_info()['row'],
+                            column=self.__elements[f'{callsign}.coordinates'].grid_info()['column'] + 3)
                         self.__add_text_box(window, title=f'{callsign}.ascent', label='Ascent', units='m', sticky='w',
-                                            row=self.__elements[f'{callsign}.distance'].grid_info()['row'],
-                                            column=self.__elements[f'{callsign}.distance'].grid_info()['column'] + 3)
+                            row=self.__elements[f'{callsign}.distance'].grid_info()['row'],
+                            column=self.__elements[f'{callsign}.distance'].grid_info()['column'] + 3)
                         self.__add_text_box(window, title=f'{callsign}.ascent_rate', label='Ascent Rate', units='m/s',
-                                            sticky='w', row=self.__elements[f'{callsign}.ground_speed'].grid_info()['row'],
-                                            column=self.__elements[f'{callsign}.ground_speed'].grid_info()['column'] + 3)
+                            sticky='w', row=self.__elements[f'{callsign}.ground_speed'].grid_info()['row'],
+                            column=self.__elements[f'{callsign}.ground_speed'].grid_info()['column'] + 3)
 
                         separator = Separator(window, orient=tkinter.HORIZONTAL)
                         separator.grid(row=window.grid_size()[1], column=0, columnspan=7, sticky='ew', pady=10)
 
                         self.__add_text_box(window, title=f'{callsign}.distance_downrange', label='Distance Downrange',
-                                            units='m',
-                                            sticky='w')
+                            units='m',
+                            sticky='w')
                         self.__add_text_box(window, title=f'{callsign}.distance_traveled', label='Distance Traveled',
-                                            units='m',
-                                            sticky='w')
+                            units='m',
+                            sticky='w')
 
                         self.__add_text_box(window, title=f'{callsign}.maximum_altitude', label='Max Altitude', units='m',
-                                            sticky='w',
-                                            row=self.__elements[f'{callsign}.distance_downrange'].grid_info()['row'],
-                                            column=self.__elements[f'{callsign}.distance_downrange'].grid_info()['column'] + 3)
+                            sticky='w',
+                            row=self.__elements[f'{callsign}.distance_downrange'].grid_info()['row'],
+                            column=self.__elements[f'{callsign}.distance_downrange'].grid_info()['column'] + 3)
                         self.__add_text_box(window, title=f'{callsign}.time_to_ground', label='Time to Ground', units='s',
-                                            sticky='w',
-                                            row=self.__elements[f'{callsign}.distance_traveled'].grid_info()['row'],
-                                            column=self.__elements[f'{callsign}.distance_traveled'].grid_info()['column'] + 3)
+                            sticky='w',
+                            row=self.__elements[f'{callsign}.distance_traveled'].grid_info()['row'],
+                            column=self.__elements[f'{callsign}.distance_traveled'].grid_info()['column'] + 3)
 
                         separator = Separator(window, orient=tkinter.VERTICAL)
                         separator.grid(row=0, column=3, rowspan=window.grid_size()[1] + 2, sticky='ns', padx=10)
@@ -617,7 +617,7 @@ class PacketRavenGUI:
                     self.replace_text(self.__elements[f'{callsign}.time'], f'{packet_track.times[-1]}')
                     self.replace_text(self.__elements[f'{callsign}.altitude'], f'{packet_track.coordinates[-1, 2]:.3f}')
                     self.replace_text(self.__elements[f'{callsign}.coordinates'],
-                                      ', '.join(f'{value:.3f}' for value in packet_track.coordinates[-1, :2]))
+                        ', '.join(f'{value:.3f}' for value in packet_track.coordinates[-1, :2]))
                     self.replace_text(self.__elements[f'{callsign}.ascent'], f'{packet_track.ascents[-1]:.2f}')
                     self.replace_text(self.__elements[f'{callsign}.distance'], f'{packet_track.distances[-1]:.2f}')
                     self.replace_text(self.__elements[f'{callsign}.interval'], f'{packet_track.intervals[-1]:.2f}')
@@ -625,11 +625,11 @@ class PacketRavenGUI:
                     self.replace_text(self.__elements[f'{callsign}.ground_speed'], f'{packet_track.ground_speeds[-1]:.2f}')
 
                     self.replace_text(self.__elements[f'{callsign}.distance_downrange'],
-                                      f'{packet_track.distance_from_start:.2f}')
+                        f'{packet_track.distance_from_start:.2f}')
                     self.replace_text(self.__elements[f'{callsign}.distance_traveled'], f'{packet_track.length:.2f}')
 
                     self.replace_text(self.__elements[f'{callsign}.maximum_altitude'],
-                                      f'{packet_track.coordinates[:, 2].max():.2f}')
+                        f'{packet_track.coordinates[:, 2].max():.2f}')
 
                     landing_box = self.__elements[f'{callsign}.time_to_ground']
 

@@ -43,8 +43,8 @@ GEOMETRY_TYPES = (Point, LineString, Polygon, MultiPoint, MultiLineString, Multi
 
 
 class DatabaseTable(NetworkConnection):
-    def __init__(self, hostname: str, database: str, table: str, fields: {str: type}, location: str, primary_key: str = None,
-                 crs: CRS = None, username: str = None, password: str = None, users: [str] = None, **kwargs):
+    def __init__(self, hostname: str, database: str, table: str, fields: {str: type}, primary_key: str = None, crs: CRS = None,
+                 username: str = None, password: str = None, users: [str] = None, **kwargs):
         # parse port from URL
         self.hostname, self.port = split_URL_port(hostname)
         if self.port is None:
@@ -87,9 +87,9 @@ class DatabaseTable(NetworkConnection):
             ssh_password = kwargs['ssh_password'] if 'ssh_password' in kwargs else None
 
             self.tunnel = SSHTunnelForwarder((ssh_hostname, ssh_port),
-                                             ssh_username=ssh_username, ssh_password=ssh_password,
-                                             remote_bind_address=('localhost', self.port),
-                                             local_bind_address=('localhost', random_open_tcp_port()))
+                ssh_username=ssh_username, ssh_password=ssh_password,
+                remote_bind_address=('localhost', self.port),
+                local_bind_address=('localhost', random_open_tcp_port()))
             try:
                 self.tunnel.start()
             except Exception as error:
@@ -159,7 +159,7 @@ class DatabaseTable(NetworkConnection):
                                 cursor.execute(f'GRANT INSERT, SELECT, UPDATE, DELETE ON TABLE public.{self.table} TO {user};')
 
                             cursor.execute('SELECT column_name FROM information_schema.columns WHERE table_name=%s;',
-                                           [f'{copy_table_name}'])
+                                [f'{copy_table_name}'])
                             column_names = [record[0] for record in cursor.fetchall()]
 
                             cursor.execute(f'INSERT INTO {self.table} ({", ".join(column_names)}) '
@@ -348,14 +348,14 @@ class DatabaseTable(NetworkConnection):
                             if len(record_without_primary_key) > 1:
                                 cursor.execute(f'UPDATE {self.table} SET ({", ".join(record_without_primary_key.keys())}) = %s'
                                                f' WHERE {primary_key_string} = %s;',
-                                               [tuple(record_without_primary_key.values()), primary_key_value])
+                                    [tuple(record_without_primary_key.values()), primary_key_value])
                             else:
                                 cursor.execute(f'UPDATE {self.table} SET {tuple(record_without_primary_key.keys())[0]} = %s'
                                                f' WHERE {primary_key_string} = %s;',
-                                               [tuple(record_without_primary_key.values())[0], primary_key_value])
+                                    [tuple(record_without_primary_key.values())[0], primary_key_value])
                     else:
                         cursor.execute(f'INSERT INTO {self.table} ({", ".join(columns)}) VALUES %s;',
-                                       [tuple(values)])
+                            [tuple(values)])
 
                     if len(geometry_fields) > 0:
                         geometries = {field: record[field] for field in geometry_fields}
@@ -363,7 +363,7 @@ class DatabaseTable(NetworkConnection):
                         for field, geometry in geometries.items():
                             cursor.execute(f'UPDATE {self.table} SET {field} = ST_GeomFromWKB(%s::geometry, %s) '
                                            f'WHERE {primary_key_string} = %s;',
-                                           [geometry.wkb, self.crs.to_epsg(), primary_key_value])
+                                [geometry.wkb, self.crs.to_epsg(), primary_key_value])
 
     @property
     def schema(self) -> str:
@@ -391,7 +391,7 @@ class DatabaseTable(NetworkConnection):
             with self.connection.cursor() as cursor:
                 if database_has_table(cursor, self.table):
                     cursor.execute(f'SELECT column_name, udt_name FROM information_schema.columns WHERE table_name=%s;',
-                                   [self.table])
+                        [self.table])
                     fields = {field[0]: field[1] for field in cursor.fetchall()}
 
                     for field, field_type in fields.items():
