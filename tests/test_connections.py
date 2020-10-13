@@ -36,8 +36,8 @@ class TestNetworkConnections(unittest.TestCase):
 
         aprs_is = APRSis(balloon_callsigns, credentials['aprs_fi']['api_key'])
 
-        with aprs_api:
-            packets = aprs_api.packets
+        with aprs_is:
+            packets = aprs_is.packets
 
         assert all(type(packet) is APRSPacket for packet in packets)
 
@@ -66,13 +66,11 @@ class TestNetworkConnections(unittest.TestCase):
                 'password': os.environ['POSTGRES_PASSWORD']
             }
             if 'ssh_hostname' in os.environ:
-                credentials['database']['ssh_hostname'] = os.environ['ssh_hostname']
-            if 'ssh_port' in os.environ:
-                credentials['database']['ssh_port'] = os.environ['ssh_port']
+                credentials['database']['ssh_hostname'] = os.environ['SSH_HOSTNAME']
             if 'ssh_username' in os.environ:
-                credentials['database']['ssh_username'] = os.environ['ssh_username']
+                credentials['database']['ssh_username'] = os.environ['SSH_USERNAME']
             if 'ssh_password' in os.environ:
-                credentials['database']['ssh_password'] = os.environ['ssh_password']
+                credentials['database']['ssh_password'] = os.environ['SSH_PASSWORD']
 
         credentials['database']['table'] = 'test_table'
 
