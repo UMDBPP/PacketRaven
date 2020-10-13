@@ -122,15 +122,8 @@ def split_URL_port(url: str) -> (str, Union[str, None]):
     """
     Split the given URL into host and port, assuming port is appended after a colon.
 
-    Parameters
-    ----------
-    url
-        URL string
-
-    Returns
-    ----------
-    str, Union[str, None]
-        URL and port (if found)
+    :param url: URL string
+    :return: URL and port (if found)
     """
 
     port = None
