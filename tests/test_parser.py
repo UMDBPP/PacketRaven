@@ -1,6 +1,6 @@
 import unittest
 
-from packetraven.parsing import PartialPacketError, parse_raw_aprs
+from packetraven.parsing import InvalidPacketError, parse_raw_aprs
 
 
 class TestParser(unittest.TestCase):
@@ -15,10 +15,10 @@ class TestParser(unittest.TestCase):
         assert parsed_packet['comment'] == '|!Q|  /W3EAX,262,0,18\'C,http://www.umd.edu'
 
     def test_partial_packets(self):
-        with self.assertRaises(PartialPacketError):
+        with self.assertRaises(InvalidPacketError):
             parse_raw_aprs('W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,KM4LKM')
 
-        with self.assertRaises(PartialPacketError):
+        with self.assertRaises(InvalidPacketError):
             parse_raw_aprs('W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:')
 
 

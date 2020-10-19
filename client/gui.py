@@ -13,8 +13,8 @@ from dateutil.parser import parse
 
 from client import DEFAULT_INTERVAL_SECONDS
 from client.retrieve import retrieve_packets
-from packetraven.connections import available_serial_ports, next_open_serial_port
-from packetraven.sources import APRSDatabaseTable, APRSfi, APRSis, SerialTNC, TextFileTNC
+from packetraven.base import available_serial_ports, next_open_serial_port
+from packetraven.connections import APRSDatabaseTable, APRSfi, APRSis, SerialTNC, TextFileTNC
 from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
 
@@ -480,7 +480,7 @@ class PacketRavenGUI:
                                 raise ConnectionError('missing APRS-IS password')
                             aprs_is_kwargs['aprs_is_password'] = aprs_is_password
 
-                        self.aprs_is = APRSis(aprs_is_kwargs['aprs_is_username'], aprs_is_kwargs['aprs_is_password'])
+                        self.aprs_is = APRSis(aprs_is_kwargs['aprs_is_username'], hostname=aprs_is_kwargs['aprs_is_password'])
                     except ConnectionError as error:
                         connection_errors.append(f'igate - {error}')
                         self.aprs_is = None

@@ -2,11 +2,12 @@ from datetime import datetime
 import os
 import unittest
 
-from client import CREDENTIALS_FILENAME
+from packetraven.connections import APRSDatabaseTable, APRSfi, APRSis
 from packetraven.database import database_has_table
 from packetraven.packets import APRSPacket
-from packetraven.sources import APRSDatabaseTable, APRSfi, APRSis
-from packetraven.utilities import read_configuration
+from packetraven.utilities import read_configuration, repository_root
+
+CREDENTIALS_FILENAME = repository_root() / 'credentials.config'
 
 
 class TestNetworkConnections(unittest.TestCase):
@@ -19,40 +20,24 @@ class TestNetworkConnections(unittest.TestCase):
 
         aprs_api = APRSfi(balloon_callsigns, credentials['aprs_fi']['api_key'])
 
-        with aprs_api:
-            packets = aprs_api.packets
+        packets = aprs_api.packets
 
         assert all(type(packet) is APRSPacket for packet in packets)
 
     def test_aprs_is(self):
-        balloon_callsigns = ['W3EAX-10', 'W3EAX-11', 'W3EAX-13', 'W3EAX-14']
-
-        credentials = read_configuration(CREDENTIALS_FILENAME)
-        if 'aprs_is' not in credentials:
-            credentials['aprs_is'] = {
-                'aprs_is_username': os.environ['APRS_IS_USERNAME'],
-                'aprs_is_password': os.environ['APRS_IS_PASSWORD']
-            }
-
-        aprs_is = APRSis(balloon_callsigns, credentials['aprs_fi']['api_key'])
-
-        with aprs_is:
-            packets = aprs_is.packets
-
-        assert all(type(packet) is APRSPacket for packet in packets)
+        aprs_is = APRSis()
+        assert aprs_is.connected
 
     def test_packet_database(self):
-        packet_1 = APRSPacket.from_frame(
-            "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,"
-            "nearspace.umd.edu",
-            packet_time=datetime(2019, 2, 3, 14, 36, 16))
-        packet_2 = APRSPacket.from_frame(
-            "W3EAX-13>APRS,WIDE1-1,WIDE2-1,qAR,W4TTU:!/:JAe:tn8O   /A=046255|!i|  /W3EAX,322,0,20'C,nearspace.umd.edu",
-            packet_time=datetime(2019, 2, 3, 14, 38, 23))
-        packet_3 = APRSPacket.from_frame(
-            "W3EAX-13>APRS,KC3FIT-1,WIDE1*,WIDE2-1,qAR,KC3AWP-10:!/:JL2:u4wO   /A=043080|!j|  /W3EAX,326,0,20'C,"
-            "nearspace.umd.edu",
-            packet_time=datetime(2019, 2, 3, 14, 39, 28))
+        packet_1 = APRSPacket.from_frame("W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   "
+                                         "/A=053614|!g|  /W3EAX,313,0,21'C,nearspace.umd.edu",
+                packet_time=datetime(2019, 2, 3, 14, 36, 16))
+        packet_2 = APRSPacket.from_frame("W3EAX-13>APRS,WIDE1-1,WIDE2-1,qAR,W4TTU:!/:JAe:tn8O   "
+                                         "/A=046255|!i|  /W3EAX,322,0,20'C,nearspace.umd.edu",
+                packet_time=datetime(2019, 2, 3, 14, 38, 23))
+        packet_3 = APRSPacket.from_frame("W3EAX-13>APRS,KC3FIT-1,WIDE1*,WIDE2-1,qAR,KC3AWP-10:!/:JL2:u4wO   "
+                                         "/A=043080|!j|  /W3EAX,326,0,20'C,nearspace.umd.edu",
+                packet_time=datetime(2019, 2, 3, 14, 39, 28))
 
         input_packets = [packet_1, packet_2, packet_3]
 

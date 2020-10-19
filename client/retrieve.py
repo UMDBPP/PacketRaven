@@ -5,8 +5,8 @@ from os import PathLike
 from aprslib.packets.base import APRSPacket
 
 from packetraven import APRSDatabaseTable
-from packetraven.connections import APRSPacketSource
-from packetraven.sources import TimeIntervalError
+from packetraven.base import APRSPacketSource
+from packetraven.connections import TimeIntervalError
 from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
 from packetraven.writer import write_aprs_packet_tracks
@@ -69,7 +69,7 @@ def retrieve_packets(connections: [APRSPacketSource], packet_tracks: [APRSTrack]
 
         parsed_packets = sorted(parsed_packets)
         if database is not None:
-            database.update(parsed_packets)
+            database.send(parsed_packets)
 
         updated_callsigns = sorted(updated_callsigns)
         for callsign in updated_callsigns:
