@@ -5,7 +5,7 @@ from typing import Any, Union
 import numpy
 from pyproj import CRS, Geod, Transformer
 
-from .parsing import parse_raw_aprs
+from .parsing import InvalidPacketError, parse_raw_aprs
 
 DEFAULT_CRS = CRS.from_epsg(4326)
 
@@ -143,10 +143,11 @@ class Distance:
 class APRSPacket(LocationPacket):
     """ APRS packet containing parsed APRS fields, along with location and time """
 
-    def __init__(self, time: datetime, x: float, y: float, z: float, crs: CRS = None, **kwargs):
+    def __init__(self, callsign: str, time: datetime, x: float, y: float, z: float = None, crs: CRS = None, **kwargs):
         """
         APRS packet object from raw packet and given datetime
 
+        :param callsign: originating callsign of packet
         :param x: x value
         :param y: y value
         :param z: z value
@@ -154,45 +155,47 @@ class APRSPacket(LocationPacket):
         :param time: time of packet, either as datetime object, seconds since Unix epoch, or ISO format date string.
         """
 
-        if 'callsign' in kwargs:
-            kwargs['from'] = kwargs['callsign']
-            del kwargs['callsign']
-        if 'from' not in kwargs:
-            kwargs['from'] = None
-
+        kwargs['from'] = callsign
         super().__init__(time, x, y, z, crs, **kwargs)
 
     @classmethod
-    def from_raw_aprs(cls, raw_aprs: Union[str, bytes, dict], time: datetime = None, **kwargs) -> 'APRSPacket':
+    def from_frame(cls, frame: Union[str, bytes, dict], packet_time: datetime = None, **kwargs) -> 'APRSPacket':
         """
         APRS packet object from raw packet and given datetime
 
-        :param raw_aprs: string containing raw packet
-        :param time: Time of packet, either as datetime object, seconds since Unix epoch, or ISO format date string.
+        :param frame: string containing raw packet
+        :param packet_time: Time of packet, either as datetime object, seconds since Unix epoch, or ISO format date string.
         """
 
         # parse packet with metric units
-        parsed_packet = parse_raw_aprs(raw_aprs)
+        parsed_packet = parse_raw_aprs(frame)
 
-        if 'longitude' in parsed_packet and 'latitude' in parsed_packet:
-            if time is None:
-                if 'timestamp' in parsed_packet:
-                    # extract time from Unix epoch
-                    time = datetime.fromtimestamp(float(parsed_packet['timestamp']))
-                else:
-                    # TODO make HABduino add timestamp to packet upon transmission
-                    # otherwise default to time the packet was received (now)
-                    time = datetime.now()
+        if 'longitude' not in parsed_packet or 'latitude' not in parsed_packet:
+            raise InvalidPacketError(f'Input packet does not contain location data: {frame}')
 
-            return cls(time, parsed_packet['longitude'], parsed_packet['latitude'],
-                       parsed_packet['altitude'] if 'altitude' in parsed_packet else None, crs=DEFAULT_CRS, **parsed_packet,
-                       **kwargs)
-        else:
-            raise ValueError(f'Input packet does not contain location data: {raw_aprs}')
+        if packet_time is None:
+            if 'timestamp' in parsed_packet:
+                # extract time from Unix epoch
+                packet_time = datetime.fromtimestamp(float(parsed_packet['timestamp']))
+            else:
+                # TODO make HABduino add timestamp to packet upon transmission
+                # otherwise default to time the packet was received (now)
+                packet_time = datetime.now()
+
+        return cls(parsed_packet['from'], packet_time, parsed_packet['longitude'], parsed_packet['latitude'],
+                   parsed_packet['altitude'] if 'altitude' in parsed_packet else None, crs=DEFAULT_CRS, **parsed_packet, **kwargs)
 
     @property
     def callsign(self) -> str:
         return self['callsign']
+
+    @property
+    def frame(self) -> str:
+        if 'raw' in self:
+            frame = self['raw']
+        else:
+            frame = f'{self.callsign}>{self["to"]},{self["path"]}:'
+        return frame
 
     def __getitem__(self, field: str):
         if field == 'callsign':

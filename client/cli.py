@@ -8,31 +8,33 @@ import time
 
 from dateutil.parser import parse as parse_date
 
-from client import CREDENTIALS_FILENAME, DEFAULT_INTERVAL_SECONDS
+from client import DEFAULT_INTERVAL_SECONDS
 from client.gui import PacketRavenGUI
 from client.retrieve import retrieve_packets
-from packetraven.connections import APRSDatabaseTable, APRSfi, SerialTNC, TextFileTNC
-from packetraven.utilities import get_logger, read_configuration
+from packetraven.connections import APRSDatabaseTable, APRSfi, APRSis, SerialTNC, TextFileTNC
+from packetraven.utilities import get_logger, read_configuration, repository_root
 
 LOGGER = get_logger('packetraven')
+
+CREDENTIALS_FILENAME = repository_root() / 'credentials.config'
 
 
 def main():
     args_parser = ArgumentParser()
-    args_parser.add_argument('-c', '--callsigns', help='comma-separated list of callsigns to track')
-    args_parser.add_argument('-k', '--apikey', help='API key from https://aprs.fi/page/api')
-    args_parser.add_argument('-p', '--tnc', help='serial port or text file of TNC parsing APRS packets '
-                                                 'from analog audio to ASCII (set to `auto` to use the first open serial '
-                                                 'port)')
-    args_parser.add_argument('-d', '--database', help='PostGres database table `user@hostname:port/database/table`')
-    args_parser.add_argument('-t', '--tunnel', help='SSH tunnel `user@hostname:port`')
-    args_parser.add_argument('-s', '--start', help='start date / time, in any common date format')
-    args_parser.add_argument('-e', '--end', help='end date / time, in any common date format')
-    args_parser.add_argument('-l', '--log', help='path to log file to save log messages')
-    args_parser.add_argument('-o', '--output', help='path to output file to save packets')
-    args_parser.add_argument('-i', '--interval', default=DEFAULT_INTERVAL_SECONDS, type=float,
+    args_parser.add_argument('--callsigns', help='comma-separated list of callsigns to track')
+    args_parser.add_argument('--apikey', help='APRS.fi API key (from https://aprs.fi/page/api)')
+    args_parser.add_argument('--tnc', help='serial port or text file of TNC parsing APRS packets from analog audio to ASCII'
+                                           ' (set to `auto` to use the first open serial port)')
+    args_parser.add_argument('--database', help='PostGres database table `user@hostname:port/database/table`')
+    args_parser.add_argument('--tunnel', help='SSH tunnel `user@hostname:port`')
+    args_parser.add_argument('--igate', action='store_true', help='send new packets to APRS-IS')
+    args_parser.add_argument('--start', help='start date / time, in any common date format')
+    args_parser.add_argument('--end', help='end date / time, in any common date format')
+    args_parser.add_argument('--log', help='path to log file to save log messages')
+    args_parser.add_argument('--output', help='path to output file to save packets')
+    args_parser.add_argument('--interval', default=DEFAULT_INTERVAL_SECONDS, type=float,
                              help='seconds between each main loop (default: 5)')
-    args_parser.add_argument('-g', '--gui', action='store_true', help='start the graphical interface')
+    args_parser.add_argument('--gui', action='store_true', help='start the graphical interface')
     args = args_parser.parse_args()
 
     using_gui = args.gui
@@ -64,6 +66,9 @@ def main():
             kwargs['ssh_username'], kwargs['ssh_hostname'] = kwargs['ssh_hostname'].split('@', 1)
             if ':' in kwargs['ssh_username']:
                 kwargs['ssh_username'], kwargs['ssh_password'] = kwargs['ssh_username'].split(':', 1)
+
+    if args.igate is not None:
+        kwargs['aprs_is_username'] = args.igate
 
     if args.start is not None:
         kwargs['start_date'] = parse_date(args.start.strip('"'))
@@ -111,17 +116,6 @@ def main():
     else:
         start_date = kwargs['start_date'] if 'start_date' in kwargs else None
         end_date = kwargs['end_date'] if 'end_date' in kwargs else None
-
-        filter_message = 'retrieving packets'
-        if start_date is not None and end_date is None:
-            filter_message += f' sent after {start_date:%Y-%m-%d %H:%M:%S}'
-        elif start_date is None and end_date is not None:
-            filter_message += f' sent before {end_date:%Y-%m-%d %H:%M:%S}'
-        elif start_date is not None and end_date is not None:
-            filter_message += f' sent between {start_date:%Y-%m-%d %H:%M:%S} and {end_date:%Y-%m-%d %H:%M:%S}'
-        if callsigns is not None:
-            filter_message += f' from {len(callsigns)} callsigns: {callsigns}'
-        LOGGER.info(filter_message)
 
         connections = []
         if 'tnc' in kwargs:
@@ -191,18 +185,57 @@ def main():
         else:
             database = None
 
+        if 'aprs_is' in kwargs and kwargs['aprs_is_username'] is not None:
+            try:
+                aprs_is_kwargs = {key: kwargs[key] for key in ['aprs_is_hostname', 'aprs_is_username', 'aprs_is_password']
+                                  if key in kwargs}
+                if 'aprs_is_username' not in aprs_is_kwargs or aprs_is_kwargs['aprs_is_username'] is None:
+                    aprs_is_callsign = getpass(f'enter username for APRS-IS: ')
+                    if aprs_is_callsign is None or len(aprs_is_callsign) == 0:
+                        raise ConnectionError('missing APRS-IS username')
+                    aprs_is_kwargs['aprs_is_username'] = aprs_is_callsign
+
+                if 'aprs_is_password' not in aprs_is_kwargs or aprs_is_kwargs['aprs_is_password'] is None:
+                    aprs_is_password = getpass(f'enter password for APRS-IS username {aprs_is_callsign}: ')
+                    if aprs_is_password is None or len(aprs_is_password) == 0:
+                        raise ConnectionError('missing APRS-IS password')
+                    aprs_is_kwargs['aprs_is_password'] = aprs_is_password
+
+                aprs_is = APRSis(aprs_is_kwargs['aprs_is_username'], hostname=aprs_is_kwargs['aprs_is_password'])
+            except ConnectionError:
+                aprs_is = None
+
         if len(connections) == 0:
             LOGGER.error(f'no connections started')
             sys.exit(1)
+
+        filter_message = 'retrieving packets'
+        if start_date is not None and end_date is None:
+            filter_message += f' sent after {start_date:%Y-%m-%d %H:%M:%S}'
+        elif start_date is None and end_date is not None:
+            filter_message += f' sent before {end_date:%Y-%m-%d %H:%M:%S}'
+        elif start_date is not None and end_date is not None:
+            filter_message += f' sent between {start_date:%Y-%m-%d %H:%M:%S} and {end_date:%Y-%m-%d %H:%M:%S}'
+        if callsigns is not None:
+            filter_message += f' from {len(callsigns)} callsigns: {callsigns}'
+        LOGGER.info(filter_message)
 
         LOGGER.info(f'listening for packets every {interval_seconds}s from {len(connections)} connection(s): '
                     f'{", ".join([connection.location for connection in connections])}')
 
         packet_tracks = {}
-        while len(connections) > 0:
-            retrieve_packets(connections, packet_tracks, database, output_filename, start_date=start_date, end_date=end_date,
-                             logger=LOGGER)
-            time.sleep(interval_seconds)
+        try:
+            while len(connections) > 0:
+                parsed_packets = retrieve_packets(connections, packet_tracks, database, output_filename, start_date=start_date,
+                                                  end_date=end_date,
+                                                  logger=LOGGER)
+                if aprs_is is not None:
+                    aprs_is.upload(parsed_packets)
+                time.sleep(interval_seconds)
+        except KeyboardInterrupt:
+            for connection in connections:
+                connection.close()
+            sys.exit(0)
 
 
 if __name__ == '__main__':

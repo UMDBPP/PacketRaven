@@ -27,7 +27,8 @@ setup(
         'pyproj',
         'psycopg2-binary',
         'shapely',
-        'sshtunnel'
+        'sshtunnel',
+        'tablecrow>=1.0.5',
     ],
     extras_require={'dev': ['coverage', 'flake8', 'nose']},
     entry_points={'console_scripts': ['packetraven=client.cli:main']},

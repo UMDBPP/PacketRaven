@@ -17,19 +17,19 @@ def parse_raw_aprs(raw_aprs: Union[str, dict]) -> dict:
         try:
             parsed_packet = aprslib.parse(raw_aprs)
         except aprslib.ParseError as error:
-            raise PartialPacketError(str(error))
+            raise InvalidPacketError(str(error))
     else:
         parsed_packet = {
-            'from'        : raw_aprs['srccall'],
-            'to'          : raw_aprs['dstcall'],
-            'path'        : raw_aprs['path'].split(','),
-            'timestamp'   : raw_aprs['time'],
-            'symbol'      : raw_aprs['symbol'][1:],
+            'from': raw_aprs['srccall'],
+            'to': raw_aprs['dstcall'],
+            'path': raw_aprs['path'].split(','),
+            'timestamp': raw_aprs['time'],
+            'symbol': raw_aprs['symbol'][1:],
             'symbol_table': raw_aprs['symbol'][0],
-            'latitude'    : float(raw_aprs['lat']),
-            'longitude'   : float(raw_aprs['lng']),
-            'altitude'    : float(raw_aprs['altitude']) if 'altitude' in raw_aprs else 0,
-            'comment'     : raw_aprs['comment'] if 'comment' in raw_aprs else 'comment'
+            'latitude': float(raw_aprs['lat']),
+            'longitude': float(raw_aprs['lng']),
+            'altitude': float(raw_aprs['altitude']) if 'altitude' in raw_aprs else None,
+            'comment': raw_aprs['comment'] if 'comment' in raw_aprs else 'comment',
         }
 
     # parsed_packet = {'raw':str(raw_aprs)}
@@ -67,41 +67,49 @@ def parse_raw_aprs(raw_aprs: Union[str, dict]) -> dict:
     return parsed_packet
 
 
-class PartialPacketError(Exception):
+class InvalidPacketError(Exception):
     pass
 
 
-def decompress_aprs_lon(compressed_lon: str) -> float:
+def decompress_longitude(compressed_longitude: str) -> float:
     """
     Decode longitude string from APRS compressed format (shifted ASCII in base 91) to a float.
 
-    :param compressed_lon: compressed APRS longitude string
+    :param compressed_longitude: compressed APRS longitude string
     :return: longitude
     """
 
     converted_floats = []
-    current_power = len(compressed_lon) - 1
+    current_power = len(compressed_longitude) - 1
 
-    for character in compressed_lon:
+    for character in compressed_longitude:
         converted_floats.append(float(ord(character) - 33) * (91 ** current_power))
         current_power -= 1
 
     return -180 + (sum(converted_floats) / 190463)
 
 
-def decompress_aprs_lat(compressed_lat: str) -> float:
+def decompress_latitude(compressed_latitude: str) -> float:
     """
     Decode latitude string from APRS compressed format (shifted ASCII in base 91) to a float.
 
-    :param compressed_lat: compressed APRS latitude string
+    :param compressed_latitude: compressed APRS latitude string
     :return: latitude
     """
 
     converted_floats = []
-    current_power = len(compressed_lat) - 1
+    current_power = len(compressed_latitude) - 1
 
-    for character in compressed_lat:
+    for character in compressed_latitude:
         converted_floats.append(float(ord(character) - 33) * (91 ** current_power))
         current_power -= 1
 
     return 90 - (sum(converted_floats) / 380926)
+
+
+def compress_longitude(longitude: float) -> str:
+    pass
+
+
+def compress_latitude(latitude: float) -> str:
+    pass

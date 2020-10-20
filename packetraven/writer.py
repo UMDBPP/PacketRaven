@@ -22,10 +22,10 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
         for packet_track in packet_tracks:
             features.extend(geojson.Feature(geometry=geojson.Point(packet.coordinates.tolist()),
                                             properties={
-                                                'time'        : f'{packet.time:%Y%m%d%H%M%S}',
-                                                'callsign'    : packet.callsign,
-                                                'altitude'    : packet.coordinates[2],
-                                                'ascent_rate' : packet_track.ascent_rates[packet_index],
+                                                'time': f'{packet.time:%Y%m%d%H%M%S}',
+                                                'callsign': packet.callsign,
+                                                'altitude': packet.coordinates[2],
+                                                'ascent_rate': packet_track.ascent_rates[packet_index],
                                                 'ground_speed': packet_track.ground_speeds[packet_index]
                                             })
                             for packet_index, packet in enumerate(packet_track))
@@ -33,11 +33,11 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
             features.append(geojson.Feature(geometry=geojson.LineString([packet.coordinates.tolist()
                                                                          for packet in packet_track.packets]),
                                             properties={
-                                                'time'             : f'{packet_track.packets[-1].time:%Y%m%d%H%M%S}',
-                                                'callsign'         : packet_track.callsign,
-                                                'altitude'         : packet_track.coordinates[-1, -1],
-                                                'ascent_rate'      : packet_track.ascent_rates[-1],
-                                                'ground_speed'     : packet_track.ground_speeds[-1],
+                                                'time': f'{packet_track.packets[-1].time:%Y%m%d%H%M%S}',
+                                                'callsign': packet_track.callsign,
+                                                'altitude': packet_track.coordinates[-1, -1],
+                                                'ascent_rate': packet_track.ascent_rates[-1],
+                                                'ground_speed': packet_track.ground_speeds[-1],
                                                 'seconds_to_ground': packet_track.time_to_ground / timedelta(seconds=1)
                                             }))
 
