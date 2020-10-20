@@ -20,16 +20,16 @@ def parse_raw_aprs(raw_aprs: Union[str, dict]) -> dict:
             raise InvalidPacketError(str(error))
     else:
         parsed_packet = {
-            'from'        : raw_aprs['srccall'],
-            'to'          : raw_aprs['dstcall'],
-            'path'        : raw_aprs['path'].split(','),
-            'timestamp'   : raw_aprs['time'],
-            'symbol'      : raw_aprs['symbol'][1:],
+            'from': raw_aprs['srccall'],
+            'to': raw_aprs['dstcall'],
+            'path': raw_aprs['path'].split(','),
+            'timestamp': raw_aprs['time'],
+            'symbol': raw_aprs['symbol'][1:],
             'symbol_table': raw_aprs['symbol'][0],
-            'latitude'    : float(raw_aprs['lat']),
-            'longitude'   : float(raw_aprs['lng']),
-            'altitude'    : float(raw_aprs['altitude']) if 'altitude' in raw_aprs else None,
-            'comment'     : raw_aprs['comment'] if 'comment' in raw_aprs else 'comment',
+            'latitude': float(raw_aprs['lat']),
+            'longitude': float(raw_aprs['lng']),
+            'altitude': float(raw_aprs['altitude']) if 'altitude' in raw_aprs else None,
+            'comment': raw_aprs['comment'] if 'comment' in raw_aprs else 'comment',
         }
 
     # parsed_packet = {'raw':str(raw_aprs)}

@@ -143,7 +143,7 @@ class Distance:
 class APRSPacket(LocationPacket):
     """ APRS packet containing parsed APRS fields, along with location and time """
 
-    def __init__(self, callsign: str, time: datetime, x: float, y: float, z: float, crs: CRS = None, **kwargs):
+    def __init__(self, callsign: str, time: datetime, x: float, y: float, z: float = None, crs: CRS = None, **kwargs):
         """
         APRS packet object from raw packet and given datetime
 
@@ -183,7 +183,7 @@ class APRSPacket(LocationPacket):
                 packet_time = datetime.now()
 
         return cls(parsed_packet['from'], packet_time, parsed_packet['longitude'], parsed_packet['latitude'],
-                parsed_packet['altitude'] if 'altitude' in parsed_packet else None, crs=DEFAULT_CRS, **parsed_packet, **kwargs)
+                   parsed_packet['altitude'] if 'altitude' in parsed_packet else None, crs=DEFAULT_CRS, **parsed_packet, **kwargs)
 
     @property
     def callsign(self) -> str:

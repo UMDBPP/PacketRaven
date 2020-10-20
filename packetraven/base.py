@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
 from datetime import timedelta
-from socket import socket
-from typing import Union
 
 import requests
 from serial.tools import list_ports
@@ -21,6 +19,10 @@ class Connection(ABC):
 
 
 class NetworkConnection(Connection):
+    """
+    A connection over the Internet
+    """
+
     @property
     def connected(self) -> bool:
         """ whether current session has a network connection """
@@ -77,12 +79,6 @@ class APRSPacketSink(PacketSink):
         super().send(packets)
 
 
-def random_open_tcp_port() -> int:
-    open_socket = socket()
-    open_socket.bind(('', 0))
-    return open_socket.getsockname()[1]
-
-
 def next_open_serial_port() -> str:
     """
     Get next port in ports list.
@@ -107,26 +103,3 @@ def available_serial_ports() -> str:
         yield com_port.device
     else:
         return None
-
-
-def split_URL_port(url: str) -> (str, Union[str, None]):
-    """
-    Split the given URL into host and port, assuming port is appended after a colon.
-
-    :param url: URL string
-    :return: URL and port (if found)
-    """
-
-    port = None
-
-    if url.count(':') > 0:
-        url = url.split(':')
-        if 'http' in url:
-            url = ':'.join(url[:2])
-            if len(url) > 2:
-                port = int(url[2])
-        else:
-            url, port = url
-            port = int(port)
-
-    return url, port

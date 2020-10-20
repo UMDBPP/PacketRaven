@@ -9,11 +9,10 @@ from dateutil.parser import parse as parse_date
 import requests
 from serial import Serial
 from shapely.geometry import Point
+from tablecrow import PostGresTable
+from tablecrow.table import split_URL_port
 
-from .base import APRSPacketSink, APRSPacketSource, NetworkConnection, PacketSink, PacketSource, \
-    next_open_serial_port, \
-    split_URL_port
-from .database import DatabaseTable
+from .base import APRSPacketSink, APRSPacketSource, NetworkConnection, PacketSink, PacketSource, next_open_serial_port
 from .packets import APRSPacket, LocationPacket
 from .parsing import InvalidPacketError
 from .utilities import get_logger, read_configuration, repository_root
@@ -177,8 +176,8 @@ class APRSfi(APRSPacketSource, NetworkConnection):
                 raise TimeIntervalError(f'interval {interval} less than minimum interval {self.interval}')
 
         query = {
-            'name'  : ','.join(self.callsigns),
-            'what'  : 'loc',
+            'name': ','.join(self.callsigns),
+            'what': 'loc',
             'apikey': self.api_key,
             'format': 'json'
         }
@@ -208,12 +207,12 @@ class APRSfi(APRSPacketSource, NetworkConnection):
         return f'{self.__class__.__name__}({repr(self.callsigns)}, {repr(re.sub(".", "*", self.api_key))})'
 
 
-class PacketDatabaseTable(DatabaseTable, PacketSource, PacketSink):
+class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
     __default_fields = {
-        'time' : datetime,
-        'x'    : float,
-        'y'    : float,
-        'z'    : float,
+        'time': datetime,
+        'x': float,
+        'y': float,
+        'z': float,
         'point': Point
     }
 
@@ -223,8 +222,8 @@ class PacketDatabaseTable(DatabaseTable, PacketSource, PacketSink):
         if 'primary_key' not in kwargs:
             kwargs['primary_key'] = 'time'
         kwargs['fields'] = {**self.__default_fields, **kwargs['fields']}
-        DatabaseTable.__init__(self, hostname, database, table, **kwargs)
-        PacketSource.__init__(self, f'postgresql://{self.hostname}:{self.port}/{self.database}/{self.table}')
+        PostGresTable.__init__(self, hostname, database, table, **kwargs)
+        PacketSource.__init__(self, f'postgresql://{self.hostname}:{self.port}/{self.database}/{self.name}')
 
         if not self.connected:
             raise ConnectionError(f'cannot connect to {self.location}')
@@ -261,7 +260,9 @@ class PacketDatabaseTable(DatabaseTable, PacketSource, PacketSink):
         super().insert(records)
 
     def __contains__(self, packet: LocationPacket) -> bool:
-        super().__contains__([packet[key.replace('packet_', '')] for key in self.primary_key])
+        if isinstance(packet, LocationPacket):
+            packet = [packet[key.replace('packet_', '')] for key in self.primary_key]
+        return super().__contains__(packet)
 
     def send(self, packets: [LocationPacket]):
         new_packets = [packet for packet in packets if packet not in self]
@@ -284,10 +285,10 @@ class PacketDatabaseTable(DatabaseTable, PacketSource, PacketSink):
     @staticmethod
     def __packet_record(packet: LocationPacket) -> {str: Any}:
         return {
-            'time' : packet.time,
-            'x'    : packet.coordinates[0],
-            'y'    : packet.coordinates[1],
-            'z'    : packet.coordinates[2],
+            'time': packet.time,
+            'x': packet.coordinates[0],
+            'y': packet.coordinates[1],
+            'z': packet.coordinates[2],
             'point': Point(*packet.coordinates),
             **{f'packet_{field}': value for field, value in packet.attributes.items()}
         }
@@ -295,16 +296,16 @@ class PacketDatabaseTable(DatabaseTable, PacketSource, PacketSink):
 
 class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
     __aprs_fields = {
-        'from'        : str,
-        'to'          : str,
-        'path'        : [str],
-        'timestamp'   : str,
-        'symbol'      : str,
+        'from': str,
+        'to': str,
+        'path': [str],
+        'timestamp': str,
+        'symbol': str,
         'symbol_table': str,
-        'latitude'    : float,
-        'longitude'   : float,
-        'altitude'    : float,
-        'comment'     : str
+        'latitude': float,
+        'longitude': float,
+        'altitude': float,
+        'comment': str
     }
 
     def __init__(self, hostname: str, database: str, table: str, callsigns: [str] = None, **kwargs):
@@ -325,8 +326,8 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
             kwargs['primary_key'][kwargs['primary_key'].index('callsign')] = 'packet_from'
         kwargs['fields'] = {f'packet_{field}': field_type for field, field_type in kwargs['fields'].items()}
         PacketDatabaseTable.__init__(self, hostname, database, table, **kwargs)
-        APRSPacketSource.__init__(self, f'postgres://{self.hostname}:{self.port}/{self.database}/{self.table}', callsigns)
-        APRSPacketSink.__init__(self, f'postgres://{self.hostname}:{self.port}/{self.database}/{self.table}', callsigns)
+        APRSPacketSource.__init__(self, f'postgres://{self.hostname}:{self.port}/{self.database}/{self.name}', callsigns)
+        APRSPacketSink.__init__(self, f'postgres://{self.hostname}:{self.port}/{self.database}/{self.name}')
         self.__last_access_time = None
 
     @property
@@ -335,15 +336,24 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
             interval = datetime.now() - self.__last_access_time
             if interval < self.interval:
                 raise TimeIntervalError(f'interval {interval} less than minimum interval {self.interval}')
-        packets = [APRSPacket(**{field if field in ['time', 'x', 'y', 'z'] else field.replace('packet_', ''): value
-                                 for field, value in record.items() if field not in ['point']},
-                source=self.location) for record in self.records]
+
+        packets = []
+        for record in self.records:
+            record = {field if field in ['time', 'x', 'y', 'z'] else field.replace('packet_', ''): value
+                      for field, value in record.items() if field not in ['point']}
+            record['callsign'] = record['from']
+            del record['from']
+            packets.append(APRSPacket(**record, source=self.location))
+
         self.__last_access_time = datetime.now()
         return packets
 
     def __getitem__(self, key: (datetime, str)) -> APRSPacket:
         packet = super().__getitem__(key)
-        return APRSPacket(packet.time, *packet.coordinates, packet.crs, **packet.attributes)
+        attributes = packet.attributes
+        callsign = attributes['from']
+        del attributes['from']
+        return APRSPacket(callsign, packet.time, *packet.coordinates, packet.crs, **attributes)
 
     def __setitem__(self, key: (datetime, str), packet: APRSPacket):
         super().__setitem__(key, packet)
@@ -367,12 +377,12 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
     @staticmethod
     def __packet_record(packet: LocationPacket) -> {str: Any}:
         return {
-            'time'    : packet.time,
+            'time': packet.time,
             'callsign': packet.callsign,
-            'x'       : packet.coordinates[0],
-            'y'       : packet.coordinates[1],
-            'z'       : packet.coordinates[2],
-            'point'   : Point(*packet.coordinates),
+            'x': packet.coordinates[0],
+            'y': packet.coordinates[1],
+            'z': packet.coordinates[2],
+            'point': Point(*packet.coordinates),
             **{f'packet_{field}': value for field, value in packet.attributes.items()}
         }
 
@@ -440,7 +450,7 @@ class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
             aprs_is.connect()
             aprs_is.close()
             return True
-        except ConnectionError:
+        except:
             return False
 
     def close(self):

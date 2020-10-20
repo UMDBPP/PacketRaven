@@ -33,7 +33,7 @@ def main():
     args_parser.add_argument('--log', help='path to log file to save log messages')
     args_parser.add_argument('--output', help='path to output file to save packets')
     args_parser.add_argument('--interval', default=DEFAULT_INTERVAL_SECONDS, type=float,
-            help='seconds between each main loop (default: 5)')
+                             help='seconds between each main loop (default: 5)')
     args_parser.add_argument('--gui', action='store_true', help='start the graphical interface')
     args = args_parser.parse_args()
 
@@ -227,8 +227,8 @@ def main():
         try:
             while len(connections) > 0:
                 parsed_packets = retrieve_packets(connections, packet_tracks, database, output_filename, start_date=start_date,
-                        end_date=end_date,
-                        logger=LOGGER)
+                                                  end_date=end_date,
+                                                  logger=LOGGER)
                 if aprs_is is not None:
                     aprs_is.upload(parsed_packets)
                 time.sleep(interval_seconds)
