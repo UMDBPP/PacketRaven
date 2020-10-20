@@ -10,6 +10,15 @@ jobs:
       matrix:
         os: [ ubuntu-latest, windows-latest, macos-latest ]
         python-version: [ 3.6, 3.7, 3.8 ]
+    services:
+      postgres:
+        image: postgis/postgis:10-2.5
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_database
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -33,21 +42,14 @@ jobs:
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-      # TODO figure out why PostGIS container is broken
-      #- name: Install PostGreSQL with PostGIS
-      #uses: huaxk/postgis-action@v1
-      #with:
-      #  postgresql version: '11'
-      #  postgresql db: test_database
-      #  postgresql user: test_user
-      #  postgresql password: test_password
       - name: Test with coverage
-        #env:
-        #  APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
-        #  POSTGRES_HOSTNAME: localhost
-        #  POSTGRES_DATABASE: test_database
-        #  POSTGRES_USERNAME: test_user
-        #  POSTGRES_PASSWORD: test_password
-        run: coverage run --source packetraven -m nose --nologcapture --verbose --ignore-files="test_connections\.py"
+        env:
+          APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
+          APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
+          POSTGRES_HOSTNAME: localhost
+          POSTGRES_DATABASE: test_database
+          POSTGRES_USERNAME: postgres
+          POSTGRES_PASSWORD: test_password
+        run: coverage run --source packetraven -m nose --nologcapture --verbose
       - name: Generate coverage report
         run: coverage report -m
