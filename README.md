@@ -46,28 +46,26 @@ packetraven --callsigns W3EAX-8,W3EAX-14 --apikey <api_key> --gui
 
 ## Usage:
 ```text
-usage: packetraven [-h] [-c CALLSIGNS] [-k APIKEY] [-p TNC] [-d DATABASE] [-t TUNNEL] [-s START] [-e END] [-l LOG] [-o OUTPUT] [-i INTERVAL] [-g]
+usage: packetraven [-h] [--callsigns CALLSIGNS] [--apikey APIKEY] [--tnc TNC] [--database DATABASE]
+                   [--tunnel TUNNEL] [--igate] [--start START] [--end END] [--log LOG] [--output OUTPUT]
+                   [--interval INTERVAL] [--gui]
 
 optional arguments:
   -h, --help            show this help message and exit
-  -c CALLSIGNS, --callsigns CALLSIGNS
+  --callsigns CALLSIGNS
                         comma-separated list of callsigns to track
-  -k APIKEY, --apikey APIKEY
-                        API key from https://aprs.fi/page/api
-  -p TNC, --tnc TNC     serial port or text file of TNC parsing APRS packets from analog audio to ASCII (set to `auto` to use the first open serial port)
-  -d DATABASE, --database DATABASE
-                        PostGres database table `user@hostname:port/database/table`
-  -t TUNNEL, --tunnel TUNNEL
-                        SSH tunnel `user@hostname:port`
-  -s START, --start START
-                        start date / time, in any common date format
-  -e END, --end END     end date / time, in any common date format
-  -l LOG, --log LOG     path to log file to save log messages
-  -o OUTPUT, --output OUTPUT
-                        path to output file to save packets
-  -i INTERVAL, --interval INTERVAL
-                        seconds between each main loop (default: 10)
-  -g, --gui             start the graphical interface
+  --apikey APIKEY       APRS.fi API key (from https://aprs.fi/page/api)
+  --tnc TNC             serial port or text file of TNC parsing APRS packets from analog audio to ASCII (set to
+                        `auto` to use the first open serial port)
+  --database DATABASE   PostGres database table `user@hostname:port/database/table`
+  --tunnel TUNNEL       SSH tunnel `user@hostname:port`
+  --igate               send new packets to APRS-IS
+  --start START         start date / time, in any common date format
+  --end END             end date / time, in any common date format
+  --log LOG             path to log file to save log messages
+  --output OUTPUT       path to output file to save packets
+  --interval INTERVAL   seconds between each main loop (default: 5)
+  --gui                 start the graphical interface
 ```
 
 ## Python API:

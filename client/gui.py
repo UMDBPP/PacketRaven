@@ -22,8 +22,8 @@ LOGGER = get_logger('packetraven')
 
 
 class PacketRavenGUI:
-    def __init__(self, callsigns: [str] = None, log_filename: PathLike = None, output_filename: PathLike = None,
-                 interval_seconds: int = None, **kwargs):
+    def __init__(self, callsigns: [str] = None, log_filename: PathLike = None, output_filename: PathLike = None, interval_seconds: int = None,
+                 igate: bool = False, **kwargs):
         main_window = tkinter.Tk()
         main_window.title('PacketRaven')
         self.__windows = {'main': main_window}
@@ -49,16 +49,14 @@ class PacketRavenGUI:
                 'ssh_username': None,
                 'ssh_password': None,
             },
-            'aprs_is': {
-                'igate_callsign': None,
-                'igate_passcode': None,
-            }
         }
 
         for section_name, section in self.__connection_configuration.items():
             section.update({
                 key: value for key, value in kwargs.items() if key in section
             })
+
+        self.igate = igate
 
         self.database = None
         self.aprs_is = None
@@ -74,31 +72,25 @@ class PacketRavenGUI:
         configuration_frame.grid(row=main_window.grid_size()[1], column=0, pady=10)
         self.__frames['configuration'] = configuration_frame
 
-        start_date_entry = self.__add_entry_box(configuration_frame, title='start_date', label='Start Date', width=22,
-                                                sticky='w')
-        self.__add_entry_box(configuration_frame, title='end_date', label='End Date', width=22,
-                             row=start_date_entry.grid_info()['row'], column=start_date_entry.grid_info()['column'] + 1,
-                             sticky='e')
+        start_date_entry = self.__add_entry_box(configuration_frame, title='start_date', label='Start Date', width=22, sticky='w')
+        self.__add_entry_box(configuration_frame, title='end_date', label='End Date', width=22, row=start_date_entry.grid_info()['row'],
+                             column=start_date_entry.grid_info()['column'] + 1, sticky='e')
 
         separator = Separator(configuration_frame, orient=tkinter.HORIZONTAL)
-        separator.grid(row=configuration_frame.grid_size()[1], column=0, columnspan=configuration_frame.grid_size()[0] + 1,
-                       sticky='ew', pady=10)
+        separator.grid(row=configuration_frame.grid_size()[1], column=0, columnspan=configuration_frame.grid_size()[0] + 1, sticky='ew', pady=10)
 
         self.__add_entry_box(configuration_frame, title='callsigns', label='Callsigns', width=55, columnspan=3)
         self.__file_selection_option = 'select file...'
-        self.__add_combo_box(configuration_frame, title='tnc', label='TNC',
-                             options=list(available_serial_ports()) + [self.__file_selection_option],
-                             option_select=self.__select_tnc,
-                             width=52, columnspan=3, sticky='w')
+        self.__add_combo_box(configuration_frame, title='tnc', label='TNC', options=list(available_serial_ports()) + [self.__file_selection_option],
+                             option_select=self.__select_tnc, width=52, columnspan=3, sticky='w')
 
         separator = Separator(configuration_frame, orient=tkinter.HORIZONTAL)
-        separator.grid(row=configuration_frame.grid_size()[1], column=0, columnspan=configuration_frame.grid_size()[0] + 1,
-                       sticky='ew', pady=10)
+        separator.grid(row=configuration_frame.grid_size()[1], column=0, columnspan=configuration_frame.grid_size()[0] + 1, sticky='ew', pady=10)
 
-        self.__add_file_box(configuration_frame, title='log_file', file_select=self.__select_log_file, label='Log', width=55,
-                            columnspan=3, sticky='w')
-        self.__add_file_box(configuration_frame, title='output_file', file_select=self.__select_output_file, label='Output',
-                            width=55, columnspan=3, sticky='w')
+        self.__add_file_box(configuration_frame, title='log_file', file_select=self.__select_log_file, label='Log', width=55, columnspan=3,
+                            sticky='w')
+        self.__add_file_box(configuration_frame, title='output_file', file_select=self.__select_output_file, label='Output', width=55, columnspan=3,
+                            sticky='w')
 
         separator = Separator(main_window, orient=tkinter.HORIZONTAL)
         separator.grid(row=main_window.grid_size()[1], column=0, sticky='ew')
@@ -273,19 +265,13 @@ class PacketRavenGUI:
         return self.__packet_tracks
 
     def __select_log_file(self):
-        self.log_filename = filedialog.asksaveasfilename(title='Create log file...',
-                                                         initialdir=self.log_filename.parent,
-                                                         initialfile=self.log_filename.stem,
-                                                         defaultextension='.txt',
-                                                         filetypes=[('Text', '*.txt')])
+        self.log_filename = filedialog.asksaveasfilename(title='Create log file...', initialdir=self.log_filename.parent,
+                                                         initialfile=self.log_filename.stem, defaultextension='.txt', filetypes=[('Text', '*.txt')])
 
     def __select_output_file(self):
-        self.output_filename = filedialog.asksaveasfilename(title='Create output file...',
-                                                            initialdir=self.output_filename.parent,
-                                                            initialfile=self.output_filename.stem,
-                                                            defaultextension='.geojson',
-                                                            filetypes=[('GeoJSON', '*.geojson'),
-                                                                       ('Keyhole Markup Language', '*.kml')])
+        self.output_filename = filedialog.asksaveasfilename(title='Create output file...', initialdir=self.output_filename.parent,
+                                                            initialfile=self.output_filename.stem, defaultextension='.geojson',
+                                                            filetypes=[('GeoJSON', '*.geojson'), ('Keyhole Markup Language', '*.kml')])
 
     def __select_tnc(self, event):
         if event.widget.get() == self.__file_selection_option:
@@ -313,8 +299,8 @@ class PacketRavenGUI:
         entry_box = tkinter.Entry(frame, width=width)
         return self.__add_text_box(frame, title, text_box=entry_box, **kwargs)
 
-    def __add_text_box(self, frame: tkinter.Frame, title: str, label: str, units: str = None, row: int = None,
-                       column: int = None, width: int = 10, text_box: tkinter.Entry = None, **kwargs) -> tkinter.Text:
+    def __add_text_box(self, frame: tkinter.Frame, title: str, label: str, units: str = None, row: int = None, column: int = None, width: int = 10,
+                       text_box: tkinter.Entry = None, **kwargs) -> tkinter.Text:
         if row is None:
             row = frame.grid_size()[1]
         if column is None:
@@ -388,8 +374,7 @@ class PacketRavenGUI:
 
                 api_key = self.__connection_configuration['aprs_fi']['api_key']
                 if api_key is None:
-                    api_key = simpledialog.askstring('APRS.fi API Key', 'enter API key for https://aprs.fi',
-                                                     parent=self.__windows['main'], show='*')
+                    api_key = simpledialog.askstring('APRS.fi API Key', 'enter API key for https://aprs.fi', parent=self.__windows['main'], show='*')
                 try:
                     aprs_api = APRSfi(self.callsigns, api_key=api_key)
                     LOGGER.info(f'established connection to {aprs_api.location}')
@@ -407,12 +392,10 @@ class PacketRavenGUI:
                             if ssh_hostname is not None:
                                 ssh_tunnel_kwargs.update(self.__connection_configuration['ssh_tunnel'])
                                 if '@' in ssh_hostname:
-                                    ssh_tunnel_kwargs['ssh_username'], ssh_tunnel_kwargs['ssh_hostname'] = ssh_hostname.split(
-                                        '@', 1)
+                                    ssh_tunnel_kwargs['ssh_username'], ssh_tunnel_kwargs['ssh_hostname'] = ssh_hostname.split('@', 1)
                                 if 'ssh_username' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_username'] is None:
                                     ssh_username = simpledialog.askstring('SSH Tunnel Username',
-                                                                          f'enter username for SSH host '
-                                                                          f'"{ssh_tunnel_kwargs["ssh_hostname"]}"',
+                                                                          f'enter username for SSH host "{ssh_tunnel_kwargs["ssh_hostname"]}"',
                                                                           parent=self.__windows['main'])
                                     if ssh_username is None or len(ssh_username) == 0:
                                         raise ConnectionError('missing SSH username')
@@ -459,28 +442,9 @@ class PacketRavenGUI:
                 else:
                     self.database = None
 
-                if 'aprs_is' in self.__connection_configuration \
-                        and self.__connection_configuration['aprs_is']['aprs_is_username'] is not None:
+                if self.igate:
                     try:
-                        aprs_is_kwargs = self.__connection_configuration['aprs_is']
-                        if 'aprs_is_username' not in aprs_is_kwargs or aprs_is_kwargs['aprs_is_username'] is None:
-                            aprs_is_username = simpledialog.askstring('APRS-IS Username',
-                                                                      f'enter username for APRS-IS',
-                                                                      parent=self.__windows['main'])
-                            if aprs_is_username is None or len(aprs_is_username) == 0:
-                                raise ConnectionError('missing APRS-IS username')
-                            aprs_is_kwargs['aprs_is_username'] = aprs_is_username
-
-                        if 'aprs_is_password' not in aprs_is_kwargs or aprs_is_kwargs['aprs_is_password'] is None:
-                            aprs_is_password = simpledialog.askstring('APRS-IS Password',
-                                                                      f'enter password for APRS-IS user "'
-                                                                      f'{aprs_is_kwargs["aprs_is_username"]}"',
-                                                                      parent=self.__windows['main'], show='*')
-                            if aprs_is_password is None or len(aprs_is_password) == 0:
-                                raise ConnectionError('missing APRS-IS password')
-                            aprs_is_kwargs['aprs_is_password'] = aprs_is_password
-
-                        self.aprs_is = APRSis(aprs_is_kwargs['aprs_is_username'], hostname=aprs_is_kwargs['aprs_is_password'])
+                        self.aprs_is = APRSis(self.callsigns)
                     except ConnectionError as error:
                         connection_errors.append(f'igate - {error}')
                         self.aprs_is = None
@@ -533,9 +497,8 @@ class PacketRavenGUI:
         if self.active:
             try:
                 existing_callsigns = list(self.packet_tracks)
-                parsed_packets = retrieve_packets(self.__connections, self.__packet_tracks, self.database,
-                                                  self.output_filename,
-                                                  self.start_date, self.end_date, logger=LOGGER)
+                parsed_packets = retrieve_packets(self.__connections, self.__packet_tracks, self.database, self.output_filename, self.start_date,
+                                                  self.end_date, logger=LOGGER)
 
                 if self.aprs_is is not None:
                     self.aprs_is.upload(parsed_packets)
