@@ -250,19 +250,19 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
     def __setitem__(self, time: datetime, packet: LocationPacket):
         if packet.crs != self.crs:
             packet.transform_to(self.crs)
-        super().__setitem__(time, self.__packet_record(packet))
+        PostGresTable.__setitem__(self, time, self.__packet_record(packet))
 
     def insert(self, packets: [APRSPacket]):
         for packet in packets:
             if packet.crs != self.crs:
                 packet.transform_to(self.crs)
         records = [self.__packet_record(packet) for packet in packets]
-        super().insert(records)
+        PostGresTable.insert(self, records)
 
     def __contains__(self, packet: LocationPacket) -> bool:
         if isinstance(packet, LocationPacket):
             packet = [packet[key.replace('packet_', '')] for key in self.primary_key]
-        return super().__contains__(packet)
+        return PostGresTable.__contains__(self, packet)
 
     def send(self, packets: [LocationPacket]):
         new_packets = [packet for packet in packets if packet not in self]
@@ -349,28 +349,28 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
         return packets
 
     def __getitem__(self, key: (datetime, str)) -> APRSPacket:
-        packet = super().__getitem__(key)
+        packet = PacketDatabaseTable.__getitem__(self, key)
         attributes = packet.attributes
         callsign = attributes['from']
         del attributes['from']
         return APRSPacket(callsign, packet.time, *packet.coordinates, packet.crs, **attributes)
 
     def __setitem__(self, key: (datetime, str), packet: APRSPacket):
-        super().__setitem__(key, packet)
+        PacketDatabaseTable.__setitem__(self, key, packet)
 
     def __contains__(self, packet: APRSPacket) -> bool:
-        super().__contains__(packet)
+        return PacketDatabaseTable.__contains__(self, packet)
 
     def send(self, packets: [APRSPacket]):
-        super().send(packets)
+        PacketDatabaseTable.send(self, packets)
 
     def insert(self, packets: [APRSPacket]):
-        super().insert(packets)
+        PacketDatabaseTable.insert(self, packets)
 
     @property
     def records(self) -> [{str: Any}]:
         if self.callsigns is not None:
-            return self.records_where({'callsign': self.callsigns})
+            return self.records_where({'packet_from': self.callsigns})
         else:
             return self.records_where(None)
 

@@ -23,7 +23,7 @@ LOGGER = get_logger('packetraven')
 
 class PacketRavenGUI:
     def __init__(self, callsigns: [str] = None, log_filename: PathLike = None, output_filename: PathLike = None, interval_seconds: int = None,
-                 igate: bool = False, **kwargs):
+                 **kwargs):
         main_window = tkinter.Tk()
         main_window.title('PacketRaven')
         self.__windows = {'main': main_window}
@@ -501,9 +501,9 @@ class PacketRavenGUI:
                                                   self.end_date, logger=LOGGER)
 
                 if self.aprs_is is not None:
-                    self.aprs_is.upload(parsed_packets)
+                    self.aprs_is.send(parsed_packets)
 
-                updated_callsigns = {packet.__callsign for packet in parsed_packets}
+                updated_callsigns = {packet.callsign for packet in parsed_packets}
                 for callsign in updated_callsigns:
                     if callsign not in existing_callsigns:
                         window = tkinter.Toplevel()
@@ -524,11 +524,9 @@ class PacketRavenGUI:
                         separator = Separator(window, orient=tkinter.HORIZONTAL)
                         separator.grid(row=window.grid_size()[1], column=0, columnspan=7, sticky='ew', pady=10)
 
-                        self.__add_text_box(window, title=f'{callsign}.coordinates', label='Coordinates', width=15, sticky='w',
-                                            columnspan=2)
+                        self.__add_text_box(window, title=f'{callsign}.coordinates', label='Coordinates', width=15, sticky='w', columnspan=2)
                         self.__add_text_box(window, title=f'{callsign}.distance', label='Distance', units='m', sticky='w')
-                        self.__add_text_box(window, title=f'{callsign}.ground_speed', label='Ground Speed', units='m/s',
-                                            sticky='w')
+                        self.__add_text_box(window, title=f'{callsign}.ground_speed', label='Ground Speed', units='m/s', sticky='w')
 
                         self.__add_text_box(window, title=f'{callsign}.altitude', label='Altitude', units='m', sticky='w',
                                             row=self.__elements[f'{callsign}.coordinates'].grid_info()['row'],
@@ -536,26 +534,20 @@ class PacketRavenGUI:
                         self.__add_text_box(window, title=f'{callsign}.ascent', label='Ascent', units='m', sticky='w',
                                             row=self.__elements[f'{callsign}.distance'].grid_info()['row'],
                                             column=self.__elements[f'{callsign}.distance'].grid_info()['column'] + 3)
-                        self.__add_text_box(window, title=f'{callsign}.ascent_rate', label='Ascent Rate', units='m/s',
-                                            sticky='w', row=self.__elements[f'{callsign}.ground_speed'].grid_info()['row'],
+                        self.__add_text_box(window, title=f'{callsign}.ascent_rate', label='Ascent Rate', units='m/s', sticky='w',
+                                            row=self.__elements[f'{callsign}.ground_speed'].grid_info()['row'],
                                             column=self.__elements[f'{callsign}.ground_speed'].grid_info()['column'] + 3)
 
                         separator = Separator(window, orient=tkinter.HORIZONTAL)
                         separator.grid(row=window.grid_size()[1], column=0, columnspan=7, sticky='ew', pady=10)
 
-                        self.__add_text_box(window, title=f'{callsign}.distance_downrange', label='Distance Downrange',
-                                            units='m',
-                                            sticky='w')
-                        self.__add_text_box(window, title=f'{callsign}.distance_traveled', label='Distance Traveled',
-                                            units='m',
-                                            sticky='w')
+                        self.__add_text_box(window, title=f'{callsign}.distance_downrange', label='Distance Downrange', units='m', sticky='w')
+                        self.__add_text_box(window, title=f'{callsign}.distance_traveled', label='Distance Traveled', units='m', sticky='w')
 
-                        self.__add_text_box(window, title=f'{callsign}.maximum_altitude', label='Max Altitude', units='m',
-                                            sticky='w',
+                        self.__add_text_box(window, title=f'{callsign}.maximum_altitude', label='Max Altitude', units='m', sticky='w',
                                             row=self.__elements[f'{callsign}.distance_downrange'].grid_info()['row'],
                                             column=self.__elements[f'{callsign}.distance_downrange'].grid_info()['column'] + 3)
-                        self.__add_text_box(window, title=f'{callsign}.time_to_ground', label='Time to Ground', units='s',
-                                            sticky='w',
+                        self.__add_text_box(window, title=f'{callsign}.time_to_ground', label='Time to Ground', units='s', sticky='w',
                                             row=self.__elements[f'{callsign}.distance_traveled'].grid_info()['row'],
                                             column=self.__elements[f'{callsign}.distance_traveled'].grid_info()['column'] + 3)
 
@@ -621,9 +613,12 @@ class PacketRavenGUI:
         element.insert(start_index, value)
 
     def close(self):
-        if self.active:
-            self.toggle()
-        self.__windows['main'].destroy()
+        try:
+            if self.active:
+                self.toggle()
+            self.__windows['main'].destroy()
+        except Exception as error:
+            LOGGER.exception(f'{error.__class__.__name__} - {error}')
         sys.exit(0)
 
 

@@ -27,7 +27,7 @@ def main():
                                            ' (set to `auto` to use the first open serial port)')
     args_parser.add_argument('--database', help='PostGres database table `user@hostname:port/database/table`')
     args_parser.add_argument('--tunnel', help='SSH tunnel `user@hostname:port`')
-    args_parser.add_argument('--igate', action='store_true', help='send new packets to APRS-IS')
+    # args_parser.add_argument('--igate', action='store_true', help='send new packets to APRS-IS')
     args_parser.add_argument('--start', help='start date / time, in any common date format')
     args_parser.add_argument('--end', help='end date / time, in any common date format')
     args_parser.add_argument('--log', help='path to log file to save log messages')
@@ -67,7 +67,7 @@ def main():
             if ':' in kwargs['ssh_username']:
                 kwargs['ssh_username'], kwargs['ssh_password'] = kwargs['ssh_username'].split(':', 1)
 
-    igate = args.igate
+    igate = False
 
     if args.start is not None:
         kwargs['start_date'] = parse_date(args.start.strip('"'))
