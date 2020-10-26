@@ -32,10 +32,10 @@ def parse_raw_aprs(raw_aprs: Union[str, dict]) -> dict:
             'comment': raw_aprs['comment'] if 'comment' in raw_aprs else 'comment',
         }
 
-    # parsed_packet = {'raw':str(raw_aprs)}
+    # parsed_packet = {'raw': str(raw_aprs)}
     #
     # if ':' not in raw_aprs:
-    #     raise PartialPacketError('location data missing')
+    #     raise InvalidPacketError('location data missing')
     #
     # parsed_packet['from'], raw_aprs = raw_aprs.split('>', 1)
     # parsed_packet['to'], raw_aprs = raw_aprs.split(',', 1)
@@ -50,8 +50,8 @@ def parse_raw_aprs(raw_aprs: Union[str, dict]) -> dict:
     #
     #     # TODO add parsing for uncompressed coordinates
     #     lonlat_string = raw_aprs[:8]
-    #     parsed_packet['latitude'] = decompress_aprs_lat(lonlat_string[:4])
-    #     parsed_packet['longitude'] = decompress_aprs_lon(lonlat_string[4:])
+    #     parsed_packet['latitude'] = decompress_latitude(lonlat_string[:4])
+    #     parsed_packet['longitude'] = decompress_longitude(lonlat_string[4:])
     #     parsed_packet['symbol'] = raw_aprs[8]
     #
     #     raw_aprs = raw_aprs[9:]
@@ -62,7 +62,7 @@ def parse_raw_aprs(raw_aprs: Union[str, dict]) -> dict:
     #
     #     parsed_packet['comment'] = re.split('/A=.{6}', raw_aprs)[-1]
     # except IndexError:
-    #     raise PartialPacketError('packet terminated unexpectedly')
+    #     raise InvalidPacketError('packet terminated unexpectedly')
 
     return parsed_packet
 
@@ -105,11 +105,3 @@ def decompress_latitude(compressed_latitude: str) -> float:
         current_power -= 1
 
     return 90 - (sum(converted_floats) / 380926)
-
-
-def compress_longitude(longitude: float) -> str:
-    pass
-
-
-def compress_latitude(latitude: float) -> str:
-    pass

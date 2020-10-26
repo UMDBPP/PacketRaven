@@ -194,13 +194,29 @@ class APRSPacket(LocationPacket):
         if 'raw' in self:
             frame = self['raw']
         else:
-            frame = f'{self.callsign}>{self["to"]},{self["path"]}:'
+            # https://aprs-python.readthedocs.io/en/stable/parse_formats.html#normal
+            x, y, z = self.coordinates
+            north = y > 0
+            east = x > 0
+            x = abs(x)
+            y = abs(y)
+            frame = f'{self.callsign}>{self["to"]}'
+            if 'path' in self:
+                frame += f',{",".join(self["path"])}'
+            if 'via' in self:
+                frame += f',{self["via"]}'
+            frame += f':!{y * 100}{"N" if north else "S"}/{x * 100}{"E" if east else "W"}-/A={z * 3.28084}'
         return frame
 
-    def __getitem__(self, field: str):
+    def __getitem__(self, field: str) -> Any:
         if field == 'callsign':
             field = 'from'
         return super().__getitem__(field)
+
+    def __setitem__(self, field: str, value: Any):
+        if field == 'path' and isinstance(value, str):
+            value = value.split(',')
+        return super().__setitem__(field, value)
 
     def __contains__(self, field: str):
         if field == 'callsign':
