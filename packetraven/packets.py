@@ -143,11 +143,12 @@ class Distance:
 class APRSPacket(LocationPacket):
     """ APRS packet containing parsed APRS fields, along with location and time """
 
-    def __init__(self, callsign: str, time: datetime, x: float, y: float, z: float = None, crs: CRS = None, **kwargs):
+    def __init__(self, from_callsign: str, to_callsign: str, time: datetime, x: float, y: float, z: float = None, crs: CRS = None, **kwargs):
         """
         APRS packet object from raw packet and given datetime
 
-        :param callsign: originating callsign of packet
+        :param from_callsign: originating callsign of packet
+        :param to_callsign: destination callsign of packet
         :param x: x value
         :param y: y value
         :param z: z value
@@ -155,7 +156,8 @@ class APRSPacket(LocationPacket):
         :param time: time of packet, either as datetime object, seconds since Unix epoch, or ISO format date string.
         """
 
-        kwargs['from'] = callsign
+        kwargs['from'] = from_callsign
+        kwargs['to'] = to_callsign if to_callsign is not None else 'APRS'
         super().__init__(time, x, y, z, crs, **kwargs)
 
     @classmethod
@@ -182,12 +184,25 @@ class APRSPacket(LocationPacket):
                 # otherwise default to time the packet was received (now)
                 packet_time = datetime.now()
 
-        return cls(parsed_packet['from'], packet_time, parsed_packet['longitude'], parsed_packet['latitude'],
-                   parsed_packet['altitude'] if 'altitude' in parsed_packet else None, crs=DEFAULT_CRS, **parsed_packet, **kwargs)
+        return cls(parsed_packet['from'], parsed_packet['to'], packet_time, parsed_packet['longitude'], parsed_packet['latitude'],
+                   parsed_packet['altitude'] if 'altitude' in parsed_packet else None, crs=DEFAULT_CRS,
+                   **{key: value for key, value in parsed_packet.items() if key not in ['from', 'to', 'longitude', 'latitude', 'altitude']}, **kwargs)
 
     @property
-    def callsign(self) -> str:
-        return self['callsign']
+    def from_callsign(self) -> str:
+        return self['from']
+
+    @from_callsign.setter
+    def from_callsign(self, callsign: str):
+        self['from'] = callsign
+
+    @property
+    def to_callsign(self) -> str:
+        return self['to']
+
+    @to_callsign.setter
+    def to_callsign(self, callsign: str):
+        self['to'] = callsign
 
     @property
     def frame(self) -> str:
@@ -196,16 +211,18 @@ class APRSPacket(LocationPacket):
         else:
             # https://aprs-python.readthedocs.io/en/stable/parse_formats.html#normal
             x, y, z = self.coordinates
-            north = y > 0
-            east = x > 0
+            north = y >= 0
+            east = x >= 0
             x = abs(x)
             y = abs(y)
-            frame = f'{self.callsign}>{self["to"]}'
+            frame = f'{self.from_callsign}>{self["to"]}'
             if 'path' in self:
                 frame += f',{",".join(self["path"])}'
             if 'via' in self:
                 frame += f',{self["via"]}'
-            frame += f':!{y * 100}{"N" if north else "S"}/{x * 100}{"E" if east else "W"}-/A={z * 3.28084}'
+            frame += f':!{y * 100:04.2f}{"N" if north else "S"}/{x * 100:05.2f}{"E" if east else "W"}-/A={z * 3.28084:06.0f}'
+            if 'comment' in self:
+                frame += f' {self["comment"]}'
         return frame
 
     def __getitem__(self, field: str) -> Any:
@@ -227,14 +244,14 @@ class APRSPacket(LocationPacket):
         yield from self.attributes
 
     def __eq__(self, other: 'APRSPacket') -> bool:
-        return super().__eq__(other) and self.callsign == other.callsign and self['comment'] == other['comment']
+        return super().__eq__(other) and self.from_callsign == other.from_callsign and self['comment'] == other['comment']
 
     def __str__(self) -> str:
-        return f'{self["callsign"]} {super().__str__()} "{self["comment"]}"'
+        return self.frame
 
     def __repr__(self) -> str:
         coordinate_string = ', '.join(f'{key}={value}' for key, value in dict(zip(('x', 'y', 'z'), self.coordinates)).items())
         attribute_string = ', '.join(f'{attribute}={repr(value)}' for attribute, value in self.attributes.items()
-                                     if attribute != 'from')
-        return f'{self.__class__.__name__}(callsign={repr(self.callsign)}, time={repr(self.time)}, {coordinate_string}, ' \
-               f'crs={self.crs.__class__.__name__}.from_epsg({repr(self.crs.to_epsg())}), {attribute_string})'
+                                     if attribute not in ['from', 'to'])
+        return f'{self.__class__.__name__}(from_callsign={repr(self.from_callsign)}, to_callsign={repr(self.to_callsign)}, time={repr(self.time)}, ' \
+               f'{coordinate_string}, crs={self.crs.__class__.__name__}.from_epsg({repr(self.crs.to_epsg())}), {attribute_string})'

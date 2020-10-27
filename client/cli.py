@@ -188,6 +188,8 @@ def main():
                 aprs_is = APRSis(callsigns)
             except ConnectionError:
                 aprs_is = None
+        else:
+            aprs_is = None
 
         if len(connections) == 0:
             LOGGER.error(f'no connections started')
@@ -213,7 +215,7 @@ def main():
                 parsed_packets = retrieve_packets(connections, packet_tracks, database, output_filename, start_date=start_date, end_date=end_date,
                                                   logger=LOGGER)
                 if aprs_is is not None:
-                    aprs_is.upload(parsed_packets)
+                    aprs_is.send(parsed_packets)
                 time.sleep(interval_seconds)
         except KeyboardInterrupt:
             for connection in connections:

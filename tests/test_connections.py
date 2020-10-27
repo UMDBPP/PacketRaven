@@ -117,7 +117,7 @@ class TestPostGres(unittest.TestCase):
                                          ssh_hostname=self.ssh_hostname, ssh_username=self.ssh_username, ssh_password=self.ssh_password)
         packet_table.insert(input_packets)
 
-        assert packet_1 == packet_table[packet_1.time, packet_1.callsign]
+        assert packet_1 == packet_table[packet_1.time, packet_1.from_callsign]
 
         packets = packet_table.packets
 

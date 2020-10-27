@@ -23,7 +23,7 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
             features.extend(geojson.Feature(geometry=geojson.Point(packet.coordinates.tolist()),
                                             properties={
                                                 'time': f'{packet.time:%Y%m%d%H%M%S}',
-                                                'callsign': packet.callsign,
+                                                'callsign': packet.from_callsign,
                                                 'altitude': packet.coordinates[2],
                                                 'ascent_rate': packet_track.ascent_rates[packet_index],
                                                 'ground_speed': packet_track.ground_speeds[packet_index]

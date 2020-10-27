@@ -503,7 +503,7 @@ class PacketRavenGUI:
                 if self.aprs_is is not None:
                     self.aprs_is.send(parsed_packets)
 
-                updated_callsigns = {packet.callsign for packet in parsed_packets}
+                updated_callsigns = {packet.from_callsign for packet in parsed_packets}
                 for callsign in updated_callsigns:
                     if callsign not in existing_callsigns:
                         window = tkinter.Toplevel()
