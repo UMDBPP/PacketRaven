@@ -2,7 +2,8 @@ from datetime import datetime, timedelta
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Any
+from time import sleep
+from typing import Any, Sequence
 
 import aprslib
 from dateutil.parser import parse as parse_date
@@ -61,7 +62,7 @@ class SerialTNC(APRSPacketSource):
             except Exception as error:
                 LOGGER.error(f'{error.__class__.__name__} - {error}')
         if self.callsigns is not None:
-            packets = [packet for packet in packets if packet.callsign in self.callsigns]
+            packets = [packet for packet in packets if packet.from_callsign in self.callsigns]
         self.__last_access_time = datetime.now()
         return packets
 
@@ -115,7 +116,7 @@ class TextFileTNC(APRSPacketSource):
                     except Exception as error:
                         LOGGER.error(f'{error.__class__.__name__} - {error}')
         if self.callsigns is not None:
-            packets = [packet for packet in packets if packet.callsign in self.callsigns]
+            packets = [packet for packet in packets if packet.from_callsign in self.callsigns]
         self.__last_access_time = datetime.now()
         return packets
 
@@ -341,9 +342,14 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
         for record in self.records:
             record = {field if field in ['time', 'x', 'y', 'z'] else field.replace('packet_', ''): value
                       for field, value in record.items() if field not in ['point']}
-            record['callsign'] = record['from']
+            record['from_callsign'] = record['from']
             del record['from']
-            packets.append(APRSPacket(**record, source=self.location))
+            if 'to' in record:
+                record['to_callsign'] = record['to']
+                del record['to']
+            else:
+                record['to'] = None
+            packets.append(APRSPacket(**record))
 
         self.__last_access_time = datetime.now()
         return packets
@@ -351,9 +357,14 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
     def __getitem__(self, key: (datetime, str)) -> APRSPacket:
         packet = PacketDatabaseTable.__getitem__(self, key)
         attributes = packet.attributes
-        callsign = attributes['from']
+        from_callsign = attributes['from']
         del attributes['from']
-        return APRSPacket(callsign, packet.time, *packet.coordinates, packet.crs, **attributes)
+        if 'to' in attributes:
+            to_callsign = attributes['to']
+            del attributes['to']
+        else:
+            to_callsign = None
+        return APRSPacket(from_callsign, to_callsign, packet.time, *packet.coordinates, packet.crs, **attributes)
 
     def __setitem__(self, key: (datetime, str), packet: APRSPacket):
         PacketDatabaseTable.__setitem__(self, key, packet)
@@ -400,6 +411,8 @@ class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
         if not self.connected:
             raise ConnectionError(f'no network connection')
 
+        self.__send_buffer = []
+
     @property
     def hostname(self) -> str:
         return self.__hostname
@@ -409,16 +422,30 @@ class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
         return self.__port
 
     def send(self, packets: [APRSPacket]):
-        callsigns = {packet.callsign for packet in packets}
-        packets = {callsign: [packet for packet in packets if packet.callsign == callsign] for callsign in callsigns}
+        if not isinstance(packets, Sequence) or isinstance(packets, str):
+            packets = [packets]
+        packets = [packet if not isinstance(packet, str) else APRSPacket.from_frame(packet) for packet in packets]
 
-        for callsign, callsign_packets in packets.items():
-            frames = [packet.frame for packet in callsign_packets]
-            aprs_is = aprslib.IS(callsign, aprslib.passcode(callsign), self.hostname, self.port)
-            aprs_is.connect()
-            if len(frames) > 0:
-                aprs_is.sendall(r'\rn'.join(frames))
-            aprs_is.close()
+        if len(self.__send_buffer) > 0:
+            packets.extend(self.__send_buffer)
+            self.__send_buffer.clear()
+
+        callsigns = {packet.from_callsign for packet in packets}
+        packets = {callsign: [packet for packet in packets if packet.from_callsign == callsign] for callsign in callsigns}
+
+        if len(packets) > 0:
+            LOGGER.info(f'sending {len(packets)} packet(s) to {self.location}: {packets}')
+            for callsign, callsign_packets in packets.items():
+                try:
+                    frames = [packet.frame for packet in callsign_packets]
+                    aprs_is = aprslib.IS(callsign, aprslib.passcode(callsign), self.hostname, self.port)
+                    aprs_is.connect()
+                    if len(frames) > 0:
+                        aprs_is.sendall(r'\rn'.join(frames))
+                    aprs_is.close()
+                except ConnectionError as error:
+                    LOGGER.info(f'could not send packet(s) ({error}); reattempting on next iteration')
+                    self.__send_buffer.extend(packets)
 
     @property
     def packets(self) -> [APRSPacket]:
@@ -430,7 +457,7 @@ class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
         def add_frames(frame: str):
             try:
                 packet = APRSPacket.from_frame(frame)
-                if packet.callsign in self.callsigns and packet not in packets:
+                if packet.from_callsign in self.callsigns and packet not in packets:
                     packets.append(packet)
             except InvalidPacketError:
                 pass
@@ -446,11 +473,15 @@ class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
     @property
     def connected(self) -> bool:
         aprs_is = aprslib.IS('NOCALL', '-1', self.hostname, self.port)
-        try:
-            aprs_is.connect()
-            aprs_is.close()
-            return True
-        except:
+        for _ in range(5):
+            try:
+                aprs_is.connect()
+                aprs_is.close()
+                return True
+            except:
+                sleep(1)
+                continue
+        else:
             return False
 
     def close(self):

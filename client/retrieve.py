@@ -15,8 +15,7 @@ LOGGER = get_logger('packetraven')
 
 
 def retrieve_packets(connections: [APRSPacketSource], packet_tracks: [APRSTrack], database: APRSDatabaseTable = None,
-                     output_filename: PathLike = None, start_date: datetime = None, end_date: datetime = None,
-                     logger: Logger = None) -> [APRSPacket]:
+                     output_filename: PathLike = None, start_date: datetime = None, end_date: datetime = None, logger: Logger = None) -> [APRSPacket]:
     if logger is None:
         logger = LOGGER
 
