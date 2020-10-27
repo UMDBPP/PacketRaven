@@ -184,8 +184,9 @@ class APRSPacket(LocationPacket):
                 # otherwise default to time the packet was received (now)
                 packet_time = datetime.now()
 
-        return cls(parsed_packet['from'], packet_time, parsed_packet['longitude'], parsed_packet['latitude'],
-                   parsed_packet['altitude'] if 'altitude' in parsed_packet else None, crs=DEFAULT_CRS, **parsed_packet, **kwargs)
+        return cls(parsed_packet['from'], parsed_packet['to'], packet_time, parsed_packet['longitude'], parsed_packet['latitude'],
+                   parsed_packet['altitude'] if 'altitude' in parsed_packet else None, crs=DEFAULT_CRS,
+                   **{key: value for key, value in parsed_packet.items() if key not in ['from', 'to', 'longitude', 'latitude', 'altitude']}, **kwargs)
 
     @property
     def from_callsign(self) -> str:

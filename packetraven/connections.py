@@ -214,7 +214,8 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
         'x': float,
         'y': float,
         'z': float,
-        'point': Point
+        'source': str,
+        'point': Point,
     }
 
     def __init__(self, hostname: str, database: str, table: str, **kwargs):
@@ -238,7 +239,7 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
             interval = datetime.now() - self.__last_access_time
             if interval < self.interval:
                 raise TimeIntervalError(f'interval {interval} less than minimum interval {self.interval}')
-        packets = [LocationPacket(**{key: value for key, value in record.items() if key != 'point'}, source=self.location)
+        packets = [LocationPacket(**{key: value for key, value in record.items() if key != 'point'})
                    for record in self.records]
         self.__last_access_time = datetime.now()
         return packets
@@ -300,13 +301,18 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
         'from': str,
         'to': str,
         'path': [str],
+        'via': str,
         'timestamp': str,
         'symbol': str,
         'symbol_table': str,
         'latitude': float,
         'longitude': float,
         'altitude': float,
-        'comment': str
+        'messagecapable': str,
+        'format': str,
+        'gpsfixstatus': str,
+        'comment': str,
+        'raw': str,
     }
 
     def __init__(self, hostname: str, database: str, table: str, callsigns: [str] = None, **kwargs):
@@ -327,8 +333,9 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
             kwargs['primary_key'][kwargs['primary_key'].index('callsign')] = 'packet_from'
         kwargs['fields'] = {f'packet_{field}': field_type for field, field_type in kwargs['fields'].items()}
         PacketDatabaseTable.__init__(self, hostname, database, table, **kwargs)
-        APRSPacketSource.__init__(self, f'postgres://{self.hostname}:{self.port}/{self.database}/{self.name}', callsigns)
-        APRSPacketSink.__init__(self, f'postgres://{self.hostname}:{self.port}/{self.database}/{self.name}')
+        location = f'postgres://{self.hostname}:{self.port}/{self.database}/{self.name}'
+        APRSPacketSource.__init__(self, location, callsigns)
+        APRSPacketSink.__init__(self, location)
         self.__last_access_time = None
 
     @property
