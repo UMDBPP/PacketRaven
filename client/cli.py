@@ -67,7 +67,7 @@ def main():
             if ':' in kwargs['ssh_username']:
                 kwargs['ssh_username'], kwargs['ssh_password'] = kwargs['ssh_username'].split(':', 1)
 
-    igate = False
+    using_igate = False
 
     if args.start is not None:
         kwargs['start_date'] = parse_date(args.start.strip('"'))
@@ -111,7 +111,7 @@ def main():
                   for key, value in credentials.items()}
 
     if using_gui:
-        PacketRavenGUI(callsigns, log_filename, output_filename, interval_seconds, igate, **kwargs)
+        PacketRavenGUI(callsigns, log_filename, output_filename, interval_seconds, using_igate, **kwargs)
     else:
         start_date = kwargs['start_date'] if 'start_date' in kwargs else None
         end_date = kwargs['end_date'] if 'end_date' in kwargs else None
@@ -184,7 +184,7 @@ def main():
         else:
             database = None
 
-        if igate:
+        if using_igate:
             try:
                 aprs_is = APRSis(callsigns)
             except ConnectionError:

@@ -23,7 +23,7 @@ LOGGER = get_logger('packetraven')
 
 class PacketRavenGUI:
     def __init__(self, callsigns: [str] = None, log_filename: PathLike = None, output_filename: PathLike = None, interval_seconds: int = None,
-                 **kwargs):
+                 using_igate: bool = False, **kwargs):
         main_window = tkinter.Tk()
         main_window.title('PacketRaven')
         self.__windows = {'main': main_window}
@@ -56,7 +56,7 @@ class PacketRavenGUI:
                 key: value for key, value in kwargs.items() if key in section
             })
 
-        self.igate = igate
+        self.using_igate = using_igate
 
         self.database = None
         self.aprs_is = None
@@ -442,7 +442,7 @@ class PacketRavenGUI:
                 else:
                     self.database = None
 
-                if self.igate:
+                if self.using_igate:
                     try:
                         self.aprs_is = APRSis(self.callsigns)
                     except ConnectionError as error:
