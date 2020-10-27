@@ -38,6 +38,7 @@ def main():
     args = args_parser.parse_args()
 
     using_gui = args.gui
+    using_igate = args.igate
 
     callsigns = [callsign.upper() for callsign in args.callsigns.strip('"').split(',')] if args.callsigns is not None else None
 
@@ -66,9 +67,6 @@ def main():
             kwargs['ssh_username'], kwargs['ssh_hostname'] = kwargs['ssh_hostname'].split('@', 1)
             if ':' in kwargs['ssh_username']:
                 kwargs['ssh_username'], kwargs['ssh_password'] = kwargs['ssh_username'].split(':', 1)
-
-    if args.igate is not None:
-        kwargs['aprs_is_username'] = args.igate
 
     if args.start is not None:
         kwargs['start_date'] = parse_date(args.start.strip('"'))
@@ -112,7 +110,7 @@ def main():
                   for key, value in credentials.items()}
 
     if using_gui:
-        PacketRavenGUI(callsigns, log_filename, output_filename, interval_seconds, **kwargs)
+        PacketRavenGUI(callsigns, log_filename, output_filename, interval_seconds, using_igate, **kwargs)
     else:
         start_date = kwargs['start_date'] if 'start_date' in kwargs else None
         end_date = kwargs['end_date'] if 'end_date' in kwargs else None
@@ -185,23 +183,9 @@ def main():
         else:
             database = None
 
-        if 'aprs_is' in kwargs and kwargs['aprs_is_username'] is not None:
+        if using_igate:
             try:
-                aprs_is_kwargs = {key: kwargs[key] for key in ['aprs_is_hostname', 'aprs_is_username', 'aprs_is_password']
-                                  if key in kwargs}
-                if 'aprs_is_username' not in aprs_is_kwargs or aprs_is_kwargs['aprs_is_username'] is None:
-                    aprs_is_callsign = getpass(f'enter username for APRS-IS: ')
-                    if aprs_is_callsign is None or len(aprs_is_callsign) == 0:
-                        raise ConnectionError('missing APRS-IS username')
-                    aprs_is_kwargs['aprs_is_username'] = aprs_is_callsign
-
-                if 'aprs_is_password' not in aprs_is_kwargs or aprs_is_kwargs['aprs_is_password'] is None:
-                    aprs_is_password = getpass(f'enter password for APRS-IS username {aprs_is_callsign}: ')
-                    if aprs_is_password is None or len(aprs_is_password) == 0:
-                        raise ConnectionError('missing APRS-IS password')
-                    aprs_is_kwargs['aprs_is_password'] = aprs_is_password
-
-                aprs_is = APRSis(aprs_is_kwargs['aprs_is_username'], hostname=aprs_is_kwargs['aprs_is_password'])
+                aprs_is = APRSis(callsigns)
             except ConnectionError:
                 aprs_is = None
 
@@ -226,8 +210,7 @@ def main():
         packet_tracks = {}
         try:
             while len(connections) > 0:
-                parsed_packets = retrieve_packets(connections, packet_tracks, database, output_filename, start_date=start_date,
-                                                  end_date=end_date,
+                parsed_packets = retrieve_packets(connections, packet_tracks, database, output_filename, start_date=start_date, end_date=end_date,
                                                   logger=LOGGER)
                 if aprs_is is not None:
                     aprs_is.upload(parsed_packets)
