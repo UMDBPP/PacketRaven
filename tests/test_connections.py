@@ -8,7 +8,7 @@ from sshtunnel import SSHTunnelForwarder
 from tablecrow.postgres import PostGresTable, SSH_DEFAULT_PORT, database_has_table
 from tablecrow.table import random_open_tcp_port, split_URL_port
 
-from packetraven.connections import APRSDatabaseTable, APRSfi, APRSis
+from packetraven.connections import APRSDatabaseTable, APRSfi
 from packetraven.packets import APRSPacket
 from packetraven.utilities import read_configuration, repository_root
 
@@ -28,10 +28,6 @@ class TestAPRS(unittest.TestCase):
         packets = aprs_api.packets
 
         assert all(type(packet) is APRSPacket for packet in packets)
-
-    def test_aprs_is(self):
-        aprs_is = APRSis()
-        assert aprs_is.connected
 
 
 class TestPostGres(unittest.TestCase):
