@@ -5,8 +5,8 @@ import unittest
 
 import psycopg2
 from sshtunnel import SSHTunnelForwarder
-from tablecrow.postgres import PostGresTable, SSH_DEFAULT_PORT, database_has_table
 from tablecrow.table import random_open_tcp_port, split_URL_port
+from tablecrow.tables.postgres import PostGresTable, SSH_DEFAULT_PORT, database_has_table
 
 from packetraven.connections import APRSDatabaseTable, APRSfi
 from packetraven.packets import APRSPacket

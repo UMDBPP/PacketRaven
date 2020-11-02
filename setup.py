@@ -36,7 +36,7 @@ setup(
         'psycopg2-binary',
         'shapely',
         'sshtunnel',
-        'tablecrow>=1.0.5',
+        'tablecrow>=1.1.4',
     ],
     extras_require={'testing': ['coverage', 'flake8', 'nose']},
     entry_points={'console_scripts': ['packetraven=client.cli:main']},
