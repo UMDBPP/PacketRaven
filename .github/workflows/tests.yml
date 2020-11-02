@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest ]
-        python-version: [ 3.6, 3.7, 3.8 ]
+        python-version: [ 3.8 ]
     services:
       postgres:
         image: postgis/postgis:10-2.5
