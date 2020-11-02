@@ -34,7 +34,7 @@ jobs:
           restore-keys: ${{ runner.os }}-pip-${{ matrix.python-version }}-
       - name: Install dependencies
         run: |
-          pip install
+          pip install --upgrade pip
           pip install -e .[testing]
       - name: Lint with flake8
         run: |
