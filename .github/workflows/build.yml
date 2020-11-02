@@ -20,7 +20,7 @@ jobs:
           key: ${{ runner.os }}-pip-${{ runner.python-version }}-${{ hashFiles('setup.py') }}
           restore-keys: ${{ runner.os }}-pip-${{ runner.python-version }}-
       - name: Install dependencies
-        run: pip install dunamai setuptools wheel twine
+        run: pip install --upgrade pip setuptools wheel twine
       - name: Build package
         run: python setup.py sdist bdist_wheel
       - name: Upload wheel
