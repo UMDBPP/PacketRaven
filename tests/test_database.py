@@ -30,7 +30,7 @@ default_credentials = {
 
 for credential, details in default_credentials.items():
     if credential not in CREDENTIALS['database']:
-        CREDENTIALS['DATABASE']['hostname'] = os.getenv(*details)
+        CREDENTIALS['database'][credential] = os.getenv(*details)
 
 if 'ssh_hostname' in CREDENTIALS['database'] and CREDENTIALS['database']['ssh_hostname'] is not None:
     hostname, port = split_URL_port(CREDENTIALS['database']['hostname'])
