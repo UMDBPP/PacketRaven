@@ -10,6 +10,16 @@ except ImportError:
     subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'dunamai'])
     from dunamai import Version
 
+try:
+    import pyproj
+except ImportError:
+    import platform
+    import subprocess
+
+    if platform.system() == 'Windows':
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pipwin'])
+        subprocess.check_call([sys.executable, '-m', 'pipwin', 'install', 'pyproj'])
+
 metadata = config.read_configuration('setup.cfg')['metadata']
 
 setup(

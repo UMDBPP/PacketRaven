@@ -1,18 +1,27 @@
 name: build
 
 on:
+  push:
+  pull_request:
   release:
-    types: [ published ]
+    types:
+      - published
 
 jobs:
-  deploy:
-    name: deploy to PyPi
-    runs-on: ubuntu-latest
+  build_wheel:
+    name: build wheel
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: [3.8]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
       - name: Install Python
         uses: actions/setup-python@v2
+        with:
+          python-version: ${ runner.python-version }
       - name: Restore cached dependencies
         uses: actions/cache@v2
         with:
@@ -21,15 +30,40 @@ jobs:
           restore-keys: ${{ runner.os }}-pip-${{ runner.python-version }}-
       - name: Install dependencies
         run: pip install --upgrade pip setuptools wheel twine
-      - name: Build package
-        run: python setup.py sdist bdist_wheel
-      - name: Upload wheel
-        uses: actions/upload-artifact@v2
+      - name: Install cibuildwheel
+        run: |
+          python -m pip install cibuildwheel==1.6.4
+      - name: Build wheels
+        run: |
+          python -m cibuildwheel --output-dir wheelhouse
+      - uses: actions/upload-artifact@v2
         with:
-          name: dist
+          path: ./wheelhouse/*.whl
+  build_sdist:
+    name: package source
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: Build sdist
+        run: python setup.py sdist
+      - uses: actions/upload-artifact@v2
+        with:
+          path: dist/*.tar.gz
+  upload_pypi:
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' && github.event.action == 'published'
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: artifact
           path: dist
-      - name: Publish package to PyPi
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-        run: twine upload dist/* --verbose
+      - uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
