@@ -9,7 +9,7 @@ on:
 
 jobs:
   build_wheels:
-    name: build wheel
+    name: build wheel on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -55,6 +55,7 @@ jobs:
         with:
           path: dist/*.tar.gz
   upload_pypi:
+    name: deploy to PyPI
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
     if: github.event_name == 'release' && github.event.action == 'published'
