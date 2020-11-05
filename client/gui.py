@@ -497,6 +497,7 @@ class PacketRavenGUI:
         if self.active:
             try:
                 existing_callsigns = list(self.packet_tracks)
+
                 parsed_packets = retrieve_packets(self.__connections, self.__packet_tracks, self.database, self.output_filename, self.start_date,
                                                   self.end_date, logger=LOGGER)
 
@@ -508,6 +509,11 @@ class PacketRavenGUI:
                     if callsign not in existing_callsigns:
                         window = tkinter.Toplevel()
                         window.title(callsign)
+
+                        self.__add_text_box(window, title=f'{callsign}.source', label='Source', width=40, sticky='w', columnspan=7)
+
+                        separator = Separator(window, orient=tkinter.HORIZONTAL)
+                        separator.grid(row=window.grid_size()[1], column=0, columnspan=7, sticky='ew', pady=10)
 
                         self.__add_text_box(window, title=f'{callsign}.callsign', label='Callsign', sticky='w')
                         self.replace_text(self.__elements[f'{callsign}.callsign'], callsign)
@@ -552,7 +558,7 @@ class PacketRavenGUI:
                                             column=self.__elements[f'{callsign}.distance_traveled'].grid_info()['column'] + 3)
 
                         separator = Separator(window, orient=tkinter.VERTICAL)
-                        separator.grid(row=0, column=3, rowspan=window.grid_size()[1] + 2, sticky='ns', padx=10)
+                        separator.grid(row=1, column=3, rowspan=window.grid_size()[1] + 2, sticky='ns', padx=10)
 
                         window.protocol("WM_DELETE_WINDOW", window.iconify)
 
@@ -569,6 +575,7 @@ class PacketRavenGUI:
 
                     packet_track = self.packet_tracks[callsign]
                     self.replace_text(self.__elements[f'{callsign}.packets'], len(packet_track))
+                    self.replace_text(self.__elements[f'{callsign}.source'], packet_track[-1].source)
                     self.replace_text(self.__elements[f'{callsign}.time'], f'{packet_track.times[-1]}')
                     self.replace_text(self.__elements[f'{callsign}.altitude'], f'{packet_track.coordinates[-1, 2]:.3f}')
                     self.replace_text(self.__elements[f'{callsign}.coordinates'],
@@ -601,6 +608,8 @@ class PacketRavenGUI:
                     self.__windows['main'].after(int(self.interval_seconds * 1000), self.retrieve_packets)
             except KeyboardInterrupt:
                 self.close()
+            except Exception as error:
+                LOGGER.exception(f'{error.__class__.__name__} - {error}')
 
     @staticmethod
     def replace_text(element: tkinter.Entry, value: str):

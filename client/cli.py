@@ -212,8 +212,11 @@ def main():
         packet_tracks = {}
         try:
             while len(connections) > 0:
-                parsed_packets = retrieve_packets(connections, packet_tracks, database, output_filename, start_date=start_date, end_date=end_date,
-                                                  logger=LOGGER)
+                try:
+                    parsed_packets = retrieve_packets(connections, packet_tracks, database, output_filename, start_date=start_date, end_date=end_date,
+                                                      logger=LOGGER)
+                except Exception as error:
+                    LOGGER.exception(f'{error.__class__.__name__} - {error}')
                 if aprs_is is not None:
                     aprs_is.send(parsed_packets)
                 time.sleep(interval_seconds)

@@ -18,7 +18,7 @@ from .packets import APRSPacket, LocationPacket
 from .parsing import InvalidPacketError
 from .utilities import get_logger, read_configuration, repository_root
 
-LOGGER = get_logger('packetraven.connection')
+LOGGER = get_logger('connection')
 
 CREDENTIALS_FILENAME = repository_root() / 'credentials.config'
 
