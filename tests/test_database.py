@@ -16,27 +16,23 @@ CREDENTIALS_FILENAME = repository_root() / 'credentials.config'
 CREDENTIALS = read_configuration(CREDENTIALS_FILENAME)
 
 if 'database' not in CREDENTIALS:
-    CREDENTIALS['database'] = {
-        'hostname': os.environ['POSTGRES_HOSTNAME'],
-        'database': os.environ['POSTGRES_DATABASE'],
-        'username': os.environ['POSTGRES_USERNAME'],
-        'password': os.environ['POSTGRES_PASSWORD']
-    }
-    if 'ssh_hostname' in os.environ:
-        CREDENTIALS['database']['ssh_hostname'] = os.environ['SSH_HOSTNAME']
-    if 'ssh_username' in os.environ:
-        CREDENTIALS['database']['ssh_username'] = os.environ['SSH_USERNAME']
-    if 'ssh_password' in os.environ:
-        CREDENTIALS['database']['ssh_password'] = os.environ['SSH_PASSWORD']
+    CREDENTIALS['database'] = {}
 
-if 'ssh_hostname' not in CREDENTIALS['database']:
-    CREDENTIALS['database']['ssh_hostname'] = None
-if 'ssh_username' not in CREDENTIALS['database']:
-    CREDENTIALS['database']['ssh_username'] = None
-if 'ssh_password' not in CREDENTIALS['database']:
-    CREDENTIALS['database']['ssh_password'] = None
+default_credentials = {
+    'hostname': ('POSTGRES_HOSTNAME', 'localhost'),
+    'database': ('POSTGRES_DATABASE', 'postgres'),
+    'username': ('POSTGRES_USERNAME', 'postgres'),
+    'password': ('POSTGRES_PASSWORD', ''),
+    'ssh_hostname': ('SSH_HOSTNAME', None),
+    'ssh_username': ('SSH_USERNAME', None),
+    'ssh_password': ('SSH_PASSWORD', None),
+}
 
-if CREDENTIALS['database']['ssh_hostname'] is not None:
+for credential, details in default_credentials.items():
+    if credential not in CREDENTIALS['database']:
+        CREDENTIALS['DATABASE']['hostname'] = os.getenv(*details)
+
+if 'ssh_hostname' in CREDENTIALS['database'] and CREDENTIALS['database']['ssh_hostname'] is not None:
     hostname, port = split_URL_port(CREDENTIALS['database']['hostname'])
     if port is None:
         port = PostGresTable.DEFAULT_PORT
@@ -59,10 +55,7 @@ if CREDENTIALS['database']['ssh_hostname'] is not None:
                                 ssh_username=ssh_username, ssh_password=ssh_password,
                                 remote_bind_address=('localhost', port),
                                 local_bind_address=('localhost', random_open_tcp_port()))
-    try:
-        TUNNEL.start()
-    except Exception as error:
-        raise ConnectionError(error)
+    TUNNEL.start()
 else:
     TUNNEL = None
 
