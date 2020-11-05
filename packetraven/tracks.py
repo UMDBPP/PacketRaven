@@ -65,7 +65,7 @@ class LocationPacketTrack:
         if current_ascent_rate < 0:
             # TODO implement landing location as the intersection of the predicted descent track with a local DEM
             # TODO implement a time to impact calc based off of standard atmo
-            return timedelta(seconds=self.packets[-1].coordinates[2] / current_ascent_rate)
+            return timedelta(seconds=self.packets[-1].coordinates[2] / abs(current_ascent_rate))
         else:
             return timedelta(seconds=-1)
 

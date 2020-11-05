@@ -38,7 +38,6 @@ setup(
         'sshtunnel',
         'tablecrow',
     ],
-    extras_require={'testing': ['coverage', 'flake8', 'nose']},
+    extras_require={'testing': ['flake8', 'pytest', 'pytest-cov']},
     entry_points={'console_scripts': ['packetraven=client.cli:main']},
-    test_suite='nose.collector'
 )
