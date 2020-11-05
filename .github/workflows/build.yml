@@ -21,7 +21,7 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v2
         with:
-          python-version: ${ runner.python-version }
+          python-version: ${{ runner.python-version }}
       - name: Restore cached dependencies
         uses: actions/cache@v2
         with:
