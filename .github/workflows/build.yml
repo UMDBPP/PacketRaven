@@ -1,7 +1,6 @@
 name: build
 
 on:
-  push:
   release:
     types:
       - published
@@ -12,7 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest]
         python-version: [3.8]
     steps:
       - name: Checkout repository
@@ -28,18 +27,13 @@ jobs:
           key: ${{ runner.os }}-pip-${{ runner.python-version }}-${{ hashFiles('setup.py') }}
           restore-keys: ${{ runner.os }}-pip-${{ runner.python-version }}-
       - name: Install dependencies
-        run: pip install --upgrade pip setuptools wheel twine
-      - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel
-      - name: Build wheels for several Python versions
-        run: python -m cibuildwheel --output-dir wheelhouse
-        env:
-          CIBW_BUILD: cp38-* cp39-*
-          CIBW_BUILD_VERBOSITY: 1
-      - name: Upload wheels
+        run: pip install --upgrade pip setuptools wheel
+      - name: Build wheel
+        run: python setup.py bdist_wheel
+      - name: Save wheel
         uses: actions/upload-artifact@v2
         with:
-          path: ./wheelhouse/*.whl
+          path: ./dist/*.whl
   build_sdist:
     name: package source
     runs-on: ubuntu-latest
@@ -52,21 +46,22 @@ jobs:
           python-version: '3.8'
       - name: Package source
         run: python setup.py sdist
-      - name: Upload source package
+      - name: Save source package
         uses: actions/upload-artifact@v2
         with:
-          path: dist/*.tar.gz
+          path: ./dist/*.tar.gz
   upload_pypi:
-    name: deploy to PyPI
+    name: publish wheel to PyPI
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' && github.event.action == 'published'
     steps:
-      - uses: actions/download-artifact@v2
+      - name: Retrieve wheel
+        uses: actions/download-artifact@v2
         with:
           name: artifact
           path: dist
-      - uses: pypa/gh-action-pypi-publish@master
+      - name: Upload wheel
+        uses: pypa/gh-action-pypi-publish@master
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
