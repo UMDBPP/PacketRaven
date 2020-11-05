@@ -10,6 +10,17 @@ except ImportError:
     subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'dunamai'])
     from dunamai import Version
 
+try:
+    import pyproj
+except ImportError:
+    import platform
+
+    if platform.system() == 'Windows':
+        import subprocess
+
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pipwin'])
+        subprocess.check_call([sys.executable, '-m', 'pipwin', 'install', 'pyproj'])
+
 metadata = config.read_configuration('setup.cfg')['metadata']
 
 setup(
@@ -27,7 +38,7 @@ setup(
     install_requires=[
         'aprslib',
         'haversine',
-        'numpy',
+        'numpy==1.19.3',
         'pyserial',
         'geojson',
         'fastkml',
