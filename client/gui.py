@@ -510,14 +510,14 @@ class PacketRavenGUI:
                         window = tkinter.Toplevel()
                         window.title(callsign)
 
-                        self.__add_text_box(window, title=f'{callsign}.source', label='Source', width=40, sticky='w', columnspan=7)
+                        self.__add_text_box(window, title=f'{callsign}.source', label='Latest Packet', width=48, sticky='w', columnspan=6)
 
                         separator = Separator(window, orient=tkinter.HORIZONTAL)
                         separator.grid(row=window.grid_size()[1], column=0, columnspan=7, sticky='ew', pady=10)
 
-                        self.__add_text_box(window, title=f'{callsign}.callsign', label='Callsign', sticky='w')
+                        self.__add_text_box(window, title=f'{callsign}.callsign', label='Callsign', width=15, sticky='w', columnspan=2)
                         self.replace_text(self.__elements[f'{callsign}.callsign'], callsign)
-                        self.__add_text_box(window, title=f'{callsign}.packets', label='Packet #', sticky='w')
+                        self.__add_text_box(window, title=f'{callsign}.packets', label='Packet #', width=15, sticky='w', columnspan=2)
 
                         self.__add_text_box(window, title=f'{callsign}.time', label='Time', width=19, sticky='w',
                                             row=self.__elements[f'{callsign}.callsign'].grid_info()['row'],
@@ -530,11 +530,11 @@ class PacketRavenGUI:
                         separator = Separator(window, orient=tkinter.HORIZONTAL)
                         separator.grid(row=window.grid_size()[1], column=0, columnspan=7, sticky='ew', pady=10)
 
-                        self.__add_text_box(window, title=f'{callsign}.coordinates', label='Coordinates', width=15, sticky='w', columnspan=2)
+                        self.__add_text_box(window, title=f'{callsign}.coordinates', label='Lat., Lon.', width=15, sticky='w', columnspan=2)
                         self.__add_text_box(window, title=f'{callsign}.distance', label='Distance', units='m', sticky='w')
                         self.__add_text_box(window, title=f'{callsign}.ground_speed', label='Ground Speed', units='m/s', sticky='w')
 
-                        self.__add_text_box(window, title=f'{callsign}.altitude', label='Altitude', units='m', sticky='w',
+                        self.__add_text_box(window, title=f'{callsign}.altitude', label='Alt.', units='m', sticky='w',
                                             row=self.__elements[f'{callsign}.coordinates'].grid_info()['row'],
                                             column=self.__elements[f'{callsign}.coordinates'].grid_info()['column'] + 3)
                         self.__add_text_box(window, title=f'{callsign}.ascent', label='Ascent', units='m', sticky='w',
@@ -547,18 +547,19 @@ class PacketRavenGUI:
                         separator = Separator(window, orient=tkinter.HORIZONTAL)
                         separator.grid(row=window.grid_size()[1], column=0, columnspan=7, sticky='ew', pady=10)
 
-                        self.__add_text_box(window, title=f'{callsign}.distance_downrange', label='Distance Downrange', units='m', sticky='w')
-                        self.__add_text_box(window, title=f'{callsign}.distance_traveled', label='Distance Traveled', units='m', sticky='w')
+                        self.__add_text_box(window, title=f'{callsign}.distance_downrange', label='Dist. Downrange', units='m', sticky='w')
+                        self.__add_text_box(window, title=f'{callsign}.distance_traveled', label='Dist. Traveled', units='m', sticky='w')
 
-                        self.__add_text_box(window, title=f'{callsign}.maximum_altitude', label='Max Altitude', units='m', sticky='w',
+                        self.__add_text_box(window, title=f'{callsign}.maximum_altitude', label='Max Alt.', units='m', sticky='w',
                                             row=self.__elements[f'{callsign}.distance_downrange'].grid_info()['row'],
                                             column=self.__elements[f'{callsign}.distance_downrange'].grid_info()['column'] + 3)
-                        self.__add_text_box(window, title=f'{callsign}.time_to_ground', label='Time to Ground', units='s', sticky='w',
+                        self.__add_text_box(window, title=f'{callsign}.time_to_ground', label='Est. Landing', units='s', sticky='w',
                                             row=self.__elements[f'{callsign}.distance_traveled'].grid_info()['row'],
                                             column=self.__elements[f'{callsign}.distance_traveled'].grid_info()['column'] + 3)
 
                         separator = Separator(window, orient=tkinter.VERTICAL)
-                        separator.grid(row=1, column=3, rowspan=window.grid_size()[1] + 2, sticky='ns', padx=10)
+                        separator.grid(row=self.__elements[f'{callsign}.source'].grid_info()['row'] + 1, column=3, rowspan=window.grid_size()[1] + 2,
+                                       sticky='ns', padx=10)
 
                         window.protocol("WM_DELETE_WINDOW", window.iconify)
 
@@ -579,7 +580,7 @@ class PacketRavenGUI:
                     self.replace_text(self.__elements[f'{callsign}.time'], f'{packet_track.times[-1]}')
                     self.replace_text(self.__elements[f'{callsign}.altitude'], f'{packet_track.coordinates[-1, 2]:.3f}')
                     self.replace_text(self.__elements[f'{callsign}.coordinates'],
-                                      ', '.join(f'{value:.3f}' for value in packet_track.coordinates[-1, :2]))
+                                      ', '.join(f'{value:.3f}' for value in reversed(packet_track.coordinates[-1, :2])))
                     self.replace_text(self.__elements[f'{callsign}.ascent'], f'{packet_track.ascents[-1]:.2f}')
                     self.replace_text(self.__elements[f'{callsign}.distance'], f'{packet_track.distances[-1]:.2f}')
                     self.replace_text(self.__elements[f'{callsign}.interval'], f'{packet_track.intervals[-1]:.2f}')

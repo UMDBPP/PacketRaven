@@ -83,20 +83,20 @@ def main():
 
     if args.log is not None:
         log_filename = Path(args.log).expanduser()
-        if not log_filename.exists():
-            os.makedirs(log_filename, exist_ok=True)
         if log_filename.is_dir():
             log_filename = log_filename / f'packetraven_log_{datetime.now():%Y%m%dT%H%M%S}.txt'
+        if not log_filename.parent.exists():
+            os.makedirs(log_filename.parent, exist_ok=True)
         get_logger(LOGGER.name, log_filename)
     else:
         log_filename = None
 
     if args.output is not None:
         output_filename = Path(args.output).expanduser()
-        if not output_filename.parent.exists():
-            os.makedirs(output_filename.parent, exist_ok=True)
         if output_filename.is_dir():
             output_filename = output_filename / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson'
+        if not output_filename.parent.exists():
+            os.makedirs(output_filename.parent, exist_ok=True)
     else:
         output_filename = None
 
