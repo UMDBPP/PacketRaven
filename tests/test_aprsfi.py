@@ -1,3 +1,5 @@
+import os
+
 from packetraven import APRSfi
 from packetraven.packets import APRSPacket
 from packetraven.utilities import read_configuration, repository_root
@@ -10,7 +12,7 @@ def test_aprs_fi():
 
     credentials = read_configuration(CREDENTIALS_FILENAME)
     if 'aprs_fi' not in credentials:
-        credentials['aprs_fi'] = {'api_key': os.environ['APRS_FI_API_KEY']}
+        credentials['aprs_fi'] = {'api_key': os.getenv('APRS_FI_API_KEY', None)}
 
     aprs_api = APRSfi(balloon_callsigns, credentials['aprs_fi']['api_key'])
 

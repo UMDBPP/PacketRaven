@@ -176,7 +176,7 @@ def main():
         if 'hostname' in kwargs:
             database_kwargs = {
                 key: kwargs[key]
-                for key in ['hostname', 'database', 'table', 'username', 'password', ]
+                for key in ['hostname', 'database', 'table', 'username', 'password']
                 if key in kwargs
             }
             ssh_tunnel_kwargs = {

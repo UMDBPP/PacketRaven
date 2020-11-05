@@ -40,8 +40,8 @@ class PacketRavenGUI:
         )
 
         self.__connection_configuration = {
-            'aprs_fi': {'api_key': None, },
-            'tnc': {'tnc': None, },
+            'aprs_fi': {'api_key': None},
+            'tnc': {'tnc': None},
             'database': {
                 'hostname': None,
                 'database': None,
@@ -49,7 +49,7 @@ class PacketRavenGUI:
                 'username': None,
                 'password': None,
             },
-            'ssh_tunnel': {'ssh_hostname': None, 'ssh_username': None, 'ssh_password': None, },
+            'ssh_tunnel': {'ssh_hostname': None, 'ssh_username': None, 'ssh_password': None},
         }
 
         for section_name, section in self.__connection_configuration.items():
