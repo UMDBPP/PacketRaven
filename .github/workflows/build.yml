@@ -8,7 +8,7 @@ on:
       - published
 
 jobs:
-  build_wheel:
+  build_wheels:
     name: build wheel
     runs-on: ${{ matrix.os }}
     strategy:
