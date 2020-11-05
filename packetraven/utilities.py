@@ -23,13 +23,20 @@ def repository_root(path: PathLike = None) -> Path:
 def read_configuration(filename: PathLike) -> {str: str}:
     configuration_file = configparser.ConfigParser()
     configuration_file.read(filename)
-    return {section_name: {key: value for key, value in section.items()} for section_name, section in
-            configuration_file.items() if
-            section_name.upper() != 'DEFAULT'}
+    return {
+        section_name: {key: value for key, value in section.items()}
+        for section_name, section in configuration_file.items()
+        if section_name.upper() != 'DEFAULT'
+    }
 
 
-def get_logger(name: str, log_filename: PathLike = None, file_level: int = None, console_level: int = None,
-               log_format: str = None) -> logging.Logger:
+def get_logger(
+        name: str,
+        log_filename: PathLike = None,
+        file_level: int = None,
+        console_level: int = None,
+        log_format: str = None,
+) -> logging.Logger:
     if file_level is None:
         file_level = logging.DEBUG
     if console_level is None:
@@ -46,6 +53,7 @@ def get_logger(name: str, log_filename: PathLike = None, file_level: int = None,
             logger.setLevel(logging.DEBUG)
             if console_level != logging.NOTSET:
                 if console_level <= logging.INFO:
+
                     class LoggingOutputFilter(logging.Filter):
                         def filter(self, rec):
                             return rec.levelno in (logging.DEBUG, logging.INFO)
@@ -65,8 +73,9 @@ def get_logger(name: str, log_filename: PathLike = None, file_level: int = None,
         log_filename = log_filename.resolve().expanduser()
         file_handler = logging.FileHandler(log_filename)
         file_handler.setLevel(file_level)
-        for existing_file_handler in [handler for handler in logger.handlers if
-                                      type(handler) is logging.FileHandler]:
+        for existing_file_handler in [
+            handler for handler in logger.handlers if type(handler) is logging.FileHandler
+        ]:
             logger.removeHandler(existing_file_handler)
         logger.addHandler(file_handler)
 

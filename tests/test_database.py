@@ -32,7 +32,10 @@ for credential, details in default_credentials.items():
     if credential not in CREDENTIALS['database']:
         CREDENTIALS['database'][credential] = os.getenv(*details)
 
-if 'ssh_hostname' in CREDENTIALS['database'] and CREDENTIALS['database']['ssh_hostname'] is not None:
+if (
+        'ssh_hostname' in CREDENTIALS['database']
+        and CREDENTIALS['database']['ssh_hostname'] is not None
+):
     hostname, port = split_URL_port(CREDENTIALS['database']['hostname'])
     if port is None:
         port = PostGresTable.DEFAULT_PORT
@@ -51,10 +54,13 @@ if 'ssh_hostname' in CREDENTIALS['database'] and CREDENTIALS['database']['ssh_ho
 
     ssh_password = CREDENTIALS['database']['ssh_password']
 
-    TUNNEL = SSHTunnelForwarder((ssh_hostname, ssh_port),
-                                ssh_username=ssh_username, ssh_password=ssh_password,
-                                remote_bind_address=('localhost', port),
-                                local_bind_address=('localhost', random_open_tcp_port()))
+    TUNNEL = SSHTunnelForwarder(
+        (ssh_hostname, ssh_port),
+        ssh_username=ssh_username,
+        ssh_password=ssh_password,
+        remote_bind_address=('localhost', port),
+        local_bind_address=('localhost', random_open_tcp_port()),
+    )
     TUNNEL.start()
 else:
     TUNNEL = None
@@ -66,8 +72,12 @@ def connection() -> psycopg2.connect:
     if port is None:
         port = PostGresTable.DEFAULT_PORT
 
-    connector = partial(psycopg2.connect, database=CREDENTIALS['database']['database'], user=CREDENTIALS['database']['username'],
-                        password=CREDENTIALS['database']['password'])
+    connector = partial(
+        psycopg2.connect,
+        database=CREDENTIALS['database']['database'],
+        user=CREDENTIALS['database']['username'],
+        password=CREDENTIALS['database']['password'],
+    )
     if tunnel := TUNNEL is not None:
         try:
             tunnel.start()
@@ -83,15 +93,21 @@ def connection() -> psycopg2.connect:
 def test_packet_database(connection):
     table_name = 'test_table'
 
-    packet_1 = APRSPacket.from_frame("W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   "
-                                     "/A=053614|!g|  /W3EAX,313,0,21'C,nearspace.umd.edu",
-                                     packet_time=datetime(2019, 2, 3, 14, 36, 16))
-    packet_2 = APRSPacket.from_frame("W3EAX-13>APRS,WIDE1-1,WIDE2-1,qAR,W4TTU:!/:JAe:tn8O   "
-                                     "/A=046255|!i|  /W3EAX,322,0,20'C,nearspace.umd.edu",
-                                     packet_time=datetime(2019, 2, 3, 14, 38, 23))
-    packet_3 = APRSPacket.from_frame("W3EAX-13>APRS,KC3FIT-1,WIDE1*,WIDE2-1,qAR,KC3AWP-10:!/:JL2:u4wO   "
-                                     "/A=043080|!j|  /W3EAX,326,0,20'C,nearspace.umd.edu",
-                                     packet_time=datetime(2019, 2, 3, 14, 39, 28))
+    packet_1 = APRSPacket.from_frame(
+        "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   "
+        "/A=053614|!g|  /W3EAX,313,0,21'C,nearspace.umd.edu",
+        packet_time=datetime(2019, 2, 3, 14, 36, 16),
+    )
+    packet_2 = APRSPacket.from_frame(
+        'W3EAX-13>APRS,WIDE1-1,WIDE2-1,qAR,W4TTU:!/:JAe:tn8O   '
+        "/A=046255|!i|  /W3EAX,322,0,20'C,nearspace.umd.edu",
+        packet_time=datetime(2019, 2, 3, 14, 38, 23),
+    )
+    packet_3 = APRSPacket.from_frame(
+        'W3EAX-13>APRS,KC3FIT-1,WIDE1*,WIDE2-1,qAR,KC3AWP-10:!/:JL2:u4wO   '
+        "/A=043080|!j|  /W3EAX,326,0,20'C,nearspace.umd.edu",
+        packet_time=datetime(2019, 2, 3, 14, 39, 28),
+    )
 
     input_packets = [packet_1, packet_2, packet_3]
 
@@ -100,10 +116,16 @@ def test_packet_database(connection):
             if database_has_table(cursor, table_name):
                 cursor.execute(f'DROP TABLE {table_name};')
 
-    packet_table = APRSDatabaseTable(hostname=CREDENTIALS['database']['hostname'], database=CREDENTIALS['database']['database'], table=table_name,
-                                     username=CREDENTIALS['database']['username'], password=CREDENTIALS['database']['password'],
-                                     ssh_hostname=CREDENTIALS['database']['ssh_hostname'], ssh_username=CREDENTIALS['database']['ssh_username'],
-                                     ssh_password=CREDENTIALS['database']['ssh_password'])
+    packet_table = APRSDatabaseTable(
+        hostname=CREDENTIALS['database']['hostname'],
+        database=CREDENTIALS['database']['database'],
+        table=table_name,
+        username=CREDENTIALS['database']['username'],
+        password=CREDENTIALS['database']['password'],
+        ssh_hostname=CREDENTIALS['database']['ssh_hostname'],
+        ssh_username=CREDENTIALS['database']['ssh_username'],
+        ssh_password=CREDENTIALS['database']['ssh_password'],
+    )
     packet_table.insert(input_packets)
 
     assert packet_1 == packet_table[packet_1.time, packet_1.from_callsign]
@@ -115,5 +137,7 @@ def test_packet_database(connection):
             assert database_has_table(cursor, table_name)
             cursor.execute(f'DROP TABLE {table_name};')
 
-    assert len(packets) > 0 and all(packets[packet_index] == input_packets[packet_index]
-                                    for packet_index in range(len(packets)))
+    assert len(packets) > 0 and all(
+        packets[packet_index] == input_packets[packet_index]
+        for packet_index in range(len(packets))
+    )

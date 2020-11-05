@@ -22,25 +22,44 @@ CREDENTIALS_FILENAME = repository_root() / 'credentials.config'
 def main():
     args_parser = ArgumentParser()
     args_parser.add_argument('--callsigns', help='comma-separated list of callsigns to track')
-    args_parser.add_argument('--apikey', help='APRS.fi API key (from https://aprs.fi/page/api)')
-    args_parser.add_argument('--tnc', help='serial port or text file of TNC parsing APRS packets from analog audio to ASCII'
-                                           ' (set to `auto` to use the first open serial port)')
-    args_parser.add_argument('--database', help='PostGres database table `user@hostname:port/database/table`')
+    args_parser.add_argument(
+        '--apikey', help='APRS.fi API key (from https://aprs.fi/page/api)'
+    )
+    args_parser.add_argument(
+        '--tnc',
+        help='serial port or text file of TNC parsing APRS packets from analog audio to ASCII'
+             ' (set to `auto` to use the first open serial port)',
+    )
+    args_parser.add_argument(
+        '--database', help='PostGres database table `user@hostname:port/database/table`'
+    )
     args_parser.add_argument('--tunnel', help='SSH tunnel `user@hostname:port`')
-    args_parser.add_argument('--igate', action='store_true', help='send new packets to APRS-IS')
+    args_parser.add_argument(
+        '--igate', action='store_true', help='send new packets to APRS-IS'
+    )
     args_parser.add_argument('--start', help='start date / time, in any common date format')
     args_parser.add_argument('--end', help='end date / time, in any common date format')
     args_parser.add_argument('--log', help='path to log file to save log messages')
     args_parser.add_argument('--output', help='path to output file to save packets')
-    args_parser.add_argument('--interval', default=DEFAULT_INTERVAL_SECONDS, type=float,
-                             help='seconds between each main loop (default: 5)')
-    args_parser.add_argument('--gui', action='store_true', help='start the graphical interface')
+    args_parser.add_argument(
+        '--interval',
+        default=DEFAULT_INTERVAL_SECONDS,
+        type=float,
+        help='seconds between each main loop (default: 5)',
+    )
+    args_parser.add_argument(
+        '--gui', action='store_true', help='start the graphical interface'
+    )
     args = args_parser.parse_args()
 
     using_gui = args.gui
     using_igate = args.igate
 
-    callsigns = [callsign.upper() for callsign in args.callsigns.strip('"').split(',')] if args.callsigns is not None else None
+    callsigns = (
+        [callsign.upper() for callsign in args.callsigns.strip('"').split(',')]
+        if args.callsigns is not None
+        else None
+    )
 
     kwargs = {}
 
@@ -53,7 +72,9 @@ def main():
     if args.database is not None:
         database = args.database
         if database.count('/') != 2:
-            LOGGER.error(f'unable to parse hostname, database name, and table name from input "{database}"')
+            LOGGER.error(
+                f'unable to parse hostname, database name, and table name from input "{database}"'
+            )
         else:
             kwargs['hostname'], kwargs['database'], kwargs['table'] = database.split('/')
             if '@' in kwargs['hostname']:
@@ -64,9 +85,13 @@ def main():
     if args.tunnel is not None:
         kwargs['ssh_hostname'] = args.tunnel
         if '@' in kwargs['ssh_hostname']:
-            kwargs['ssh_username'], kwargs['ssh_hostname'] = kwargs['ssh_hostname'].split('@', 1)
+            kwargs['ssh_username'], kwargs['ssh_hostname'] = kwargs['ssh_hostname'].split(
+                '@', 1
+            )
             if ':' in kwargs['ssh_username']:
-                kwargs['ssh_username'], kwargs['ssh_password'] = kwargs['ssh_username'].split(':', 1)
+                kwargs['ssh_username'], kwargs['ssh_password'] = kwargs['ssh_username'].split(
+                    ':', 1
+                )
 
     if args.start is not None:
         kwargs['start_date'] = parse_date(args.start.strip('"'))
@@ -94,7 +119,9 @@ def main():
     if args.output is not None:
         output_filename = Path(args.output).expanduser()
         if output_filename.is_dir():
-            output_filename = output_filename / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson'
+            output_filename = (
+                    output_filename / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson'
+            )
         if not output_filename.parent.exists():
             os.makedirs(output_filename.parent, exist_ok=True)
     else:
@@ -106,11 +133,15 @@ def main():
         credentials = {}
         for section in read_configuration(CREDENTIALS_FILENAME).values():
             credentials.update(section)
-        kwargs = {key: value if key not in kwargs or kwargs[key] is None else kwargs[key]
-                  for key, value in credentials.items()}
+        kwargs = {
+            key: value if key not in kwargs or kwargs[key] is None else kwargs[key]
+            for key, value in credentials.items()
+        }
 
     if using_gui:
-        PacketRavenGUI(callsigns, log_filename, output_filename, interval_seconds, using_igate, **kwargs)
+        PacketRavenGUI(
+            callsigns, log_filename, output_filename, interval_seconds, using_igate, **kwargs
+        )
     else:
         start_date = kwargs['start_date'] if 'start_date' in kwargs else None
         end_date = kwargs['end_date'] if 'end_date' in kwargs else None
@@ -143,39 +174,61 @@ def main():
                 LOGGER.warning(f'{error.__class__.__name__} - {error}')
 
         if 'hostname' in kwargs:
-            database_kwargs = {key: kwargs[key] for key in ['hostname', 'database', 'table', 'username', 'password', ]
-                               if key in kwargs}
-            ssh_tunnel_kwargs = {key: kwargs[key] for key in ['ssh_hostname', 'ssh_username', 'ssh_password']
-                                 if key in kwargs}
+            database_kwargs = {
+                key: kwargs[key]
+                for key in ['hostname', 'database', 'table', 'username', 'password', ]
+                if key in kwargs
+            }
+            ssh_tunnel_kwargs = {
+                key: kwargs[key]
+                for key in ['ssh_hostname', 'ssh_username', 'ssh_password']
+                if key in kwargs
+            }
 
             try:
                 if 'ssh_hostname' in ssh_tunnel_kwargs:
-                    if 'ssh_username' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_username'] is None:
-                        ssh_username = input(f'enter username for SSH host "{ssh_tunnel_kwargs["ssh_hostname"]}": ')
+                    if (
+                            'ssh_username' not in ssh_tunnel_kwargs
+                            or ssh_tunnel_kwargs['ssh_username'] is None
+                    ):
+                        ssh_username = input(
+                            f'enter username for SSH host "{ssh_tunnel_kwargs["ssh_hostname"]}": '
+                        )
                         if ssh_username is None or len(ssh_username) == 0:
                             raise ConnectionError('missing SSH username')
                         ssh_tunnel_kwargs['ssh_username'] = ssh_username
 
-                    if 'ssh_password' not in ssh_tunnel_kwargs or ssh_tunnel_kwargs['ssh_password'] is None:
-                        ssh_password = getpass(f'enter password for SSH user "{ssh_tunnel_kwargs["ssh_username"]}": ')
+                    if (
+                            'ssh_password' not in ssh_tunnel_kwargs
+                            or ssh_tunnel_kwargs['ssh_password'] is None
+                    ):
+                        ssh_password = getpass(
+                            f'enter password for SSH user "{ssh_tunnel_kwargs["ssh_username"]}": '
+                        )
                         if ssh_password is None or len(ssh_password) == 0:
                             raise ConnectionError('missing SSH password')
                         ssh_tunnel_kwargs['ssh_password'] = ssh_password
 
                 if 'username' not in database_kwargs or database_kwargs['username'] is None:
-                    database_username = input(f'enter username for database '
-                                              f'"{database_kwargs["hostname"]}/{database_kwargs["database"]}": ')
+                    database_username = input(
+                        f'enter username for database '
+                        f'"{database_kwargs["hostname"]}/{database_kwargs["database"]}": '
+                    )
                     if database_username is None or len(database_username) == 0:
                         raise ConnectionError('missing database username')
                     database_kwargs['username'] = database_username
 
                 if 'password' not in database_kwargs or database_kwargs['password'] is None:
-                    database_password = getpass(f'enter password for database user "{database_kwargs["username"]}": ')
+                    database_password = getpass(
+                        f'enter password for database user "{database_kwargs["username"]}": '
+                    )
                     if database_password is None or len(database_password) == 0:
                         raise ConnectionError('missing database password')
                     database_kwargs['password'] = database_password
 
-                database = APRSDatabaseTable(**database_kwargs, **ssh_tunnel_kwargs, callsigns=callsigns)
+                database = APRSDatabaseTable(
+                    **database_kwargs, **ssh_tunnel_kwargs, callsigns=callsigns
+                )
                 LOGGER.info(f'connected to {database.location}')
                 connections.append(database)
             except ConnectionError:
@@ -206,15 +259,24 @@ def main():
             filter_message += f' from {len(callsigns)} callsigns: {callsigns}'
         LOGGER.info(filter_message)
 
-        LOGGER.info(f'listening for packets every {interval_seconds}s from {len(connections)} connection(s): '
-                    f'{", ".join([connection.location for connection in connections])}')
+        LOGGER.info(
+            f'listening for packets every {interval_seconds}s from {len(connections)} connection(s): '
+            f'{", ".join([connection.location for connection in connections])}'
+        )
 
         packet_tracks = {}
         try:
             while len(connections) > 0:
                 try:
-                    parsed_packets = retrieve_packets(connections, packet_tracks, database, output_filename, start_date=start_date, end_date=end_date,
-                                                      logger=LOGGER)
+                    parsed_packets = retrieve_packets(
+                        connections,
+                        packet_tracks,
+                        database,
+                        output_filename,
+                        start_date=start_date,
+                        end_date=end_date,
+                        logger=LOGGER,
+                    )
                 except Exception as error:
                     LOGGER.exception(f'{error.__class__.__name__} - {error}')
                 if aprs_is is not None:

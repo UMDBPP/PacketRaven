@@ -38,23 +38,58 @@ class LocationPacketTrack:
 
     @property
     def intervals(self) -> numpy.ndarray:
-        return numpy.concatenate([[0], numpy.array([packet_delta.seconds for packet_delta in numpy.diff(self.packets)])])
+        return numpy.concatenate(
+            [
+                [0],
+                numpy.array(
+                    [packet_delta.seconds for packet_delta in numpy.diff(self.packets)]
+                ),
+            ]
+        )
 
     @property
     def distances(self) -> numpy.ndarray:
-        return numpy.concatenate([[0], numpy.array([packet_delta.distance for packet_delta in numpy.diff(self.packets)])])
+        return numpy.concatenate(
+            [
+                [0],
+                numpy.array(
+                    [packet_delta.distance for packet_delta in numpy.diff(self.packets)]
+                ),
+            ]
+        )
 
     @property
     def ascents(self) -> numpy.ndarray:
-        return numpy.concatenate([[0], numpy.array([packet_delta.ascent for packet_delta in numpy.diff(self.packets)])])
+        return numpy.concatenate(
+            [
+                [0],
+                numpy.array(
+                    [packet_delta.ascent for packet_delta in numpy.diff(self.packets)]
+                ),
+            ]
+        )
 
     @property
     def ascent_rates(self) -> numpy.ndarray:
-        return numpy.concatenate([[0], numpy.array([packet_delta.ascent_rate for packet_delta in numpy.diff(self.packets)])])
+        return numpy.concatenate(
+            [
+                [0],
+                numpy.array(
+                    [packet_delta.ascent_rate for packet_delta in numpy.diff(self.packets)]
+                ),
+            ]
+        )
 
     @property
     def ground_speeds(self) -> numpy.ndarray:
-        return numpy.concatenate([[0], numpy.array([packet_delta.ground_speed for packet_delta in numpy.diff(self.packets)])])
+        return numpy.concatenate(
+            [
+                [0],
+                numpy.array(
+                    [packet_delta.ground_speed for packet_delta in numpy.diff(self.packets)]
+                ),
+            ]
+        )
 
     @property
     def time_to_ground(self) -> timedelta:
@@ -65,7 +100,9 @@ class LocationPacketTrack:
         if current_ascent_rate < 0:
             # TODO implement landing location as the intersection of the predicted descent track with a local DEM
             # TODO implement a time to impact calc based off of standard atmo
-            return timedelta(seconds=self.packets[-1].coordinates[2] / abs(current_ascent_rate))
+            return timedelta(
+                seconds=self.packets[-1].coordinates[2] / abs(current_ascent_rate)
+            )
         else:
             return timedelta(seconds=-1)
 
@@ -133,7 +170,9 @@ class APRSTrack(LocationPacketTrack):
         if packet_callsign == self.callsign:
             super().append(packet)
         else:
-            raise ValueError(f'Packet callsign {packet_callsign} does not match ground track callsign {self.callsign}.')
+            raise ValueError(
+                f'Packet callsign {packet_callsign} does not match ground track callsign {self.callsign}.'
+            )
 
     def __eq__(self, other) -> bool:
         return self.callsign == other.__callsign and super().__eq__(other)
