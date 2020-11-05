@@ -14,8 +14,15 @@ from packetraven.writer import write_aprs_packet_tracks
 LOGGER = get_logger('packetraven')
 
 
-def retrieve_packets(connections: [APRSPacketSource], packet_tracks: [APRSTrack], database: APRSDatabaseTable = None,
-                     output_filename: PathLike = None, start_date: datetime = None, end_date: datetime = None, logger: Logger = None) -> [APRSPacket]:
+def retrieve_packets(
+        connections: [APRSPacketSource],
+        packet_tracks: [APRSTrack],
+        database: APRSDatabaseTable = None,
+        output_filename: PathLike = None,
+        start_date: datetime = None,
+        end_date: datetime = None,
+        logger: Logger = None,
+) -> [APRSPacket]:
     if logger is None:
         logger = LOGGER
 
@@ -75,21 +82,29 @@ def retrieve_packets(connections: [APRSPacketSource], packet_tracks: [APRSTrack]
             packet_track = packet_tracks[callsign]
             message = ''
             try:
-                coordinate_string = ', '.join(f'{coordinate:.3f}°' for coordinate in packet_track.coordinates[-1, :2])
-                message += f'{callsign:8} #{len(packet_track)} ({coordinate_string}, {packet_track.coordinates[-1, 2]:.2f} m); ' \
-                           f'{packet_track.intervals[-1]:.2f} s since last packet: ' \
-                           f'{packet_track.distances[-1]:.2f} m distance over ground ({packet_track.ground_speeds[-1]:.2f} m/s), ' \
-                           f'{packet_track.ascents[-1]:.2f} m ascent ({packet_track.ascent_rates[-1]:.2f} m/s)'
+                coordinate_string = ', '.join(
+                    f'{coordinate:.3f}°' for coordinate in packet_track.coordinates[-1, :2]
+                )
+                message += (
+                    f'{callsign:8} #{len(packet_track)} ({coordinate_string}, {packet_track.coordinates[-1, 2]:.2f} m); '
+                    f'{packet_track.intervals[-1]:.2f} s since last packet: '
+                    f'{packet_track.distances[-1]:.2f} m distance over ground ({packet_track.ground_speeds[-1]:.2f} m/s), '
+                    f'{packet_track.ascents[-1]:.2f} m ascent ({packet_track.ascent_rates[-1]:.2f} m/s)'
+                )
 
                 if packet_track.time_to_ground >= timedelta(seconds=0):
-                    message += f'; currently falling from {packet_track.coordinates[:, 2].max():.3f} m; ' \
-                               f'{packet_track.time_to_ground / timedelta(seconds=1):.2f} s to the ground'
+                    message += (
+                        f'; currently falling from {packet_track.coordinates[:, 2].max():.3f} m; '
+                        f'{packet_track.time_to_ground / timedelta(seconds=1):.2f} s to the ground'
+                    )
             except Exception as error:
                 LOGGER.exception(f'{error.__class__.__name__} - {error}')
             finally:
                 logger.info(message)
 
         if output_filename is not None:
-            write_aprs_packet_tracks([packet_tracks[callsign] for callsign in updated_callsigns], output_filename)
+            write_aprs_packet_tracks(
+                [packet_tracks[callsign] for callsign in updated_callsigns], output_filename
+            )
 
     return parsed_packets

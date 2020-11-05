@@ -50,6 +50,4 @@ jobs:
           POSTGRES_DATABASE: test_database
           POSTGRES_USERNAME: postgres
           POSTGRES_PASSWORD: test_password
-        run: coverage run --source packetraven -m nose --nologcapture --verbose
-      - name: Generate coverage report
-        run: coverage report -m
+        run: pytest --cov=packetraven

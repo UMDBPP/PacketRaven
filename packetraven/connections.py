@@ -13,7 +13,14 @@ from shapely.geometry import Point
 from tablecrow import PostGresTable
 from tablecrow.table import split_URL_port
 
-from .base import APRSPacketSink, APRSPacketSource, NetworkConnection, PacketSink, PacketSource, next_open_serial_port
+from .base import (
+    APRSPacketSink,
+    APRSPacketSource,
+    NetworkConnection,
+    PacketSink,
+    PacketSource,
+    next_open_serial_port,
+)
 from .packets import APRSPacket, LocationPacket
 from .parsing import InvalidPacketError
 from .utilities import get_logger, read_configuration, repository_root
@@ -53,7 +60,9 @@ class SerialTNC(APRSPacketSource):
         if self.__last_access_time is not None and self.interval is not None:
             interval = datetime.now() - self.__last_access_time
             if interval < self.interval:
-                raise TimeIntervalError(f'interval {interval} less than minimum interval {self.interval}')
+                raise TimeIntervalError(
+                    f'interval {interval} less than minimum interval {self.interval}'
+                )
         packets = []
         for line in self.connection.readlines():
             try:
@@ -98,7 +107,9 @@ class TextFileTNC(APRSPacketSource):
         if self.__last_access_time is not None and self.interval is not None:
             interval = datetime.now() - self.__last_access_time
             if interval < self.interval:
-                raise TimeIntervalError(f'interval {interval} less than minimum interval {self.interval}')
+                raise TimeIntervalError(
+                    f'interval {interval} less than minimum interval {self.interval}'
+                )
         packets = []
         for line in self.connection.readlines():
             if len(line) > 0:
@@ -112,7 +123,9 @@ class TextFileTNC(APRSPacketSource):
                         packet_time = datetime.now()
                     raw_aprs = raw_aprs.strip()
                     try:
-                        packets.append(APRSPacket.from_frame(raw_aprs, packet_time, source=self.location))
+                        packets.append(
+                            APRSPacket.from_frame(raw_aprs, packet_time, source=self.location)
+                        )
                     except Exception as error:
                         LOGGER.error(f'{error.__class__.__name__} - {error}')
         if self.callsigns is not None:
@@ -164,7 +177,9 @@ class APRSfi(APRSPacketSource, NetworkConnection):
 
     @api_key.setter
     def api_key(self, api_key: str):
-        response = requests.get(f'{self.location}?name=OH2TI&what=wx&apikey={api_key}&format=json').json()
+        response = requests.get(
+            f'{self.location}?name=OH2TI&what=wx&apikey={api_key}&format=json'
+        ).json()
         if response['result'] == 'fail':
             raise ConnectionError(response['description'])
         self.__api_key = api_key
@@ -174,13 +189,15 @@ class APRSfi(APRSPacketSource, NetworkConnection):
         if self.__last_access_time is not None and self.interval is not None:
             interval = datetime.now() - self.__last_access_time
             if interval < self.interval:
-                raise TimeIntervalError(f'interval {interval} less than minimum interval {self.interval}')
+                raise TimeIntervalError(
+                    f'interval {interval} less than minimum interval {self.interval}'
+                )
 
         query = {
             'name': ','.join(self.callsigns),
             'what': 'loc',
             'apikey': self.api_key,
-            'format': 'json'
+            'format': 'json',
         }
 
         query = '&'.join(f'{key}={value}' for key, value in query.items())
@@ -225,7 +242,9 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
             kwargs['primary_key'] = 'time'
         kwargs['fields'] = {**self.__default_fields, **kwargs['fields']}
         PostGresTable.__init__(self, hostname, database, table, **kwargs)
-        PacketSource.__init__(self, f'postgresql://{self.hostname}:{self.port}/{self.database}/{self.name}')
+        PacketSource.__init__(
+            self, f'postgresql://{self.hostname}:{self.port}/{self.database}/{self.name}'
+        )
 
         if not self.connected:
             raise ConnectionError(f'cannot connect to {self.location}')
@@ -238,9 +257,13 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
         if self.__last_access_time is not None and self.interval is not None:
             interval = datetime.now() - self.__last_access_time
             if interval < self.interval:
-                raise TimeIntervalError(f'interval {interval} less than minimum interval {self.interval}')
-        packets = [LocationPacket(**{key: value for key, value in record.items() if key != 'point'})
-                   for record in self.records]
+                raise TimeIntervalError(
+                    f'interval {interval} less than minimum interval {self.interval}'
+                )
+        packets = [
+            LocationPacket(**{key: value for key, value in record.items() if key != 'point'})
+            for record in self.records
+        ]
         self.__last_access_time = datetime.now()
         return packets
 
@@ -272,11 +295,15 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
             new_packets.extend(self.__send_buffer)
             self.__send_buffer.clear()
         if len(new_packets) > 0:
-            LOGGER.info(f'sending {len(new_packets)} packet(s) to {self.location}: {new_packets}')
+            LOGGER.info(
+                f'sending {len(new_packets)} packet(s) to {self.location}: {new_packets}'
+            )
             try:
                 self.insert(new_packets)
             except ConnectionError as error:
-                LOGGER.info(f'could not send packet(s) ({error}); reattempting on next iteration')
+                LOGGER.info(
+                    f'could not send packet(s) ({error}); reattempting on next iteration'
+                )
                 self.__send_buffer.extend(new_packets)
 
     def close(self):
@@ -292,7 +319,7 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
             'y': packet.coordinates[1],
             'z': packet.coordinates[2],
             'point': Point(*packet.coordinates),
-            **{f'packet_{field}': value for field, value in packet.attributes.items()}
+            **{f'packet_{field}': value for field, value in packet.attributes.items()},
         }
 
 
@@ -315,7 +342,9 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
         'raw': str,
     }
 
-    def __init__(self, hostname: str, database: str, table: str, callsigns: [str] = None, **kwargs):
+    def __init__(
+            self, hostname: str, database: str, table: str, callsigns: [str] = None, **kwargs
+    ):
         """
         Create a new database connection to a table containing APRS packet data.
 
@@ -331,7 +360,9 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
             kwargs['primary_key'] = ('time', 'packet_from')
         elif 'callsign' in kwargs['primary_key']:
             kwargs['primary_key'][kwargs['primary_key'].index('callsign')] = 'packet_from'
-        kwargs['fields'] = {f'packet_{field}': field_type for field, field_type in kwargs['fields'].items()}
+        kwargs['fields'] = {
+            f'packet_{field}': field_type for field, field_type in kwargs['fields'].items()
+        }
         PacketDatabaseTable.__init__(self, hostname, database, table, **kwargs)
         location = f'postgres://{self.hostname}:{self.port}/{self.database}/{self.name}'
         APRSPacketSource.__init__(self, location, callsigns)
@@ -343,12 +374,19 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
         if self.__last_access_time is not None and self.interval is not None:
             interval = datetime.now() - self.__last_access_time
             if interval < self.interval:
-                raise TimeIntervalError(f'interval {interval} less than minimum interval {self.interval}')
+                raise TimeIntervalError(
+                    f'interval {interval} less than minimum interval {self.interval}'
+                )
 
         packets = []
         for record in self.records:
-            record = {field if field in ['time', 'x', 'y', 'z'] else field.replace('packet_', ''): value
-                      for field, value in record.items() if field not in ['point']}
+            record = {
+                field
+                if field in ['time', 'x', 'y', 'z']
+                else field.replace('packet_', ''): value
+                for field, value in record.items()
+                if field not in ['point']
+            }
             record['from_callsign'] = record['from']
             del record['from']
             if 'to' in record:
@@ -371,7 +409,14 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
             del attributes['to']
         else:
             to_callsign = None
-        return APRSPacket(from_callsign, to_callsign, packet.time, *packet.coordinates, packet.crs, **attributes)
+        return APRSPacket(
+            from_callsign,
+            to_callsign,
+            packet.time,
+            *packet.coordinates,
+            packet.crs,
+            **attributes,
+        )
 
     def __setitem__(self, key: (datetime, str), packet: APRSPacket):
         PacketDatabaseTable.__setitem__(self, key, packet)
@@ -401,7 +446,7 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
             'y': packet.coordinates[1],
             'z': packet.coordinates[2],
             'point': Point(*packet.coordinates),
-            **{f'packet_{field}': value for field, value in packet.attributes.items()}
+            **{f'packet_{field}': value for field, value in packet.attributes.items()},
         }
 
 
@@ -431,33 +476,45 @@ class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
     def send(self, packets: [APRSPacket]):
         if not isinstance(packets, Sequence) or isinstance(packets, str):
             packets = [packets]
-        packets = [packet if not isinstance(packet, str) else APRSPacket.from_frame(packet) for packet in packets]
+        packets = [
+            packet if not isinstance(packet, str) else APRSPacket.from_frame(packet)
+            for packet in packets
+        ]
 
         if len(self.__send_buffer) > 0:
             packets.extend(self.__send_buffer)
             self.__send_buffer.clear()
 
         callsigns = {packet.from_callsign for packet in packets}
-        packets = {callsign: [packet for packet in packets if packet.from_callsign == callsign] for callsign in callsigns}
+        packets = {
+            callsign: [packet for packet in packets if packet.from_callsign == callsign]
+            for callsign in callsigns
+        }
 
         if len(packets) > 0:
             LOGGER.info(f'sending {len(packets)} packet(s) to {self.location}: {packets}')
             for callsign, callsign_packets in packets.items():
                 try:
                     frames = [packet.frame for packet in callsign_packets]
-                    aprs_is = aprslib.IS(callsign, aprslib.passcode(callsign), self.hostname, self.port)
+                    aprs_is = aprslib.IS(
+                        callsign, aprslib.passcode(callsign), self.hostname, self.port
+                    )
                     aprs_is.connect()
                     if len(frames) > 0:
                         aprs_is.sendall(r'\rn'.join(frames))
                     aprs_is.close()
                 except ConnectionError as error:
-                    LOGGER.info(f'could not send packet(s) ({error}); reattempting on next iteration')
+                    LOGGER.info(
+                        f'could not send packet(s) ({error}); reattempting on next iteration'
+                    )
                     self.__send_buffer.extend(packets)
 
     @property
     def packets(self) -> [APRSPacket]:
         if self.callsigns is None:
-            raise ConnectionError(f'cannot retrieve packets from APRS-IS with no callsigns specified')
+            raise ConnectionError(
+                f'cannot retrieve packets from APRS-IS with no callsigns specified'
+            )
 
         packets = []
 
