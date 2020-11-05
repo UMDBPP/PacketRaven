@@ -206,7 +206,7 @@ class APRSPacket(LocationPacket):
 
     @property
     def frame(self) -> str:
-        if 'raw' in self:
+        if 'raw' in self and self['raw'] is not None:
             frame = self['raw']
         else:
             # https://aprs-python.readthedocs.io/en/stable/parse_formats.html#normal
