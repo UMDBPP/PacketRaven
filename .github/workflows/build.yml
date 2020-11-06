@@ -19,13 +19,13 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ runner.python-version }}
+          python-version: ${{ matrix.python-version }}
       - name: Restore cached dependencies
         uses: actions/cache@v2
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ runner.python-version }}-${{ hashFiles('setup.py') }}
-          restore-keys: ${{ runner.os }}-pip-${{ runner.python-version }}-
+          key: ${{ matrix.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('setup.py') }}
+          restore-keys: ${{ matrix.os }}-pip-${{ matrix.python-version }}-
       - name: Install dependencies
         run: pip install --upgrade pip setuptools wheel
       - name: Build wheel
