@@ -642,7 +642,8 @@ class PacketRavenGUI:
                 for callsign in updated_callsigns:
                     packet_track = self.packet_tracks[callsign]
                     packet_time = datetime.utcfromtimestamp(
-                        (packet_track.times[-1] - numpy.datetime64('1970-01-01T00:00:00Z')) / numpy.timedelta64(1, 's')
+                        (packet_track.times[-1] - numpy.datetime64('1970-01-01T00:00:00Z'))
+                        / numpy.timedelta64(1, 's')
                     )
 
                     if callsign not in existing_callsigns:
@@ -909,7 +910,8 @@ class PacketRavenGUI:
                 for callsign, packet_track in self.__packet_tracks.items():
                     window = self.__windows[callsign]
                     packet_time = datetime.utcfromtimestamp(
-                        (packet_track.times[-1] - numpy.datetime64('1970-01-01T00:00:00Z')) / numpy.timedelta64(1, 's')
+                        (packet_track.times[-1] - numpy.datetime64('1970-01-01T00:00:00Z'))
+                        / numpy.timedelta64(1, 's')
                     )
 
                     time_to_ground_box = self.__elements[f'{callsign}.time_to_ground']
