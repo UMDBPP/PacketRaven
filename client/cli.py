@@ -127,7 +127,7 @@ def main():
     interval_seconds = args.interval if args.interval >= 1 else 1
 
     if CREDENTIALS_FILENAME.exists():
-        credentials = {}
+        credentials = kwargs.copy()
         for section in read_configuration(CREDENTIALS_FILENAME).values():
             credentials.update(section)
         kwargs = {
