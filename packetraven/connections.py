@@ -198,6 +198,8 @@ class APRSfi(APRSPacketSource, NetworkConnection):
             'what': 'loc',
             'apikey': self.api_key,
             'format': 'json',
+            'timerange': int(timedelta(days=1) / timedelta(seconds=1)),
+            'tail': int(timedelta(days=1) / timedelta(seconds=1)),
         }
 
         query = '&'.join(f'{key}={value}' for key, value in query.items())
