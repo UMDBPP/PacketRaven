@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-import math
 from typing import Any, Union
 
 import numpy
@@ -141,11 +140,11 @@ class Distance:
 
     @property
     def ascent_rate(self) -> float:
-        return self.__vertical / self.seconds if self.seconds > 0 else math.inf
+        return self.__vertical / self.seconds if self.seconds > 0 else 0
 
     @property
     def ground_speed(self) -> float:
-        return self.__horizontal / self.seconds if self.seconds > 0 else math.inf
+        return self.__horizontal / self.seconds if self.seconds > 0 else 0
 
     def __str__(self) -> str:
         return (

@@ -94,7 +94,7 @@ def retrieve_packets(
 
                 if packet_track.time_to_ground >= timedelta(seconds=0):
                     message += (
-                        f'; currently falling from {packet_track.coordinates[:, 2].max():.3f} m; '
+                        f'; max altitude was {packet_track.coordinates[:, 2].max():.3f} m; '
                         f'{packet_track.time_to_ground / timedelta(seconds=1):.2f} s to the ground'
                     )
             except Exception as error:

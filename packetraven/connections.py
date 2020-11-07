@@ -396,6 +396,8 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
                 del record['to']
             else:
                 record['to'] = None
+            if record['source'] is None:
+                record['source'] = self.location
             packets.append(APRSPacket(**record))
 
         self.__last_access_time = datetime.now()

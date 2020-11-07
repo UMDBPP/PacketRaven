@@ -10,6 +10,7 @@ from tkinter.ttk import Combobox, Separator
 from typing import Callable
 
 from dateutil.parser import parse
+import numpy
 
 from client import DEFAULT_INTERVAL_SECONDS
 from client.retrieve import retrieve_packets
@@ -25,10 +26,12 @@ class PacketRavenGUI:
     def __init__(
             self,
             callsigns: [str] = None,
+            start_date: datetime = None,
+            end_date: datetime = None,
             log_filename: PathLike = None,
             output_filename: PathLike = None,
             interval_seconds: int = None,
-            using_igate: bool = False,
+            igate: bool = False,
             **kwargs,
     ):
         main_window = tkinter.Tk()
@@ -55,7 +58,7 @@ class PacketRavenGUI:
         for section_name, section in self.__connection_configuration.items():
             section.update({key: value for key, value in kwargs.items() if key in section})
 
-        self.using_igate = using_igate
+        self.igate = igate
 
         self.database = None
         self.aprs_is = None
@@ -153,10 +156,10 @@ class PacketRavenGUI:
         self.callsigns = callsigns
         self.tnc = self.__connection_configuration['tnc']['tnc']
 
-        if 'start_date' in kwargs:
-            self.start_date = kwargs['start_date']
-        if 'end_date' in kwargs:
-            self.end_date = kwargs['end_date']
+        if start_date is not None:
+            self.start_date = start_date
+        if end_date is not None:
+            self.end_date = end_date
 
         self.log_filename = log_filename
         if self.log_filename is None:
@@ -562,7 +565,7 @@ class PacketRavenGUI:
                 else:
                     self.database = None
 
-                if self.using_igate:
+                if self.igate:
                     try:
                         self.aprs_is = APRSis(self.callsigns)
                     except ConnectionError as error:
@@ -618,6 +621,8 @@ class PacketRavenGUI:
     def retrieve_packets(self):
         if self.active:
             try:
+                current_time = datetime.now()
+
                 existing_callsigns = list(self.packet_tracks)
 
                 parsed_packets = retrieve_packets(
@@ -635,6 +640,11 @@ class PacketRavenGUI:
 
                 updated_callsigns = {packet.from_callsign for packet in parsed_packets}
                 for callsign in updated_callsigns:
+                    packet_track = self.packet_tracks[callsign]
+                    packet_time = datetime.utcfromtimestamp(
+                        (packet_track.times[-1] - numpy.datetime64('1970-01-01T00:00:00Z')) / numpy.timedelta64(1, 's')
+                    )
+
                     if callsign not in existing_callsigns:
                         window = tkinter.Toplevel()
                         window.title(callsign)
@@ -642,21 +652,11 @@ class PacketRavenGUI:
                         self.__add_text_box(
                             window,
                             title=f'{callsign}.source',
-                            label='Latest Packet',
-                            width=48,
+                            label=None,
+                            width=25,
                             sticky='w',
-                            columnspan=6,
+                            columnspan=3,
                         )
-
-                        separator = Separator(window, orient=tkinter.HORIZONTAL)
-                        separator.grid(
-                            row=window.grid_size()[1],
-                            column=0,
-                            columnspan=7,
-                            sticky='ew',
-                            pady=10,
-                        )
-
                         self.__add_text_box(
                             window,
                             title=f'{callsign}.callsign',
@@ -681,12 +681,22 @@ class PacketRavenGUI:
                             label='Time',
                             width=19,
                             sticky='w',
+                            row=self.__elements[f'{callsign}.source'].grid_info()['row'],
+                            column=self.__elements[f'{callsign}.source'].grid_info()['column']
+                                   + 4,
+                            columnspan=2,
+                        )
+                        self.__add_text_box(
+                            window,
+                            title=f'{callsign}.age',
+                            label='Packet Age',
+                            units='s',
+                            sticky='w',
                             row=self.__elements[f'{callsign}.callsign'].grid_info()['row'],
                             column=self.__elements[f'{callsign}.callsign'].grid_info()[
                                        'column'
                                    ]
                                    + 3,
-                            columnspan=2,
                         )
                         self.__add_text_box(
                             window,
@@ -780,14 +790,14 @@ class PacketRavenGUI:
                         self.__add_text_box(
                             window,
                             title=f'{callsign}.distance_downrange',
-                            label='Dist. Downrange',
+                            label='Downrange',
                             units='m',
                             sticky='w',
                         )
                         self.__add_text_box(
                             window,
                             title=f'{callsign}.distance_traveled',
-                            label='Dist. Traveled',
+                            label='Traveled',
                             units='m',
                             sticky='w',
                         )
@@ -823,7 +833,7 @@ class PacketRavenGUI:
 
                         separator = Separator(window, orient=tkinter.VERTICAL)
                         separator.grid(
-                            row=self.__elements[f'{callsign}.source'].grid_info()['row'] + 1,
+                            row=0,
                             column=3,
                             rowspan=window.grid_size()[1] + 2,
                             sticky='ns',
@@ -843,16 +853,13 @@ class PacketRavenGUI:
 
                     set_child_states(window)
 
-                    packet_track = self.packet_tracks[callsign]
                     self.replace_text(
                         self.__elements[f'{callsign}.packets'], len(packet_track)
                     )
                     self.replace_text(
                         self.__elements[f'{callsign}.source'], packet_track[-1].source
                     )
-                    self.replace_text(
-                        self.__elements[f'{callsign}.time'], f'{packet_track.times[-1]}'
-                    )
+                    self.replace_text(self.__elements[f'{callsign}.time'], f'{packet_time}')
                     self.replace_text(
                         self.__elements[f'{callsign}.altitude'],
                         f'{packet_track.coordinates[-1, 2]:.3f}',
@@ -899,19 +906,35 @@ class PacketRavenGUI:
                         f'{packet_track.coordinates[:, 2].max():.2f}',
                     )
 
-                    landing_box = self.__elements[f'{callsign}.time_to_ground']
+                for callsign, packet_track in self.__packet_tracks.items():
+                    window = self.__windows[callsign]
+                    packet_time = datetime.utcfromtimestamp(
+                        (packet_track.times[-1] - numpy.datetime64('1970-01-01T00:00:00Z')) / numpy.timedelta64(1, 's')
+                    )
 
+                    time_to_ground_box = self.__elements[f'{callsign}.time_to_ground']
                     if packet_track.time_to_ground >= timedelta(seconds=0):
-                        landing_box.configure(state=tkinter.NORMAL)
+                        time_to_ground_box.configure(state=tkinter.NORMAL)
+                        current_time_to_ground = (
+                                packet_time + packet_track.time_to_ground - current_time
+                        )
                         self.replace_text(
-                            landing_box,
-                            f'{packet_track.time_to_ground / timedelta(seconds=1):.2f}',
+                            time_to_ground_box,
+                            f'{current_time_to_ground / timedelta(seconds=1):.2f}',
                         )
                     else:
-                        self.replace_text(landing_box, '')
-                        landing_box.configure(state=tkinter.DISABLED)
+                        self.replace_text(time_to_ground_box, '')
+                        time_to_ground_box.configure(state=tkinter.DISABLED)
 
                     set_child_states(window, tkinter.DISABLED, [tkinter.Text])
+
+                    packet_age_box = self.__elements[f'{callsign}.age']
+                    packet_age_box.configure(state=tkinter.NORMAL)
+                    self.replace_text(
+                        packet_age_box,
+                        f'{(current_time - packet_time) / timedelta(seconds=1):.2f}',
+                    )
+                    packet_age_box.configure(state=tkinter.DISABLED)
 
                 if self.active:
                     self.__windows['main'].after(
@@ -928,6 +951,9 @@ class PacketRavenGUI:
             start_index = '1.0'
         else:
             start_index = 0
+
+        if value is None:
+            value = ''
 
         element.delete(start_index, tkinter.END)
         element.insert(start_index, value)
