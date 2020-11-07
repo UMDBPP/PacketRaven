@@ -92,18 +92,15 @@ def main():
                     ':', 1
                 )
 
-    if args.start is not None:
-        kwargs['start_date'] = parse_date(args.start.strip('"'))
+    start_date = parse_date(args.start.strip('"')) if args.start is not None else None
+    end_date = parse_date(args.end.strip('"')) if args.end is not None else None
 
-    if args.end is not None:
-        kwargs['end_date'] = parse_date(args.end.strip('"'))
-
-    if 'start_date' in kwargs and 'end_date' in kwargs:
-        if kwargs['start_date'] > kwargs['end_date']:
-            start_date = kwargs['start_date']
-            kwargs['start_date'] = kwargs['end_date']
-            kwargs['end_date'] = start_date
-            del start_date
+    if start_date is not None and end_date is not None:
+        if start_date > end_date:
+            temp_start_date = start_date
+            start_date = end_date
+            end_date = temp_start_date
+            del temp_start_date
 
     if args.log is not None:
         log_filename = Path(args.log).expanduser()
@@ -117,8 +114,12 @@ def main():
 
     if args.output is not None:
         output_filename = Path(args.output).expanduser()
-        if output_filename.is_dir() or (not output_filename.exists() and output_filename.suffix == ''):
-            output_filename = (output_filename / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson')
+        if output_filename.is_dir() or (
+                not output_filename.exists() and output_filename.suffix == ''
+        ):
+            output_filename = (
+                    output_filename / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson'
+            )
         if not output_filename.parent.exists():
             output_filename.parent.mkdir(parents=True, exist_ok=True)
     else:
@@ -127,7 +128,7 @@ def main():
     interval_seconds = args.interval if args.interval >= 1 else 1
 
     if CREDENTIALS_FILENAME.exists():
-        credentials = {}
+        credentials = kwargs.copy()
         for section in read_configuration(CREDENTIALS_FILENAME).values():
             credentials.update(section)
         kwargs = {
@@ -137,12 +138,16 @@ def main():
 
     if using_gui:
         PacketRavenGUI(
-            callsigns, log_filename, output_filename, interval_seconds, using_igate, **kwargs
+            callsigns,
+            start_date,
+            end_date,
+            log_filename,
+            output_filename,
+            interval_seconds,
+            using_igate,
+            **kwargs,
         )
     else:
-        start_date = kwargs['start_date'] if 'start_date' in kwargs else None
-        end_date = kwargs['end_date'] if 'end_date' in kwargs else None
-
         connections = []
         if 'tnc' in kwargs:
             tnc_kwargs = {key: kwargs[key] for key in ['tnc'] if key in kwargs}

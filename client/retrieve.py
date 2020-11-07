@@ -3,6 +3,7 @@ from logging import Logger
 from os import PathLike
 
 from aprslib.packets.base import APRSPacket
+import numpy
 
 from packetraven import APRSDatabaseTable
 from packetraven.base import APRSPacketSource
@@ -27,6 +28,7 @@ def retrieve_packets(
         logger = LOGGER
 
     logger.debug(f'receiving packets from {len(connections)} source(s)')
+    current_time = datetime.now()
 
     parsed_packets = []
     for connection in connections:
@@ -80,6 +82,11 @@ def retrieve_packets(
         updated_callsigns = sorted(updated_callsigns)
         for callsign in updated_callsigns:
             packet_track = packet_tracks[callsign]
+            packet_time = datetime.utcfromtimestamp(
+                (packet_track.times[-1] - numpy.datetime64('1970-01-01T00:00:00Z'))
+                / numpy.timedelta64(1, 's')
+            )
+
             message = ''
             try:
                 coordinate_string = ', '.join(
@@ -87,15 +94,19 @@ def retrieve_packets(
                 )
                 message += (
                     f'{callsign:8} #{len(packet_track)} ({coordinate_string}, {packet_track.coordinates[-1, 2]:.2f} m); '
-                    f'{packet_track.intervals[-1]:.2f} s since last packet: '
+                    f'{(current_time - packet_time) / timedelta(seconds=1)} s old; '
+                    f'{packet_track.intervals[-1]:.2f} s since last packet; '
                     f'{packet_track.distances[-1]:.2f} m distance over ground ({packet_track.ground_speeds[-1]:.2f} m/s), '
                     f'{packet_track.ascents[-1]:.2f} m ascent ({packet_track.ascent_rates[-1]:.2f} m/s)'
                 )
 
                 if packet_track.time_to_ground >= timedelta(seconds=0):
+                    current_time_to_ground = (
+                            packet_time + packet_track.time_to_ground - current_time
+                    )
                     message += (
-                        f'; currently falling from {packet_track.coordinates[:, 2].max():.3f} m; '
-                        f'{packet_track.time_to_ground / timedelta(seconds=1):.2f} s to the ground'
+                        f'; currently falling from max altitude of {packet_track.coordinates[:, 2].max():.3f} m; '
+                        f'{current_time_to_ground / timedelta(seconds=1):.2f} s to the ground'
                     )
             except Exception as error:
                 LOGGER.exception(f'{error.__class__.__name__} - {error}')
