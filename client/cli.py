@@ -1,7 +1,6 @@
 from argparse import ArgumentParser
 from datetime import datetime
 from getpass import getpass
-import os
 from pathlib import Path
 import sys
 import time
@@ -108,22 +107,20 @@ def main():
 
     if args.log is not None:
         log_filename = Path(args.log).expanduser()
-        if log_filename.is_dir():
+        if log_filename.is_dir() or (not log_filename.exists() and log_filename.suffix == ''):
             log_filename = log_filename / f'packetraven_log_{datetime.now():%Y%m%dT%H%M%S}.txt'
         if not log_filename.parent.exists():
-            os.makedirs(log_filename.parent, exist_ok=True)
+            log_filename.parent.mkdir(parents=True, exist_ok=True)
         get_logger(LOGGER.name, log_filename)
     else:
         log_filename = None
 
     if args.output is not None:
         output_filename = Path(args.output).expanduser()
-        if output_filename.is_dir():
-            output_filename = (
-                    output_filename / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson'
-            )
+        if output_filename.is_dir() or (not output_filename.exists() and output_filename.suffix == ''):
+            output_filename = (output_filename / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson')
         if not output_filename.parent.exists():
-            os.makedirs(output_filename.parent, exist_ok=True)
+            output_filename.parent.mkdir(parents=True, exist_ok=True)
     else:
         output_filename = None
 
