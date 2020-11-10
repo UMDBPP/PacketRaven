@@ -446,7 +446,6 @@ class PacketRavenGUI:
                         if 'txt' in tnc:
                             tnc = TextFileTNC(tnc, self.callsigns)
                             LOGGER.info(f'reading file {tnc.location}')
-                            self.__connections.append(tnc)
                         else:
                             tnc = SerialTNC(tnc, self.callsigns)
                             LOGGER.info(f'opened port {tnc.location}')
