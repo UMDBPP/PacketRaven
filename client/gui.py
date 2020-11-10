@@ -154,7 +154,7 @@ class PacketRavenGUI:
         toggle_button.grid(row=control_frame.grid_size()[1], column=0, sticky='nsew')
 
         self.callsigns = callsigns
-        self.tnc = self.__connection_configuration['tnc']['tnc']
+        self.tncs = self.__connection_configuration['tnc']['tnc']
 
         if start_date is not None:
             self.start_date = start_date
@@ -195,29 +195,30 @@ class PacketRavenGUI:
         self.replace_text(self.__elements['callsigns'], callsigns)
 
     @property
-    def tnc(self) -> str:
-        tnc_location = self.__elements['tnc'].get().upper()
-        if len(tnc_location) > 0:
-            if tnc_location.upper() == 'AUTO':
-                try:
-                    tnc_location = next_open_serial_port()
-                except OSError:
-                    LOGGER.warning(f'no open serial ports')
-                    tnc_location = None
-                self.tnc = tnc_location
-        else:
-            tnc_location = None
-        return tnc_location
+    def tncs(self) -> [str]:
+        """ locations of TNCs parsing APRS audio into ASCII frames """
+        tncs = []
+        for tnc in self.__elements['tnc'].get().split(','):
+            tnc = tnc.strip()
+            if len(tnc) > 0:
+                if tnc.upper() == 'AUTO':
+                    try:
+                        tnc = next_open_serial_port()
+                    except OSError:
+                        LOGGER.warning(f'no open serial ports')
+                        tnc = None
+                tncs.append(tnc)
+        return tncs
 
-    @tnc.setter
-    def tnc(self, filename: str):
-        filename = filename
-        self.__connection_configuration['tnc']['tnc'] = filename
-        if filename is None:
-            filename = ''
-        else:
-            filename = filename.upper()
-        self.replace_text(self.__elements['tnc'], filename)
+    @tncs.setter
+    def tncs(self, filenames: [str]):
+        if filenames is None:
+            filenames = []
+        elif isinstance(filenames, str):
+            filenames = [filenames]
+
+        self.__connection_configuration['tnc']['tnc'] = filenames
+        self.replace_text(self.__elements['tnc'], ', '.join(filenames))
 
     @property
     def start_date(self) -> datetime:
@@ -338,7 +339,7 @@ class PacketRavenGUI:
 
     def __select_tnc(self, event):
         if event.widget.get() == self.__file_selection_option:
-            self.tnc = filedialog.askopenfilename(
+            self.tncs = filedialog.askopenfilename(
                 title='Select TNC text file...',
                 defaultextension='.txt',
                 filetypes=[('Text', '*.txt')],
@@ -438,25 +439,22 @@ class PacketRavenGUI:
 
             connection_errors = []
             try:
-                tnc_location = self.tnc
+                tncs = self.tncs
                 self.__elements['tnc'].configure(state=tkinter.DISABLED)
-
-                if tnc_location is not None:
-                    if 'txt' in tnc_location:
-                        try:
-                            text_file_tnc = TextFileTNC(tnc_location, self.callsigns)
-                            LOGGER.info(f'reading file {text_file_tnc.location}')
-                            self.__connections.append(text_file_tnc)
-                        except Exception as error:
-                            connection_errors.append(f'file TNC - {error}')
-                    else:
-                        try:
-                            serial_tnc = SerialTNC(tnc_location, self.callsigns)
-                            LOGGER.info(f'opened port {serial_tnc.location}')
-                            self.tnc = serial_tnc.location
-                            self.__connections.append(serial_tnc)
-                        except Exception as error:
-                            connection_errors.append(f'serial TNC - {error}')
+                for tnc in tncs:
+                    try:
+                        if 'txt' in tnc:
+                            tnc = TextFileTNC(tnc, self.callsigns)
+                            LOGGER.info(f'reading file {tnc.location}')
+                            self.__connections.append(tnc)
+                        else:
+                            tnc = SerialTNC(tnc, self.callsigns)
+                            LOGGER.info(f'opened port {tnc.location}')
+                        self.__connections.append(tnc)
+                    except Exception as error:
+                        connection_errors.append(f'TNC - {error}')
+                self.tncs = [connection.location for connection in self.__connections
+                             if isinstance(connection, SerialTNC) or isinstance(connection, TextFileTNC)]
 
                 api_key = self.__connection_configuration['aprs_fi']['api_key']
                 if api_key is None:
@@ -967,7 +965,7 @@ class PacketRavenGUI:
             self.__windows['main'].destroy()
         except Exception as error:
             LOGGER.exception(f'{error.__class__.__name__} - {error}')
-        sys.exit(0)
+        sys.exit()
 
 
 def set_child_states(frame: tkinter.Frame, state: str = None, types: [type] = None):

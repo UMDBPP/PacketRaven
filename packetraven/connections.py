@@ -4,6 +4,7 @@ from pathlib import Path
 import re
 from time import sleep
 from typing import Any, Sequence
+from urllib.parse import urlparse
 
 import aprslib
 from dateutil.parser import parse as parse_date
@@ -43,7 +44,7 @@ class SerialTNC(APRSPacketSource):
         :param callsigns: list of callsigns to return from source
         """
 
-        if serial_port is None or serial_port == 'auto':
+        if serial_port is None or serial_port == '' or serial_port == 'auto':
             try:
                 serial_port = next_open_serial_port()
             except ConnectionError:
@@ -51,8 +52,8 @@ class SerialTNC(APRSPacketSource):
         else:
             serial_port = serial_port.strip('"')
 
-        self.connection = Serial(serial_port, baudrate=9600, timeout=1)
-        super().__init__(self.connection.port, callsigns)
+        self.serial_connection = Serial(serial_port, baudrate=9600, timeout=1)
+        super().__init__(self.serial_connection.port, callsigns)
         self.__last_access_time = None
 
     @property
@@ -64,7 +65,7 @@ class SerialTNC(APRSPacketSource):
                     f'interval {interval} less than minimum interval {self.interval}'
                 )
         packets = []
-        for line in self.connection.readlines():
+        for line in self.serial_connection.readlines():
             try:
                 packet = APRSPacket.from_frame(line, source=self.location)
                 packets.append(packet)
@@ -76,7 +77,7 @@ class SerialTNC(APRSPacketSource):
         return packets
 
     def close(self):
-        self.connection.close()
+        self.serial_connection.close()
 
     def __repr__(self):
         return f'{self.__class__.__name__}("{self.location}")'
@@ -86,19 +87,20 @@ class TextFileTNC(APRSPacketSource):
     def __init__(self, filename: PathLike = None, callsigns: str = None):
         """
         read APRS packets from a given text file where each line consists of the time sent (`YYYY-MM-DDTHH:MM:SS`) followed by
-        the raw APRS string
+        a colon `:` and then the raw APRS string
 
         :param filename: path to text file
         :param callsigns: list of callsigns to return from source
         """
 
-        if not isinstance(filename, Path):
-            if isinstance(filename, str):
-                filename = filename.strip('"')
-            filename = Path(filename)
+        if not urlparse(str(filename)).scheme in ['http', 'https', 'ftp', 'sftp']:
+            if not isinstance(filename, Path):
+                if isinstance(filename, str):
+                    filename = filename.strip('"')
+                filename = Path(filename)
+            filename = str(filename)
 
         super().__init__(filename, callsigns)
-        self.connection = open(filename)
         self.__last_access_time = None
         self.__parsed_lines = []
 
@@ -110,13 +112,23 @@ class TextFileTNC(APRSPacketSource):
                 raise TimeIntervalError(
                     f'interval {interval} less than minimum interval {self.interval}'
                 )
+
+        if isinstance(self.location, Path):
+            file_connection = open(self.location.expanduser().resolve())
+            lines = file_connection.readlines()
+        else:
+            file_connection = requests.get(self.location, stream=True)
+            lines = file_connection.iter_lines()
+
         packets = []
-        for line in self.connection.readlines():
+        for line in lines:
             if len(line) > 0:
+                if isinstance(line, bytes):
+                    line = line.decode()
                 if line not in self.__parsed_lines:
                     self.__parsed_lines.append(line)
                     try:
-                        packet_time, raw_aprs = line.split(' ', 1)
+                        packet_time, raw_aprs = line.split(': ', 1)
                         packet_time = parse_date(packet_time)
                     except:
                         raw_aprs = line
@@ -128,13 +140,17 @@ class TextFileTNC(APRSPacketSource):
                         )
                     except Exception as error:
                         LOGGER.error(f'{error.__class__.__name__} - {error}')
+
+        file_connection.close()
+
         if self.callsigns is not None:
             packets = [packet for packet in packets if packet.from_callsign in self.callsigns]
         self.__last_access_time = datetime.now()
+
         return packets
 
     def close(self):
-        self.connection.close()
+        pass
 
     def __repr__(self):
         return f'{self.__class__.__name__}("{self.location}")'
