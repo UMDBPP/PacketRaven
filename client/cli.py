@@ -26,7 +26,7 @@ def main():
     )
     args_parser.add_argument(
         '--tnc',
-        help='serial port or text file of TNC parsing APRS packets from analog audio to ASCII'
+        help='comma-separated list of serial ports / text files of a TNC parsing APRS packets from analog audio to ASCII'
              ' (set to `auto` to use the first open serial port)',
     )
     args_parser.add_argument(
@@ -66,7 +66,7 @@ def main():
         kwargs['api_key'] = args.apikey
 
     if args.tnc is not None:
-        kwargs['tnc'] = args.tnc
+        kwargs['tnc'] = [tnc.strip() for tnc in args.tnc.split(',')]
 
     if args.database is not None:
         database = args.database
@@ -150,19 +150,17 @@ def main():
     else:
         connections = []
         if 'tnc' in kwargs:
-            tnc_kwargs = {key: kwargs[key] for key in ['tnc'] if key in kwargs}
-            if tnc_kwargs['tnc'] is not None and 'txt' in tnc_kwargs['tnc']:
+            for tnc_location in kwargs['tnc']:
+                tnc_location = tnc_location.strip()
                 try:
-                    text_file_tnc = TextFileTNC(kwargs['tnc'], callsigns)
-                    LOGGER.info(f'reading file {text_file_tnc.location}')
-                    connections.append(text_file_tnc)
-                except ConnectionError as error:
-                    LOGGER.warning(f'{error.__class__.__name__} - {error}')
-            else:
-                try:
-                    serial_tnc = SerialTNC(kwargs['tnc'], callsigns)
-                    LOGGER.info(f'opened port {serial_tnc.location}')
-                    connections.append(serial_tnc)
+                    if 'txt' in tnc_location:
+                        tnc_location = TextFileTNC(tnc_location, callsigns)
+                        LOGGER.info(f'reading file {tnc_location.location}')
+                        connections.append(tnc_location)
+                    else:
+                        tnc_location = SerialTNC(tnc_location, callsigns)
+                        LOGGER.info(f'opened port {tnc_location.location}')
+                        connections.append(tnc_location)
                 except ConnectionError as error:
                     LOGGER.warning(f'{error.__class__.__name__} - {error}')
 
