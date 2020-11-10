@@ -452,8 +452,11 @@ class PacketRavenGUI:
                         self.__connections.append(tnc)
                     except Exception as error:
                         connection_errors.append(f'TNC - {error}')
-                self.tncs = [connection.location for connection in self.__connections
-                             if isinstance(connection, SerialTNC) or isinstance(connection, TextFileTNC)]
+                self.tncs = [
+                    connection.location
+                    for connection in self.__connections
+                    if isinstance(connection, SerialTNC) or isinstance(connection, TextFileTNC)
+                ]
 
                 api_key = self.__connection_configuration['aprs_fi']['api_key']
                 if api_key is None:
