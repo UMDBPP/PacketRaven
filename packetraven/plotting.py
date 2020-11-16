@@ -8,8 +8,18 @@ from packetraven.tracks import LocationPacketTrack
 
 VARIABLES = {
     'altitude': {'x': 'times', 'y': 'altitudes', 'xlabel': 'time', 'ylabel': 'altitude (m)'},
-    'ascent_rate': {'x': 'times', 'y': 'ascent_rates', 'xlabel': 'time', 'ylabel': 'ascent rate (m/s)'},
-    'ground_speed': {'x': 'ground_speeds', 'y': 'altitudes', 'xlabel': 'ground speed (m/s)', 'ylabel': 'altitude (m)'}
+    'ascent_rate': {
+        'x': 'times',
+        'y': 'ascent_rates',
+        'xlabel': 'time',
+        'ylabel': 'ascent rate (m/s)',
+    },
+    'ground_speed': {
+        'x': 'ground_speeds',
+        'y': 'altitudes',
+        'xlabel': 'ground speed (m/s)',
+        'ylabel': 'altitude (m)',
+    },
 }
 
 

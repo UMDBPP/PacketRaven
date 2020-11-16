@@ -14,8 +14,35 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
     if not isinstance(output_filename, Path):
         output_filename = Path(output_filename)
     output_filename = output_filename.resolve().expanduser()
-    extension = output_filename.suffix
-    if extension == '.geojson':
+    if output_filename.suffix == '.txt':
+        for packet_track_index, packet_track in enumerate(packet_tracks):
+            for packet_index, packet in enumerate(packet_track):
+                placemark = kml.Placemark(
+                    KML_STANDARD,
+                    f'1 {packet_track_index} {packet_index}',
+                    f'{packet_track.callsign} {packet.time:%Y%m%d%H%M%S}',
+                    f'altitude={packet.coordinates[2]} '
+                    f'ascent_rate={packet_track.ascent_rates[packet_index]} '
+                    f'ground_speed={packet_track.ground_speeds[packet_index]}',
+                )
+                placemark.geometry = Point(packet.coordinates.tolist())
+                document.append(placemark)
+
+            placemark = kml.Placemark(
+                KML_STANDARD,
+                f'1 {packet_track_index}',
+                packet_track.callsign,
+                f'altitude={packet_track.coordinates[-1, -1]} '
+                f'ascent_rate={packet_track.ascent_rates[-1]} '
+                f'ground_speed={packet_track.ground_speeds[-1]} '
+                f'seconds_to_ground={packet_track.time_to_ground / timedelta(seconds=1)}',
+            )
+            placemark.geometry = LineString(packet_track.coordinates)
+            document.append(placemark)
+
+        with open(output_filename, 'w') as output_file:
+            output_file.write(output_kml.to_string())
+    elif output_filename.suffix == '.geojson':
         import geojson
 
         features = []
@@ -55,7 +82,7 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
 
         with open(output_filename, 'w') as output_file:
             geojson.dump(features, output_file)
-    elif extension == '.kml':
+    elif output_filename.suffix == '.kml':
         from fastkml import kml
 
         output_kml = kml.KML()
@@ -93,5 +120,5 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
             output_file.write(output_kml.to_string())
     else:
         raise NotImplementedError(
-            f'saving to file type "{extension}" has not been implemented'
+            f'saving to file type "{output_filename.suffix}" has not been implemented'
         )

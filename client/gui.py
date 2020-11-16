@@ -154,9 +154,7 @@ class PacketRavenGUI:
         row = plot_frame.grid_size()[1]
         for plot_index, plot in enumerate(plot_variables):
             boolean_var = tkinter.BooleanVar()
-            plot_checkbox = tkinter.Checkbutton(
-                plot_frame, text=plot, variable=boolean_var,
-            )
+            plot_checkbox = tkinter.Checkbutton(plot_frame, text=plot, variable=boolean_var)
             plot_checkbox.grid(row=row, column=plot_index, sticky='nsew')
             self.__plot_toggles[plot] = boolean_var
 
