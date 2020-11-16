@@ -157,9 +157,11 @@ class DoublyLinkedList:
         differences = []
         current_node = self.head
 
-        while current_node is not None:
+        while current_node is not None and current_node.next_node is not None:
             differences.append(current_node.next_node.value - current_node.value)
             current_node = current_node.next_node
+
+        return differences
 
     def _node_at_index(self, index: int) -> Node:
         """
