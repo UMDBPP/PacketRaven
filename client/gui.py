@@ -16,6 +16,7 @@ from client import DEFAULT_INTERVAL_SECONDS
 from client.retrieve import retrieve_packets
 from packetraven.base import available_serial_ports, next_open_serial_port
 from packetraven.connections import APRSDatabaseTable, APRSfi, APRSis, SerialTNC, TextFileTNC
+from packetraven.plotting import LivePlot
 from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
 
@@ -69,6 +70,8 @@ class PacketRavenGUI:
 
         self.__frames = {}
         self.__elements = {}
+
+        self.__plots = {}
 
         configuration_frame = tkinter.Frame(main_window)
         configuration_frame.grid(row=main_window.grid_size()[1], column=0, pady=10)
@@ -138,6 +141,24 @@ class PacketRavenGUI:
             columnspan=3,
             sticky='w',
         )
+
+        separator = Separator(main_window, orient=tkinter.HORIZONTAL)
+        separator.grid(row=main_window.grid_size()[1], column=0, sticky='ew')
+
+        plot_frame = tkinter.Frame(main_window)
+        plot_frame.grid(row=main_window.grid_size()[1], column=0, pady=10)
+        self.__frames['plots'] = plot_frame
+
+        plot_variables = ['altitude', 'ascent_rate', 'ground_speed']
+        self.__plot_toggles = {}
+        row = plot_frame.grid_size()[1]
+        for plot_index, plot in enumerate(plot_variables):
+            boolean_var = tkinter.BooleanVar()
+            plot_checkbox = tkinter.Checkbutton(
+                plot_frame, text=plot, variable=boolean_var,
+            )
+            plot_checkbox.grid(row=row, column=plot_index, sticky='nsew')
+            self.__plot_toggles[plot] = boolean_var
 
         separator = Separator(main_window, orient=tkinter.HORIZONTAL)
         separator.grid(row=main_window.grid_size()[1], column=0, sticky='ew')
@@ -581,7 +602,16 @@ class PacketRavenGUI:
                     f'connection(s): {", ".join([connection.location for connection in self.__connections])}'
                 )
 
+                for variable, enabled in self.__plot_toggles.items():
+                    enabled = enabled.get()
+                    if enabled and variable not in self.__plots:
+                        self.__plots[variable] = LivePlot(self.__packet_tracks, variable)
+                    elif not enabled and variable in self.__plots:
+                        self.__plots[variable].close()
+                        del self.__plots[variable]
+
                 set_child_states(self.__frames['configuration'], tkinter.DISABLED)
+                set_child_states(self.__frames['plots'], tkinter.DISABLED)
 
                 for callsign in self.packet_tracks:
                     set_child_states(self.__windows[callsign], tkinter.DISABLED)
@@ -597,6 +627,7 @@ class PacketRavenGUI:
                     LOGGER.error(error)
                 self.__active = False
                 set_child_states(self.__frames['configuration'], tkinter.NORMAL)
+                set_child_states(self.__frames['plots'], tkinter.NORMAL)
 
             self.retrieve_packets()
         else:
@@ -611,6 +642,7 @@ class PacketRavenGUI:
             for callsign in self.packet_tracks:
                 set_child_states(self.__windows[callsign], tkinter.DISABLED)
             set_child_states(self.__frames['configuration'], tkinter.NORMAL)
+            set_child_states(self.__frames['plots'], tkinter.NORMAL)
 
             self.__toggle_text.set('Start')
             self.__active = False
@@ -634,6 +666,10 @@ class PacketRavenGUI:
                     self.end_date,
                     logger=LOGGER,
                 )
+
+                if len(parsed_packets) > 0:
+                    for variable, plot in self.__plots.items():
+                        plot.update(self.packet_tracks)
 
                 if self.aprs_is is not None:
                     self.aprs_is.send(parsed_packets)
@@ -797,8 +833,8 @@ class PacketRavenGUI:
                         )
                         self.__add_text_box(
                             window,
-                            title=f'{callsign}.distance_traveled',
-                            label='Traveled',
+                            title=f'{callsign}.distance_overground',
+                            label='Overground',
                             units='m',
                             sticky='w',
                         )
@@ -823,11 +859,11 @@ class PacketRavenGUI:
                             label='Est. Landing',
                             units='s',
                             sticky='w',
-                            row=self.__elements[f'{callsign}.distance_traveled'].grid_info()[
+                            row=self.__elements[f'{callsign}.distance_overground'].grid_info()[
                                 'row'
                             ],
                             column=self.__elements[
-                                       f'{callsign}.distance_traveled'
+                                       f'{callsign}.distance_overground'
                                    ].grid_info()['column']
                                    + 3,
                         )
@@ -878,7 +914,7 @@ class PacketRavenGUI:
                     )
                     self.replace_text(
                         self.__elements[f'{callsign}.distance'],
-                        f'{packet_track.distances[-1]:.2f}',
+                        f'{packet_track.overground_distances[-1]:.2f}',
                     )
                     self.replace_text(
                         self.__elements[f'{callsign}.interval'],
@@ -895,10 +931,10 @@ class PacketRavenGUI:
 
                     self.replace_text(
                         self.__elements[f'{callsign}.distance_downrange'],
-                        f'{packet_track.distance_from_start:.2f}',
+                        f'{packet_track.distance_downrange:.2f}',
                     )
                     self.replace_text(
-                        self.__elements[f'{callsign}.distance_traveled'],
+                        self.__elements[f'{callsign}.distance_overground'],
                         f'{packet_track.length:.2f}',
                     )
 
@@ -964,6 +1000,8 @@ class PacketRavenGUI:
         try:
             if self.active:
                 self.toggle()
+            for plot in self.__plots.values():
+                plot.close()
             self.__windows['main'].destroy()
         except Exception as error:
             LOGGER.exception(f'{error.__class__.__name__} - {error}')

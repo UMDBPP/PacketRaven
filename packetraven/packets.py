@@ -28,7 +28,7 @@ class LocationPacket:
         self.source = source
         self.attributes = kwargs
 
-    def distance(self, point: (float, float)) -> float:
+    def overground_distance(self, point: (float, float)) -> float:
         """
         horizontal distance over ellipsoid
 
@@ -113,7 +113,7 @@ class Distance:
             packet_2_coordinates = packet_2.coordinates
 
         interval = packet_1.time - packet_2.time
-        horizontal_distance = packet_1.distance(packet_2_coordinates[:2])
+        horizontal_distance = packet_1.overground_distance(packet_2_coordinates[:2])
         vertical_distance = packet_1.coordinates[2] - packet_2_coordinates[2]
 
         return cls(interval, horizontal_distance, vertical_distance, packet_1.crs)
@@ -127,7 +127,7 @@ class Distance:
         return self.interval / timedelta(seconds=1)
 
     @property
-    def distance(self) -> float:
+    def overground(self) -> float:
         return self.__horizontal
 
     @property
@@ -148,12 +148,12 @@ class Distance:
 
     def __str__(self) -> str:
         return (
-            f'{self.seconds}s, {self.ascent:6.2f}m vertical, {self.distance:6.2f}m horizontal'
+            f'{self.seconds}s, {self.ascent:6.2f}m vertical, {self.overground:6.2f}m horizontal'
         )
 
     def __repr__(self) -> str:
         return (
-            f'{self.__class__.__name__}({repr(self.interval)}, {self.ascent}, {self.distance}, '
+            f'{self.__class__.__name__}({repr(self.interval)}, {self.ascent}, {self.overground}, '
             f'{self.crs.__class__.__name__}.from_epsg({repr(self.crs.to_epsg())}))'
         )
 

@@ -93,11 +93,11 @@ def retrieve_packets(
                     f'{coordinate:.3f}°' for coordinate in packet_track.coordinates[-1, :2]
                 )
                 message += (
-                    f'{callsign:8} #{len(packet_track)} ({coordinate_string}, {packet_track.coordinates[-1, 2]:.2f} m); '
-                    f'{(current_time - packet_time) / timedelta(seconds=1)} s old; '
-                    f'{packet_track.intervals[-1]:.2f} s since last packet; '
-                    f'{packet_track.distances[-1]:.2f} m distance over ground ({packet_track.ground_speeds[-1]:.2f} m/s), '
-                    f'{packet_track.ascents[-1]:.2f} m ascent ({packet_track.ascent_rates[-1]:.2f} m/s)'
+                    f'{callsign:8} #{len(packet_track)} ({coordinate_string}, {packet_track.coordinates[-1, 2]:.2f}m); '
+                    f'{(current_time - packet_time) / timedelta(seconds=1):.2f}s old; '
+                    f'{packet_track.intervals[-1]:.2f}s since last packet; '
+                    f'{packet_track.overground_distances[-1]:.2f}m distance over ground ({packet_track.ground_speeds[-1]:.2f}m/s), '
+                    f'{packet_track.ascents[-1]:.2f}m ascent ({packet_track.ascent_rates[-1]:.2f}m/s)'
                 )
 
                 if packet_track.time_to_ground >= timedelta(seconds=0):

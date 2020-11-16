@@ -2,7 +2,7 @@ from datetime import timedelta
 from typing import Union
 
 import numpy
-from pyproj import CRS, Geod
+from pyproj import CRS
 
 from .packets import APRSPacket, DEFAULT_CRS, LocationPacket
 from .structures import DoublyLinkedList
@@ -11,14 +11,16 @@ from .structures import DoublyLinkedList
 class LocationPacketTrack:
     """ collection of location packets """
 
-    def __init__(self, packets: [LocationPacket] = None, crs: CRS = None):
+    def __init__(self, name: str, packets: [LocationPacket] = None, crs: CRS = None):
         """
         location packet track
 
+        :param name: name of packet track
         :param crs: coordinate reference system to use
         :param packets: iterable of packets
         """
 
+        self.name = name
         self.packets = DoublyLinkedList(packets)
         self.crs = crs if crs is not None else DEFAULT_CRS
 
@@ -37,6 +39,10 @@ class LocationPacketTrack:
         return numpy.stack([packet.coordinates for packet in self.packets], axis=0)
 
     @property
+    def altitudes(self) -> numpy.ndarray:
+        return self.coordinates[:, 2]
+
+    @property
     def intervals(self) -> numpy.ndarray:
         return numpy.concatenate(
             [
@@ -48,18 +54,20 @@ class LocationPacketTrack:
         )
 
     @property
-    def distances(self) -> numpy.ndarray:
+    def overground_distances(self) -> numpy.ndarray:
+        """ overground distances between packets """
         return numpy.concatenate(
             [
                 [0],
                 numpy.array(
-                    [packet_delta.distance for packet_delta in numpy.diff(self.packets)]
+                    [packet_delta.overground for packet_delta in numpy.diff(self.packets)]
                 ),
             ]
         )
 
     @property
     def ascents(self) -> numpy.ndarray:
+        """ differences in altitude between packets """
         return numpy.concatenate(
             [
                 [0],
@@ -71,6 +79,7 @@ class LocationPacketTrack:
 
     @property
     def ascent_rates(self) -> numpy.ndarray:
+        """ instantaneous ascent rates between packets """
         return numpy.concatenate(
             [
                 [0],
@@ -82,6 +91,7 @@ class LocationPacketTrack:
 
     @property
     def ground_speeds(self) -> numpy.ndarray:
+        """ instantaneous overground speeds between packets """
         return numpy.concatenate(
             [
                 [0],
@@ -90,6 +100,11 @@ class LocationPacketTrack:
                 ),
             ]
         )
+
+    @property
+    def cumulative_overground_distances(self) -> numpy.ndarray:
+        """ cumulative overground distances from start """
+        return numpy.cumsum(self.overground_distances)
 
     @property
     def time_to_ground(self) -> timedelta:
@@ -107,25 +122,17 @@ class LocationPacketTrack:
             return timedelta(seconds=-1)
 
     @property
-    def distance_from_start(self) -> float:
-        """ overground distance from the first to the most recent packet """
-
+    def distance_downrange(self) -> float:
+        """ direct overground distance between first and last packets only """
         if len(self.packets) > 0:
-            return self.packets[-1].distance(self.coordinates[0, :2])
+            return self.packets[-1].overground_distance(self.coordinates[0, :2])
         else:
             return 0.0
 
     @property
     def length(self) -> float:
         """ total length of the packet track over the ground """
-
-        coordinates = self.coordinates[:2]
-        if self.crs.is_projected:
-            return sum(self.packets.difference)
-        else:
-            ellipsoid = self.crs.datum.to_json_dict()['ellipsoid']
-            geodetic = Geod(a=ellipsoid['semi_major_axis'], rf=ellipsoid['inverse_flattening'])
-            return geodetic.line_length(coordinates[:, 0], coordinates[:, 1])
+        return sum([distance.overground for distance in self.packets.difference])
 
     def __getitem__(self, index: Union[int, slice]) -> LocationPacket:
         return self.packets[index]
@@ -162,7 +169,7 @@ class APRSTrack(LocationPacketTrack):
         """
 
         self.callsign = callsign
-        super().__init__(packets, crs)
+        super().__init__(self.callsign, packets, crs)
 
     def append(self, packet: APRSPacket):
         packet_callsign = packet['callsign']
