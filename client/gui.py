@@ -627,6 +627,7 @@ class PacketRavenGUI:
                     LOGGER.error(error)
                 self.__active = False
                 set_child_states(self.__frames['configuration'], tkinter.NORMAL)
+                set_child_states(self.__frames['plots'], tkinter.NORMAL)
 
             self.retrieve_packets()
         else:
@@ -641,6 +642,7 @@ class PacketRavenGUI:
             for callsign in self.packet_tracks:
                 set_child_states(self.__windows[callsign], tkinter.DISABLED)
             set_child_states(self.__frames['configuration'], tkinter.NORMAL)
+            set_child_states(self.__frames['plots'], tkinter.NORMAL)
 
             self.__toggle_text.set('Start')
             self.__active = False
@@ -665,8 +667,9 @@ class PacketRavenGUI:
                     logger=LOGGER,
                 )
 
-                for variable, plot in self.__plots.items():
-                    plot.update(self.packet_tracks)
+                if len(parsed_packets) > 0:
+                    for variable, plot in self.__plots.items():
+                        plot.update(self.packet_tracks)
 
                 if self.aprs_is is not None:
                     self.aprs_is.send(parsed_packets)
