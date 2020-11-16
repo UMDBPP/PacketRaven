@@ -8,8 +8,18 @@ from packetraven.tracks import LocationPacketTrack
 
 VARIABLES = {
     'altitude': {'x': 'times', 'y': 'altitudes', 'xlabel': 'time', 'ylabel': 'altitude (m)'},
-    'ascent_rate': {'x': 'times', 'y': 'ascent_rates', 'xlabel': 'time', 'ylabel': 'ascent rate (m/s)'},
-    'ground_speed': {'x': 'ground_speeds', 'y': 'altitudes', 'xlabel': 'ground speed (m/s)', 'ylabel': 'altitude (m)'}
+    'ascent_rate': {
+        'x': 'times',
+        'y': 'ascent_rates',
+        'xlabel': 'time',
+        'ylabel': 'ascent rate (m/s)',
+    },
+    'ground_speed': {
+        'x': 'ground_speeds',
+        'y': 'altitudes',
+        'xlabel': 'ground speed (m/s)',
+        'ylabel': 'altitude (m)',
+    },
 }
 
 
@@ -43,6 +53,7 @@ class LivePlot:
                     getattr(packet_track, VARIABLES[self.variable]['x']),
                     getattr(packet_track, VARIABLES[self.variable]['y']),
                     label=packet_track.name,
+                    s=2,
                 )
 
             self.axis.legend()

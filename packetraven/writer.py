@@ -14,8 +14,15 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
     if not isinstance(output_filename, Path):
         output_filename = Path(output_filename)
     output_filename = output_filename.resolve().expanduser()
-    extension = output_filename.suffix
-    if extension == '.geojson':
+    if output_filename.suffix == '.txt':
+        packets = []
+        for packet_track_index, packet_track in enumerate(packet_tracks):
+            packets.extend(packet_track)
+        packets = sorted(packets)
+        lines = [f'{packet.time:%Y-%m-%d %H:%M:%S %Z}: {packet.frame}' for packet in packets]
+        with open(output_filename, 'w') as output_file:
+            output_file.writelines(lines)
+    elif output_filename.suffix == '.geojson':
         import geojson
 
         features = []
@@ -55,7 +62,7 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
 
         with open(output_filename, 'w') as output_file:
             geojson.dump(features, output_file)
-    elif extension == '.kml':
+    elif output_filename.suffix == '.kml':
         from fastkml import kml
 
         output_kml = kml.KML()
@@ -93,5 +100,5 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
             output_file.write(output_kml.to_string())
     else:
         raise NotImplementedError(
-            f'saving to file type "{extension}" has not been implemented'
+            f'saving to file type "{output_filename.suffix}" has not been implemented'
         )

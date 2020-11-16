@@ -147,9 +147,7 @@ class Distance:
         return self.__horizontal / self.seconds if self.seconds > 0 else 0
 
     def __str__(self) -> str:
-        return (
-            f'{self.seconds}s, {self.ascent:6.2f}m vertical, {self.overground:6.2f}m horizontal'
-        )
+        return f'{self.seconds}s, {self.ascent:6.2f}m vertical, {self.overground:6.2f}m horizontal'
 
     def __repr__(self) -> str:
         return (
