@@ -100,7 +100,11 @@ class PacketRavenGUI:
         )
 
         self.__add_entry_box(
-            configuration_frame, title='callsigns', label='Callsigns', width=55, columnspan=3
+            configuration_frame,
+            title='callsigns',
+            label='Callsigns',
+            width=55,
+            columnspan=configuration_frame.grid_size()[0],
         )
         self.__file_selection_option = 'select file...'
         self.__add_combo_box(
@@ -110,7 +114,7 @@ class PacketRavenGUI:
             options=list(available_serial_ports()) + [self.__file_selection_option],
             option_select=self.__select_tnc,
             width=52,
-            columnspan=3,
+            columnspan=configuration_frame.grid_size()[0],
             sticky='w',
         )
 
@@ -128,8 +132,8 @@ class PacketRavenGUI:
             title='log_file',
             file_select=self.__select_log_file,
             label='Log',
-            width=55,
-            columnspan=3,
+            width=52,
+            columnspan=configuration_frame.grid_size()[0],
             sticky='w',
         )
         self.__add_file_box(
@@ -137,25 +141,38 @@ class PacketRavenGUI:
             title='output_file',
             file_select=self.__select_output_file,
             label='Output',
-            width=55,
-            columnspan=3,
+            width=52,
+            columnspan=configuration_frame.grid_size()[0],
             sticky='w',
         )
 
-        separator = Separator(main_window, orient=tkinter.HORIZONTAL)
-        separator.grid(row=main_window.grid_size()[1], column=0, sticky='ew')
+        separator = Separator(configuration_frame, orient=tkinter.HORIZONTAL)
+        separator.grid(
+            row=configuration_frame.grid_size()[1],
+            column=0,
+            columnspan=configuration_frame.grid_size()[0] + 1,
+            sticky='ew',
+            pady=10,
+        )
 
-        plot_frame = tkinter.Frame(main_window)
-        plot_frame.grid(row=main_window.grid_size()[1], column=0, pady=10)
-        self.__frames['plots'] = plot_frame
+        plot_label = tkinter.Label(configuration_frame, text='Plots')
+        plot_label.grid(row=configuration_frame.grid_size()[1], column=0, sticky='w')
+
+        plot_checkbox_frame = tkinter.Frame(configuration_frame)
+        plot_checkbox_frame.grid(
+            row=plot_label.grid_info()['row'],
+            column=0,
+            columnspan=configuration_frame.grid_size()[0] - 1,
+        )
 
         plot_variables = ['altitude', 'ascent_rate', 'ground_speed']
         self.__plot_toggles = {}
-        row = plot_frame.grid_size()[1]
         for plot_index, plot in enumerate(plot_variables):
             boolean_var = tkinter.BooleanVar()
-            plot_checkbox = tkinter.Checkbutton(plot_frame, text=plot, variable=boolean_var)
-            plot_checkbox.grid(row=row, column=plot_index, sticky='nsew')
+            plot_checkbox = tkinter.Checkbutton(
+                plot_checkbox_frame, text=plot, variable=boolean_var
+            )
+            plot_checkbox.grid(row=0, column=plot_index, padx=10)
             self.__plot_toggles[plot] = boolean_var
 
         separator = Separator(main_window, orient=tkinter.HORIZONTAL)
@@ -275,7 +292,7 @@ class PacketRavenGUI:
             end_date = f'{end_date:%Y-%m-%d %H:%M:%S}'
         else:
             end_date = ''
-        self.replace_text(self.__elements['start_date'], end_date)
+        self.replace_text(self.__elements['end_date'], end_date)
 
     @property
     def log_filename(self) -> Path:
@@ -318,9 +335,7 @@ class PacketRavenGUI:
             if not isinstance(filename, Path):
                 filename = Path(filename)
             if filename.expanduser().resolve().is_dir():
-                filename = (
-                        filename / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson'
-                )
+                filename = filename / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.txt'
         else:
             filename = ''
         self.replace_text(self.__elements['output_file'], filename)
@@ -352,8 +367,12 @@ class PacketRavenGUI:
             title='Create output file...',
             initialdir=self.output_filename.parent,
             initialfile=self.output_filename.stem,
-            defaultextension='.geojson',
-            filetypes=[('GeoJSON', '*.geojson'), ('Keyhole Markup Language', '*.kml')],
+            defaultextension='.txt',
+            filetypes=[
+                ('Text', '*.txt'),
+                ('GeoJSON', '*.geojson'),
+                ('Keyhole Markup Language', '*.kml'),
+            ],
         )
 
     def __select_tnc(self, event):
@@ -382,18 +401,43 @@ class PacketRavenGUI:
     def __add_file_box(
             self, frame: tkinter.Frame, title: str, file_select: Callable, **kwargs
     ) -> tkinter.Entry:
-        file_box = self.__add_entry_box(frame, title, **kwargs)
-        log_file_button = tkinter.Button(frame, text='...', command=file_select)
-        log_file_button.grid(
-            row=file_box.grid_info()['row'],
-            column=file_box.grid_info()['column'] + file_box.grid_info()['columnspan'],
+        if 'row' not in kwargs:
+            kwargs['row'] = frame.grid_size()[1]
+        if 'column' not in kwargs:
+            kwargs['column'] = 0
+        file_box_kwargs = {
+            key: value
+            for key, value in kwargs.items()
+            if key in ['row', 'column', 'columnspan']
+        }
+        if 'columnspan' in file_box_kwargs:
+            file_box_kwargs['columnspan'] -= 1
+
+        if 'label' in kwargs:
+            text_label = tkinter.Label(frame, text=kwargs['label'])
+            text_label.grid(row=kwargs['row'], column=kwargs['column'], sticky='w')
+            file_box_kwargs['column'] += 1
+
+        file_box_frame = tkinter.Frame(frame)
+        file_box_frame.grid(**file_box_kwargs)
+
+        file_box = tkinter.Entry(
+            file_box_frame, width=kwargs['width'] if 'width' in kwargs else None
         )
+        file_button = tkinter.Button(file_box_frame, text='...', command=file_select)
+
+        file_box.pack(side='left')
+        file_button.pack(side='left')
+
+        self.__elements[title] = file_box
         return file_box
 
     def __add_entry_box(self, frame: tkinter.Frame, title: str, **kwargs) -> tkinter.Entry:
-        width = kwargs['width'] if 'width' in kwargs else None
-        entry_box = tkinter.Entry(frame, width=width)
-        return self.__add_text_box(frame, title, text_box=entry_box, **kwargs)
+        if 'text_box' not in kwargs:
+            kwargs['text_box'] = tkinter.Entry(
+                frame, width=kwargs['width'] if 'width' in kwargs else None
+            )
+        return self.__add_text_box(frame, title, **kwargs)
 
     def __add_text_box(
             self,
@@ -411,6 +455,12 @@ class PacketRavenGUI:
             row = frame.grid_size()[1]
         if column is None:
             column = 0
+
+        if 'columnspan' in kwargs:
+            if label is not None:
+                kwargs['columnspan'] -= 1
+            if units is not None:
+                kwargs['columnspan'] -= 1
 
         if label is not None:
             text_label = tkinter.Label(frame, text=label)
@@ -570,6 +620,15 @@ class PacketRavenGUI:
                             if database_password is None or len(database_password) == 0:
                                 raise ConnectionError('missing database password')
                             database_kwargs['password'] = database_password
+                        if 'table' not in database_kwargs or database_kwargs['table'] is None:
+                            database_table = simpledialog.askstring(
+                                'Database Table',
+                                f'enter database table name',
+                                parent=self.__windows['main'],
+                            )
+                            if database_table is None or len(database_table) == 0:
+                                raise ConnectionError('missing database table name')
+                            database_kwargs['table'] = database_table
 
                         self.database = APRSDatabaseTable(
                             **database_kwargs, **ssh_tunnel_kwargs, callsigns=self.callsigns
@@ -609,7 +668,6 @@ class PacketRavenGUI:
                         del self.__plots[variable]
 
                 set_child_states(self.__frames['configuration'], tkinter.DISABLED)
-                set_child_states(self.__frames['plots'], tkinter.DISABLED)
 
                 for callsign in self.packet_tracks:
                     set_child_states(self.__windows[callsign], tkinter.DISABLED)
@@ -625,7 +683,6 @@ class PacketRavenGUI:
                     LOGGER.error(error)
                 self.__active = False
                 set_child_states(self.__frames['configuration'], tkinter.NORMAL)
-                set_child_states(self.__frames['plots'], tkinter.NORMAL)
 
             self.retrieve_packets()
         else:
@@ -640,7 +697,6 @@ class PacketRavenGUI:
             for callsign in self.packet_tracks:
                 set_child_states(self.__windows[callsign], tkinter.DISABLED)
             set_child_states(self.__frames['configuration'], tkinter.NORMAL)
-            set_child_states(self.__frames['plots'], tkinter.NORMAL)
 
             self.__toggle_text.set('Start')
             self.__active = False

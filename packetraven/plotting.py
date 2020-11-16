@@ -53,6 +53,7 @@ class LivePlot:
                     getattr(packet_track, VARIABLES[self.variable]['x']),
                     getattr(packet_track, VARIABLES[self.variable]['y']),
                     label=packet_track.name,
+                    s=2,
                 )
 
             self.axis.legend()
