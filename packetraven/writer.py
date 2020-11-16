@@ -21,7 +21,7 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
         packets = sorted(packets)
         lines = [f'{packet.time:%Y-%m-%d %H:%M:%S %Z}: {packet.frame}' for packet in packets]
         with open(output_filename, 'w') as output_file:
-            output_file.writelines(lines)
+            output_file.write('\n'.join(lines))
     elif output_filename.suffix == '.geojson':
         import geojson
 

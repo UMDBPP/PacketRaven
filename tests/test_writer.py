@@ -4,7 +4,10 @@ from tempfile import TemporaryDirectory
 
 from packetraven.packets import APRSPacket
 from packetraven.tracks import APRSTrack
+from packetraven.utilities import repository_root
 from packetraven.writer import write_aprs_packet_tracks
+
+REFERENCE_DIRECTORY = repository_root() / 'tests' / 'reference'
 
 PACKET_TRACK = APRSTrack(
     'W3EAX-13',
@@ -28,21 +31,30 @@ PACKET_TRACK = APRSTrack(
 
 
 def test_write_kml():
+    filename = 'test_output.kml'
+    reference_filename = REFERENCE_DIRECTORY / filename
     with TemporaryDirectory() as temporary_directory:
-        output_filename = Path(temporary_directory) / 'test_output.kml'
+        output_filename = Path(temporary_directory) / filename
         write_aprs_packet_tracks([PACKET_TRACK], output_filename)
-        assert output_filename.exists()
+        with open(output_filename) as output_file, open(reference_filename) as reference_file:
+            assert output_file.read() == reference_file.read()
 
 
 def test_write_geojson():
+    filename = 'test_output.geojson'
+    reference_filename = REFERENCE_DIRECTORY / filename
     with TemporaryDirectory() as temporary_directory:
-        output_filename = Path(temporary_directory) / 'test_output.geojson'
+        output_filename = Path(temporary_directory) / filename
         write_aprs_packet_tracks([PACKET_TRACK], output_filename)
-        assert output_filename.exists()
+        with open(output_filename) as output_file, open(reference_filename) as reference_file:
+            assert output_file.read() == reference_file.read()
 
 
 def test_write_txt():
+    filename = 'test_output.txt'
+    reference_filename = REFERENCE_DIRECTORY / filename
     with TemporaryDirectory() as temporary_directory:
-        output_filename = Path(temporary_directory) / 'test_output.txt'
+        output_filename = Path(temporary_directory) / filename
         write_aprs_packet_tracks([PACKET_TRACK], output_filename)
-        assert output_filename.exists()
+        with  open(output_filename) as output_file, open(reference_filename) as reference_file:
+            assert output_file.read() == reference_file.read()
