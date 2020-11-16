@@ -178,24 +178,6 @@ class PacketRavenGUI:
         separator = Separator(main_window, orient=tkinter.HORIZONTAL)
         separator.grid(row=main_window.grid_size()[1], column=0, sticky='ew')
 
-        plot_frame = tkinter.Frame(main_window)
-        plot_frame.grid(row=main_window.grid_size()[1], column=0, pady=10)
-        self.__frames['plots'] = plot_frame
-
-        plot_variables = ['altitude', 'ascent_rate', 'ground_speed']
-        self.__plot_toggles = {}
-        row = plot_frame.grid_size()[1]
-        for plot_index, plot in enumerate(plot_variables):
-            boolean_var = tkinter.BooleanVar()
-            plot_checkbox = tkinter.Checkbutton(
-                plot_frame, text=plot, variable=boolean_var,
-            )
-            plot_checkbox.grid(row=row, column=plot_index, sticky='nsew')
-            self.__plot_toggles[plot] = boolean_var
-
-        separator = Separator(main_window, orient=tkinter.HORIZONTAL)
-        separator.grid(row=main_window.grid_size()[1], column=0, sticky='ew')
-
         control_frame = tkinter.Frame(main_window)
         control_frame.grid(row=main_window.grid_size()[1], column=0, pady=10)
         self.__frames['controls'] = control_frame
@@ -686,7 +668,6 @@ class PacketRavenGUI:
                         del self.__plots[variable]
 
                 set_child_states(self.__frames['configuration'], tkinter.DISABLED)
-                set_child_states(self.__frames['plots'], tkinter.DISABLED)
 
                 for callsign in self.packet_tracks:
                     set_child_states(self.__windows[callsign], tkinter.DISABLED)
@@ -702,7 +683,6 @@ class PacketRavenGUI:
                     LOGGER.error(error)
                 self.__active = False
                 set_child_states(self.__frames['configuration'], tkinter.NORMAL)
-                set_child_states(self.__frames['plots'], tkinter.NORMAL)
 
             self.retrieve_packets()
         else:
@@ -717,7 +697,6 @@ class PacketRavenGUI:
             for callsign in self.packet_tracks:
                 set_child_states(self.__windows[callsign], tkinter.DISABLED)
             set_child_states(self.__frames['configuration'], tkinter.NORMAL)
-            set_child_states(self.__frames['plots'], tkinter.NORMAL)
 
             self.__toggle_text.set('Start')
             self.__active = False
@@ -963,7 +942,7 @@ class PacketRavenGUI:
                     if window.focus_get() is None:
                         window.focus_force()
 
-                    set_child_states(window)
+                    set_child_states(window, tkinter.NORMAL)
 
                     self.replace_text(
                         self.__elements[f'{callsign}.packets'], len(packet_track)
@@ -1088,7 +1067,7 @@ def set_child_states(frame: tkinter.Frame, state: str = None, types: [type] = No
         state = tkinter.NORMAL
     for child in frame.winfo_children():
         if isinstance(child, tkinter.Frame):
-            set_child_states(child)
+            set_child_states(child, state, types)
         else:
             if types is None or any(
                     isinstance(child, selected_type) for selected_type in types
