@@ -29,7 +29,7 @@ packetraven --database <username>@<hostname>:5432/<database_name>/<table_name>
 ```
 #### watch a text file for new lines containing raw APRS strings:
 ```cmd
-packetraven --tnc ~\Desktop\aprs_packets.txt
+packetraven --tnc http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-11/W3EAX-11_raw_NS95.txt
 ```
 #### listen to a TNC on COM3, watching specific callsigns, and synchronize new packets with a database table via SSH tunnel:
 ```cmd

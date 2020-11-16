@@ -49,16 +49,16 @@ def main():
     args_parser.add_argument(
         '--gui', action='store_true', help='start the graphical interface'
     )
+
     args = args_parser.parse_args()
 
     using_gui = args.gui
     using_igate = args.igate
 
-    callsigns = (
-        [callsign.upper() for callsign in args.callsigns.strip('"').split(',')]
-        if args.callsigns is not None
-        else None
-    )
+    if args.callsigns is not None:
+        callsigns = [callsign.upper() for callsign in args.callsigns.strip('"').split(',')]
+    else:
+        callsigns = None
 
     kwargs = {}
 

@@ -62,7 +62,7 @@ def test_subtraction():
 
     assert packet_delta.seconds == 127
     assert numpy.allclose(packet_delta.ascent, -2243.0231999999996)
-    assert numpy.allclose(packet_delta.distance, 4019.3334763155167)
+    assert numpy.allclose(packet_delta.overground, 4019.3334763155167)
 
 
 def test_append():
