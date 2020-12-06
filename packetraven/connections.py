@@ -259,7 +259,7 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
         if 'primary_key' not in kwargs:
             kwargs['primary_key'] = 'time'
         kwargs['fields'] = {**self.__default_fields, **kwargs['fields']}
-        PostGresTable.__init__(self, hostname, database, table, **kwargs)
+        PostGresTable.__init__(self, hostname=hostname, database=database, name=table, **kwargs)
         PacketSource.__init__(
             self, f'postgresql://{self.hostname}:{self.port}/{self.database}/{self.name}'
         )
