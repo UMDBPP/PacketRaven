@@ -80,6 +80,7 @@ setup(
     install_requires=[
         'aprslib',
         'haversine',
+        'netcdf4',
         'numpy>=1.20.0',
         'pandas',
         'pyserial',
@@ -92,6 +93,7 @@ setup(
         'shapely',
         'sshtunnel',
         'tablecrow>=1.3.3',
+        'xarray',
     ],
     extras_require={
         'testing': ['flake8', 'pytest', 'pytest-cov', 'pytz'],
