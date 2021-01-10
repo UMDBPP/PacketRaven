@@ -38,6 +38,7 @@ setup(
     install_requires=[
         'aprslib',
         'haversine',
+        'netcdf4',
         'numpy==1.19.3',
         'pyserial',
         'geojson',
@@ -49,6 +50,7 @@ setup(
         'shapely',
         'sshtunnel',
         'tablecrow',
+        'xarray',
     ],
     extras_require={'testing': ['flake8', 'pytest', 'pytest-cov', 'pytz'], 'development': ['oitnb']},
     entry_points={'console_scripts': ['packetraven=client.cli:main']},
