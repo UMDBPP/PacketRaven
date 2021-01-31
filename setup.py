@@ -38,8 +38,8 @@ setup(
     install_requires=[
         'aprslib',
         'haversine',
+        'numpy>=1.20.0',
         'netcdf4',
-        'numpy==1.19.3',
         'pyserial',
         'geojson',
         'fastkml',
@@ -49,7 +49,7 @@ setup(
         'requests',
         'shapely',
         'sshtunnel',
-        'tablecrow',
+        'tablecrow>=1.2.6',
         'xarray',
     ],
     extras_require={'testing': ['flake8', 'pytest', 'pytest-cov', 'pytz'], 'development': ['oitnb']},
