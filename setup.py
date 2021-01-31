@@ -48,7 +48,7 @@ setup(
         'requests',
         'shapely',
         'sshtunnel',
-        'tablecrow',
+        'tablecrow>=1.2.6',
     ],
     extras_require={'testing': ['flake8', 'pytest', 'pytest-cov', 'pytz'], 'development': ['oitnb']},
     entry_points={'console_scripts': ['packetraven=client.cli:main']},
