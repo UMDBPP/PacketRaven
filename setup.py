@@ -38,7 +38,7 @@ setup(
     install_requires=[
         'aprslib',
         'haversine',
-        'numpy==1.19.3',
+        'numpy>=1.20.0',
         'pyserial',
         'geojson',
         'fastkml',
