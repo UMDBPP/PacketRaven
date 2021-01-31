@@ -12,7 +12,7 @@ jobs:
         python-version: [ 3.8, 3.9 ]
     services:
       postgres:
-        image: postgis/postgis:10-2.5
+        image: postgis/postgis:13-3.1
         env:
           POSTGRES_PASSWORD: test_password
           POSTGRES_DB: test_database
