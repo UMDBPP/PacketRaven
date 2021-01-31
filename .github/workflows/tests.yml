@@ -4,15 +4,15 @@ on: [ push ]
 
 jobs:
   tests:
-    name: test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    name: Python ${{ matrix.python-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ ubuntu-latest ]
-        python-version: [ 3.8 ]
+        python-version: [ 3.8, 3.9 ]
     services:
       postgres:
-        image: postgis/postgis:10-2.5
+        image: postgis/postgis:13-3.1
         env:
           POSTGRES_PASSWORD: test_password
           POSTGRES_DB: test_database
@@ -32,9 +32,11 @@ jobs:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('setup.py') }}
           restore-keys: ${{ runner.os }}-pip-${{ matrix.python-version }}-
+      - name: Update pip
+        run: python -m pip install --upgrade pip
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
+          pip install wheel
           pip install -e .[testing]
       - name: Lint with flake8
         run: |

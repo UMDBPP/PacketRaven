@@ -3,6 +3,7 @@ from os import PathLike
 from pathlib import Path
 
 from geojson import Point
+import numpy
 from shapely.geometry import LineString
 
 from .tracks import APRSTrack
@@ -21,12 +22,15 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
         packets = sorted(packets)
         lines = [f'{packet.time:%Y-%m-%d %H:%M:%S %Z}: {packet.frame}' for packet in packets]
         with open(output_filename, 'w') as output_file:
-            output_file.writelines(lines)
+            output_file.write('\n'.join(lines))
     elif output_filename.suffix == '.geojson':
         import geojson
 
         features = []
         for packet_track in packet_tracks:
+            ascent_rates = numpy.round(packet_track.ascent_rates, 3)
+            ground_speeds = numpy.round(packet_track.ground_speeds, 3)
+
             features.extend(
                 geojson.Feature(
                     geometry=geojson.Point(packet.coordinates.tolist()),
@@ -34,8 +38,8 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
                         'time': f'{packet.time:%Y%m%d%H%M%S}',
                         'callsign': packet.from_callsign,
                         'altitude': packet.coordinates[2],
-                        'ascent_rate': packet_track.ascent_rates[packet_index],
-                        'ground_speed': packet_track.ground_speeds[packet_index],
+                        'ascent_rate': ascent_rates[packet_index],
+                        'ground_speed': ground_speeds[packet_index],
                     },
                 )
                 for packet_index, packet in enumerate(packet_track)
@@ -50,10 +54,9 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
                         'time': f'{packet_track.packets[-1].time:%Y%m%d%H%M%S}',
                         'callsign': packet_track.callsign,
                         'altitude': packet_track.coordinates[-1, -1],
-                        'ascent_rate': packet_track.ascent_rates[-1],
-                        'ground_speed': packet_track.ground_speeds[-1],
-                        'seconds_to_ground': packet_track.time_to_ground
-                                             / timedelta(seconds=1),
+                        'ascent_rate': ascent_rates[-1],
+                        'ground_speed': ground_speeds[-1],
+                        'seconds_to_ground': packet_track.time_to_ground / timedelta(seconds=1),
                     },
                 )
             )
@@ -72,14 +75,17 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
         output_kml.append(document)
 
         for packet_track_index, packet_track in enumerate(packet_tracks):
+            ascent_rates = numpy.round(packet_track.ascent_rates, 3)
+            ground_speeds = numpy.round(packet_track.ground_speeds, 3)
+
             for packet_index, packet in enumerate(packet_track):
                 placemark = kml.Placemark(
                     KML_STANDARD,
                     f'1 {packet_track_index} {packet_index}',
                     f'{packet_track.callsign} {packet.time:%Y%m%d%H%M%S}',
                     f'altitude={packet.coordinates[2]} '
-                    f'ascent_rate={packet_track.ascent_rates[packet_index]} '
-                    f'ground_speed={packet_track.ground_speeds[packet_index]}',
+                    f'ascent_rate={ascent_rates[packet_index]} '
+                    f'ground_speed={ground_speeds[packet_index]}',
                 )
                 placemark.geometry = Point(packet.coordinates.tolist())
                 document.append(placemark)
@@ -89,8 +95,8 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
                 f'1 {packet_track_index}',
                 packet_track.callsign,
                 f'altitude={packet_track.coordinates[-1, -1]} '
-                f'ascent_rate={packet_track.ascent_rates[-1]} '
-                f'ground_speed={packet_track.ground_speeds[-1]} '
+                f'ascent_rate={ascent_rates[-1]} '
+                f'ground_speed={ground_speeds[-1]} '
                 f'seconds_to_ground={packet_track.time_to_ground / timedelta(seconds=1)}',
             )
             placemark.geometry = LineString(packet_track.coordinates)
