@@ -47,7 +47,6 @@ class LocationPacket:
             return geodetic.line_length(coordinates[:, 0], coordinates[:, 1])
 
     def transform_to(self, crs: CRS):
-        print(f'{self.crs} -> {crs}')
         transformer = Transformer.from_crs(self.crs, crs)
         self.coordinates = transformer.transform(self.coordinates)
 
