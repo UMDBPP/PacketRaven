@@ -25,15 +25,15 @@ LOGGER = get_logger('packetraven')
 
 class PacketRavenGUI:
     def __init__(
-            self,
-            callsigns: [str] = None,
-            start_date: datetime = None,
-            end_date: datetime = None,
-            log_filename: PathLike = None,
-            output_filename: PathLike = None,
-            interval_seconds: int = None,
-            igate: bool = False,
-            **kwargs,
+        self,
+        callsigns: [str] = None,
+        start_date: datetime = None,
+        end_date: datetime = None,
+        log_filename: PathLike = None,
+        output_filename: PathLike = None,
+        interval_seconds: int = None,
+        igate: bool = False,
+        **kwargs,
     ):
         main_window = tkinter.Tk()
         main_window.title('PacketRaven')
@@ -384,12 +384,12 @@ class PacketRavenGUI:
             )
 
     def __add_combo_box(
-            self,
-            frame: tkinter.Frame,
-            title: str,
-            options: [str],
-            option_select: Callable = None,
-            **kwargs,
+        self,
+        frame: tkinter.Frame,
+        title: str,
+        options: [str],
+        option_select: Callable = None,
+        **kwargs,
     ) -> Combobox:
         width = kwargs['width'] if 'width' in kwargs else None
         combo_box = Combobox(frame, width=width)
@@ -399,7 +399,7 @@ class PacketRavenGUI:
         return self.__add_text_box(frame, title, text_box=combo_box, **kwargs)
 
     def __add_file_box(
-            self, frame: tkinter.Frame, title: str, file_select: Callable, **kwargs
+        self, frame: tkinter.Frame, title: str, file_select: Callable, **kwargs
     ) -> tkinter.Entry:
         if 'row' not in kwargs:
             kwargs['row'] = frame.grid_size()[1]
@@ -440,16 +440,16 @@ class PacketRavenGUI:
         return self.__add_text_box(frame, title, **kwargs)
 
     def __add_text_box(
-            self,
-            frame: tkinter.Frame,
-            title: str,
-            label: str,
-            units: str = None,
-            row: int = None,
-            column: int = None,
-            width: int = 10,
-            text_box: tkinter.Entry = None,
-            **kwargs,
+        self,
+        frame: tkinter.Frame,
+        title: str,
+        label: str,
+        units: str = None,
+        row: int = None,
+        column: int = None,
+        width: int = 10,
+        text_box: tkinter.Entry = None,
+        **kwargs,
     ) -> tkinter.Text:
         if row is None:
             row = frame.grid_size()[1]
@@ -544,8 +544,8 @@ class PacketRavenGUI:
                     connection_errors.append(f'aprs.fi - {error}')
 
                 if (
-                        'database' in self.__connection_configuration
-                        and self.__connection_configuration['database']['hostname'] is not None
+                    'database' in self.__connection_configuration
+                    and self.__connection_configuration['database']['hostname'] is not None
                 ):
                     try:
                         ssh_tunnel_kwargs = {}
@@ -563,8 +563,8 @@ class PacketRavenGUI:
                                         ssh_tunnel_kwargs['ssh_hostname'],
                                     ) = ssh_hostname.split('@', 1)
                                 if (
-                                        'ssh_username' not in ssh_tunnel_kwargs
-                                        or ssh_tunnel_kwargs['ssh_username'] is None
+                                    'ssh_username' not in ssh_tunnel_kwargs
+                                    or ssh_tunnel_kwargs['ssh_username'] is None
                                 ):
                                     ssh_username = simpledialog.askstring(
                                         'SSH Tunnel Username',
@@ -576,8 +576,8 @@ class PacketRavenGUI:
                                     ssh_tunnel_kwargs['ssh_username'] = ssh_username
 
                                 if (
-                                        'ssh_password' not in ssh_tunnel_kwargs
-                                        or ssh_tunnel_kwargs['ssh_password'] is None
+                                    'ssh_password' not in ssh_tunnel_kwargs
+                                    or ssh_tunnel_kwargs['ssh_password'] is None
                                 ):
                                     password = simpledialog.askstring(
                                         'SSH Tunnel Password',
@@ -592,8 +592,8 @@ class PacketRavenGUI:
 
                         database_kwargs = self.__connection_configuration['database']
                         if (
-                                'username' not in database_kwargs
-                                or database_kwargs['username'] is None
+                            'username' not in database_kwargs
+                            or database_kwargs['username'] is None
                         ):
                             database_username = simpledialog.askstring(
                                 'Database Username',
@@ -607,8 +607,8 @@ class PacketRavenGUI:
                             database_kwargs['username'] = database_username
 
                         if (
-                                'password' not in database_kwargs
-                                or database_kwargs['password'] is None
+                            'password' not in database_kwargs
+                            or database_kwargs['password'] is None
                         ):
                             database_password = simpledialog.askstring(
                                 'Database Password',
@@ -1008,7 +1008,7 @@ class PacketRavenGUI:
                     if packet_track.time_to_ground >= timedelta(seconds=0):
                         time_to_ground_box.configure(state=tkinter.NORMAL)
                         current_time_to_ground = (
-                                packet_time + packet_track.time_to_ground - current_time
+                            packet_time + packet_track.time_to_ground - current_time
                         )
                         self.replace_text(
                             time_to_ground_box,
@@ -1070,7 +1070,7 @@ def set_child_states(frame: tkinter.Frame, state: str = None, types: [type] = No
             set_child_states(child, state, types)
         else:
             if types is None or any(
-                    isinstance(child, selected_type) for selected_type in types
+                isinstance(child, selected_type) for selected_type in types
             ):
                 try:
                     child.configure(state=state)

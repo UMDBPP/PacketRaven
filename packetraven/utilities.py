@@ -31,11 +31,11 @@ def read_configuration(filename: PathLike) -> {str: str}:
 
 
 def get_logger(
-        name: str,
-        log_filename: PathLike = None,
-        file_level: int = None,
-        console_level: int = None,
-        log_format: str = None,
+    name: str,
+    log_filename: PathLike = None,
+    file_level: int = None,
+    console_level: int = None,
+    log_format: str = None,
 ) -> logging.Logger:
     if file_level is None:
         file_level = logging.DEBUG

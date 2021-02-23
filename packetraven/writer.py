@@ -56,7 +56,8 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
                         'altitude': packet_track.coordinates[-1, -1],
                         'ascent_rate': ascent_rates[-1],
                         'ground_speed': ground_speeds[-1],
-                        'seconds_to_ground': packet_track.time_to_ground / timedelta(seconds=1),
+                        'seconds_to_ground': packet_track.time_to_ground
+                                             / timedelta(seconds=1),
                     },
                 )
             )

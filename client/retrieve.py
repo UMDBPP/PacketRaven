@@ -16,13 +16,13 @@ LOGGER = get_logger('packetraven')
 
 
 def retrieve_packets(
-        connections: [APRSPacketSource],
-        packet_tracks: [APRSTrack],
-        database: APRSDatabaseTable = None,
-        output_filename: PathLike = None,
-        start_date: datetime = None,
-        end_date: datetime = None,
-        logger: Logger = None,
+    connections: [APRSPacketSource],
+    packet_tracks: [APRSTrack],
+    database: APRSDatabaseTable = None,
+    output_filename: PathLike = None,
+    start_date: datetime = None,
+    end_date: datetime = None,
+    logger: Logger = None,
 ) -> [APRSPacket]:
     if logger is None:
         logger = LOGGER
@@ -102,7 +102,7 @@ def retrieve_packets(
 
                 if packet_track.time_to_ground >= timedelta(seconds=0):
                     current_time_to_ground = (
-                            packet_time + packet_track.time_to_ground - current_time
+                        packet_time + packet_track.time_to_ground - current_time
                     )
                     message += (
                         f'; currently falling from max altitude of {packet_track.coordinates[:, 2].max():.3f} m; '

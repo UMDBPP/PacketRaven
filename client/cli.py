@@ -115,10 +115,10 @@ def main():
     if args.output is not None:
         output_filename = Path(args.output).expanduser()
         if output_filename.is_dir() or (
-                not output_filename.exists() and output_filename.suffix == ''
+            not output_filename.exists() and output_filename.suffix == ''
         ):
             output_filename = (
-                    output_filename / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson'
+                output_filename / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson'
             )
         if not output_filename.parent.exists():
             output_filename.parent.mkdir(parents=True, exist_ok=True)
@@ -188,8 +188,8 @@ def main():
             try:
                 if 'ssh_hostname' in ssh_tunnel_kwargs:
                     if (
-                            'ssh_username' not in ssh_tunnel_kwargs
-                            or ssh_tunnel_kwargs['ssh_username'] is None
+                        'ssh_username' not in ssh_tunnel_kwargs
+                        or ssh_tunnel_kwargs['ssh_username'] is None
                     ):
                         ssh_username = input(
                             f'enter username for SSH host "{ssh_tunnel_kwargs["ssh_hostname"]}": '
@@ -199,8 +199,8 @@ def main():
                         ssh_tunnel_kwargs['ssh_username'] = ssh_username
 
                     if (
-                            'ssh_password' not in ssh_tunnel_kwargs
-                            or ssh_tunnel_kwargs['ssh_password'] is None
+                        'ssh_password' not in ssh_tunnel_kwargs
+                        or ssh_tunnel_kwargs['ssh_password'] is None
                     ):
                         ssh_password = getpass(
                             f'enter password for SSH user "{ssh_tunnel_kwargs["ssh_username"]}": '

@@ -259,7 +259,9 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
         if 'primary_key' not in kwargs:
             kwargs['primary_key'] = 'time'
         kwargs['fields'] = {**self.__default_fields, **kwargs['fields']}
-        PostGresTable.__init__(self, hostname=hostname, database=database, name=table, **kwargs)
+        PostGresTable.__init__(
+            self, hostname=hostname, database=database, name=table, **kwargs
+        )
         PacketSource.__init__(
             self, f'postgresql://{self.hostname}:{self.port}/{self.database}/{self.name}'
         )
@@ -361,7 +363,7 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
     }
 
     def __init__(
-            self, hostname: str, database: str, table: str, callsigns: [str] = None, **kwargs
+        self, hostname: str, database: str, table: str, callsigns: [str] = None, **kwargs
     ):
         """
         Create a new database connection to a table containing APRS packet data.
