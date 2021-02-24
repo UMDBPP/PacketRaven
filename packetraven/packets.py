@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Any, Union
 
+from dateutil.parser import parse as parse_date
 import numpy
 from pyproj import CRS, Geod, Transformer
 
@@ -22,6 +23,9 @@ class LocationPacket:
         source: str = None,
         **kwargs,
     ):
+        if isinstance(time, str):
+            time = parse_date(time)
+
         self.time = time
         self.coordinates = numpy.array((x, y, z if z is not None else 0))
         self.crs = crs if crs is not None else DEFAULT_CRS

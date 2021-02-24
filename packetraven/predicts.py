@@ -6,6 +6,9 @@ from typing import Any, Optional, Tuple, Union
 import requests
 from shapely.geometry import Point
 
+from packetraven.packets import LocationPacket
+from packetraven.tracks import LocationPacketTrack, PredictionTrajectory
+
 
 class APIURL(Enum):
     cusf = 'https://predict.cusf.co.uk/api/v1/'
@@ -55,6 +58,11 @@ class BalloonPredictionQuery(ABC):
 
     @abstractmethod
     def get(self) -> {str: Any}:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def predict(self) -> LocationPacketTrack:
         raise NotImplementedError
 
 
@@ -111,6 +119,20 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
     def get(self) -> {str: Any}:
         response = requests.get(self.api_url, params=self.query)
         return response.json()
+
+    @property
+    def predict(self) -> LocationPacketTrack:
+        json = self.get()
+
+        points = []
+        for stage in json['prediction']:
+            points.extend(stage['trajectory'])
+
+        return PredictionTrajectory(
+            name='trajectory',
+            packets=[LocationPacket(point['datetime'], point['longitude'], point['latitude'], point['altitude']) for point in points],
+            prediction_time=json['metadata']['complete_datetime'],
+        )
 
 
 class LukeRenegarBalloonPredictionQuery(CUSFBalloonPredictionQuery):
@@ -179,6 +201,6 @@ if __name__ == '__main__':
     descent_rate = 9
 
     cusf_api = CUSFBalloonPredictionQuery(launch_site, launch_datetime, ascent_rate, burst_altitude, descent_rate)
-    json = cusf_api.get()
+    predict = cusf_api.predict
 
     print('done')

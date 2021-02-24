@@ -1,6 +1,7 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Union
 
+from dateutil.parser import parse as parse_date
 import numpy
 from pyproj import CRS
 
@@ -60,7 +61,7 @@ class LocationPacketTrack:
             [
                 [0],
                 numpy.array(
-                    [packet_delta.overground for packet_delta in numpy.diff(self.packets)]
+                    [packet_delta.overground for packet_delta in self.packets.difference]
                 ),
             ]
         )
@@ -186,3 +187,21 @@ class APRSTrack(LocationPacketTrack):
 
     def __str__(self) -> str:
         return f'{self.callsign}: {super().__str__()}'
+
+
+class PredictionTrajectory(LocationPacketTrack):
+    def __init__(self, name: str, packets: [LocationPacket], prediction_time: datetime, crs: CRS = None):
+        """
+        prediction trajectory
+
+        :param name: name of prediction
+        :param packets: iterable of packets
+        :param prediction_time: time of prediction
+        :param crs: coordinate reference system to use
+        """
+
+        if isinstance(prediction_time, str):
+            prediction_time = parse_date(prediction_time)
+
+        super().__init__(name, packets, crs)
+        self.prediction_time = prediction_time
