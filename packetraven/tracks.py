@@ -189,8 +189,10 @@ class APRSTrack(LocationPacketTrack):
         return f'{self.callsign}: {super().__str__()}'
 
 
-class PredictionTrajectory(LocationPacketTrack):
-    def __init__(self, name: str, packets: [LocationPacket], prediction_time: datetime, crs: CRS = None):
+class PredictedTrajectory(LocationPacketTrack):
+    def __init__(
+        self, name: str, packets: [LocationPacket], prediction_time: datetime, crs: CRS = None
+    ):
         """
         prediction trajectory
 

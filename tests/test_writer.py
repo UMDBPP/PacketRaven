@@ -7,7 +7,7 @@ import pytz
 from packetraven.packets import APRSPacket
 from packetraven.tracks import APRSTrack
 from packetraven.utilities import repository_root
-from packetraven.writer import write_aprs_packet_tracks
+from packetraven.writer import write_packet_tracks
 
 REFERENCE_DIRECTORY = repository_root() / 'tests' / 'reference'
 
@@ -43,7 +43,7 @@ def test_write_kml():
     reference_filename = REFERENCE_DIRECTORY / filename
     with TemporaryDirectory() as temporary_directory:
         output_filename = Path(temporary_directory) / filename
-        write_aprs_packet_tracks([PACKET_TRACK], output_filename)
+        write_packet_tracks([PACKET_TRACK], output_filename)
         with open(output_filename) as output_file, open(reference_filename) as reference_file:
             assert output_file.read() == reference_file.read()
 
@@ -53,7 +53,7 @@ def test_write_geojson():
     reference_filename = REFERENCE_DIRECTORY / filename
     with TemporaryDirectory() as temporary_directory:
         output_filename = Path(temporary_directory) / filename
-        write_aprs_packet_tracks([PACKET_TRACK], output_filename)
+        write_packet_tracks([PACKET_TRACK], output_filename)
         with open(output_filename) as output_file, open(reference_filename) as reference_file:
             assert output_file.read() == reference_file.read()
 
@@ -63,6 +63,6 @@ def test_write_txt():
     reference_filename = REFERENCE_DIRECTORY / filename
     with TemporaryDirectory() as temporary_directory:
         output_filename = Path(temporary_directory) / filename
-        write_aprs_packet_tracks([PACKET_TRACK], output_filename)
+        write_packet_tracks([PACKET_TRACK], output_filename)
         with open(output_filename) as output_file, open(reference_filename) as reference_file:
             assert output_file.read() == reference_file.read()

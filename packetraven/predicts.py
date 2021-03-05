@@ -7,10 +7,14 @@ import requests
 from shapely.geometry import Point
 
 from packetraven.packets import LocationPacket
-from packetraven.tracks import LocationPacketTrack, PredictionTrajectory
+from packetraven.tracks import LocationPacketTrack, PredictedTrajectory
+
+DEFAULT_ASCENT_RATE = 5.5
+DEFAULT_BURST_ALTITUDE = 28000
+DEFAULT_SEA_LEVEL_DESCENT_RATE = 9
 
 
-class APIURL(Enum):
+class PredictionAPIURL(Enum):
     cusf = 'https://predict.cusf.co.uk/api/v1/'
     lukerenegar = 'https://predict.lukerenegar.com/api/v1.1/'
 
@@ -28,17 +32,17 @@ class BalloonPredictionQuery(ABC):
         launch_datetime: datetime,
         ascent_rate: float,
         burst_altitude: float,
-        descent_rate: float,
+        sea_level_descent_rate: float,
     ):
         """
         initialize a new balloon prediction API query
 
         :param api_url: URL of API
-        :param launch_site:
-        :param launch_datetime:
-        :param ascent_rate:
-        :param burst_altitude:
-        :param descent_rate:
+        :param launch_site: location of balloon launch
+        :param launch_datetime: date and time of balloon launch
+        :param ascent_rate: average ascent rate (m/s)
+        :param burst_altitude: altitude at which balloon will burst
+        :param sea_level_descent_rate: descent rate at sea level (m/s)
         """
 
         if not isinstance(launch_site, Point):
@@ -49,21 +53,28 @@ class BalloonPredictionQuery(ABC):
         self.launch_datetime = launch_datetime
         self.ascent_rate = ascent_rate
         self.burst_altitude = burst_altitude
-        self.descent_rate = descent_rate
+        self.sea_level_descent_rate = sea_level_descent_rate
 
     @property
     @abstractmethod
     def query(self) -> {str: Any}:
         raise NotImplementedError
 
-    @abstractmethod
     def get(self) -> {str: Any}:
-        raise NotImplementedError
+        response = requests.get(self.api_url, params=self.query)
+        return response.json()
 
     @property
     @abstractmethod
     def predict(self) -> LocationPacketTrack:
         raise NotImplementedError
+
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}({repr(self.api_url)}, {repr(self.launch_site)}, {repr(self.launch_datetime)}, {repr(self.ascent_rate)}, {repr(self.burst_altitude)}, {repr(self.sea_level_descent_rate)})'
+
+
+class PredictionError(Exception):
+    pass
 
 
 class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
@@ -73,14 +84,25 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
         launch_datetime: datetime,
         ascent_rate: float,
         burst_altitude: float,
-        descent_rate: float,
+        sea_level_descent_rate: float,
         profile: FlightProfile = None,
         version: float = None,
         dataset_datetime: datetime = None,
-        api_url: str = APIURL.cusf.value,
+        api_url: PredictionAPIURL = None,
     ):
+        if api_url is None:
+            api_url = PredictionAPIURL.cusf
+
+        if isinstance(api_url, PredictionAPIURL):
+            api_url = api_url.value
+
         super().__init__(
-            api_url, launch_site, launch_datetime, ascent_rate, burst_altitude, descent_rate
+            api_url,
+            launch_site,
+            launch_datetime,
+            ascent_rate,
+            burst_altitude,
+            sea_level_descent_rate,
         )
 
         # CUSF API requires longitude in 0-360 format
@@ -102,7 +124,7 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
             'launch_datetime': f'{self.launch_datetime:%Y-%m-%dT%H:%M:%SZ}',
             'ascent_rate': self.ascent_rate,
             'burst_altitude': self.burst_altitude,
-            'descent_rate': self.descent_rate,
+            'descent_rate': self.sea_level_descent_rate,
         }
 
         if self.launch_site.has_z:
@@ -116,23 +138,30 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
 
         return query
 
-    def get(self) -> {str: Any}:
-        response = requests.get(self.api_url, params=self.query)
-        return response.json()
-
     @property
     def predict(self) -> LocationPacketTrack:
-        json = self.get()
+        response = self.get()
 
-        points = []
-        for stage in json['prediction']:
-            points.extend(stage['trajectory'])
+        if 'error' not in response:
+            points = []
+            for stage in response['prediction']:
+                points.extend(stage['trajectory'])
 
-        return PredictionTrajectory(
-            name='trajectory',
-            packets=[LocationPacket(point['datetime'], point['longitude'], point['latitude'], point['altitude']) for point in points],
-            prediction_time=json['metadata']['complete_datetime'],
-        )
+            return PredictedTrajectory(
+                name='trajectory',
+                packets=[
+                    LocationPacket(
+                        point['datetime'],
+                        point['longitude'],
+                        point['latitude'],
+                        point['altitude'],
+                    )
+                    for point in points
+                ],
+                prediction_time=response['metadata']['complete_datetime'],
+            )
+        else:
+            raise PredictionError(response['error']['description'])
 
 
 class LukeRenegarBalloonPredictionQuery(CUSFBalloonPredictionQuery):
@@ -142,7 +171,7 @@ class LukeRenegarBalloonPredictionQuery(CUSFBalloonPredictionQuery):
         launch_datetime: datetime,
         ascent_rate: float,
         burst_altitude: float,
-        descent_rate: float,
+        sea_level_descent_rate: float,
         ascent_rate_standard_deviation: float = None,
         burst_altitude_standard_deviation: float = None,
         descent_rate_standard_deviation: float = None,
@@ -152,14 +181,17 @@ class LukeRenegarBalloonPredictionQuery(CUSFBalloonPredictionQuery):
         profile: FlightProfile = None,
         version: float = None,
         dataset_datetime: datetime = None,
-        api_url: str = APIURL.lukerenegar.value,
+        api_url: str = None,
     ):
+        if api_url is None:
+            api_url = PredictionAPIURL.lukerenegar
+
         super().__init__(
             launch_site,
             launch_datetime,
             ascent_rate,
             burst_altitude,
-            descent_rate,
+            sea_level_descent_rate,
             profile,
             version,
             dataset_datetime,
@@ -200,7 +232,9 @@ if __name__ == '__main__':
     burst_altitude = 28000
     descent_rate = 9
 
-    cusf_api = CUSFBalloonPredictionQuery(launch_site, launch_datetime, ascent_rate, burst_altitude, descent_rate)
+    cusf_api = CUSFBalloonPredictionQuery(
+        launch_site, launch_datetime, ascent_rate, burst_altitude, descent_rate
+    )
     predict = cusf_api.predict
 
     print('done')

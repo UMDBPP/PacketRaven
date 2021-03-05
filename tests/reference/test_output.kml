@@ -1,1 +1,39 @@
-<kml:kml xmlns:kml="http://www.opengis.net/kml/2.2"><kml:Document id="1"><kml:name>root document</kml:name><kml:description>root document, containing geometries</kml:description><kml:visibility>1</kml:visibility><kml:Placemark id="1 0 0"><kml:name>W3EAX-13 20181111102013</kml:name><kml:description>altitude=8201.8632 ascent_rate=0.0 ground_speed=0.0</kml:description><kml:visibility>1</kml:visibility><kml:Point><kml:coordinates>-77.909211,39.700356,8201.863200</kml:coordinates></kml:Point></kml:Placemark><kml:Placemark id="1 0 1"><kml:name>W3EAX-13 20181111102124</kml:name><kml:description>altitude=8645.652 ascent_rate=6.251 ground_speed=34.01</kml:description><kml:visibility>1</kml:visibility><kml:Point><kml:coordinates>-77.881058,39.700099,8645.652000</kml:coordinates></kml:Point></kml:Placemark><kml:Placemark id="1 0 2"><kml:name>W3EAX-13 20190203143928</kml:name><kml:description>altitude=13130.784000000001 ascent_rate=0.001 ground_speed=0.005</kml:description><kml:visibility>1</kml:visibility><kml:Point><kml:coordinates>-77.425253,39.641857,13130.784000</kml:coordinates></kml:Point></kml:Placemark><kml:Placemark id="1 0"><kml:name>W3EAX-13</kml:name><kml:description>altitude=13130.784000000001 ascent_rate=0.001 ground_speed=0.005 seconds_to_ground=-1.0</kml:description><kml:visibility>1</kml:visibility><kml:LineString><kml:coordinates>-77.909211,39.700356,8201.863200 -77.881058,39.700099,8645.652000 -77.425253,39.641857,13130.784000</kml:coordinates></kml:LineString></kml:Placemark></kml:Document></kml:kml>
+<kml:kml xmlns:kml="http://www.opengis.net/kml/2.2">
+    <kml:Document id="1">
+        <kml:name>root document</kml:name>
+        <kml:description>root document, containing geometries</kml:description>
+        <kml:visibility>1</kml:visibility>
+        <kml:Placemark id="1 0 0">
+            <kml:name>20181111102013 W3EAX-13</kml:name>
+            <kml:description>altitude=8201.8632 ascent_rate=0.0 ground_speed=0.0</kml:description>
+            <kml:visibility>1</kml:visibility>
+            <kml:Point>
+                <kml:coordinates>-77.909211,39.700356,8201.863200</kml:coordinates>
+            </kml:Point>
+        </kml:Placemark>
+        <kml:Placemark id="1 0 1">
+            <kml:name>20181111102124 W3EAX-13</kml:name>
+            <kml:description>altitude=8645.652 ascent_rate=6.251 ground_speed=34.01</kml:description>
+            <kml:visibility>1</kml:visibility>
+            <kml:Point>
+                <kml:coordinates>-77.881058,39.700099,8645.652000</kml:coordinates>
+            </kml:Point>
+        </kml:Placemark>
+        <kml:Placemark id="1 0 2">
+            <kml:name>20190203143928 W3EAX-13</kml:name>
+            <kml:description>altitude=13130.784000000001 ascent_rate=0.001 ground_speed=0.005</kml:description>
+            <kml:visibility>1</kml:visibility>
+            <kml:Point>
+                <kml:coordinates>-77.425253,39.641857,13130.784000</kml:coordinates>
+            </kml:Point>
+        </kml:Placemark>
+        <kml:Placemark id="1 0">
+            <kml:name>W3EAX-13</kml:name>
+            <kml:description>altitude=13130.784000000001 ascent_rate=0.001 ground_speed=0.005 seconds_to_ground=-1.0</kml:description>
+            <kml:visibility>1</kml:visibility>
+            <kml:LineString>
+                <kml:coordinates>-77.909211,39.700356,8201.863200 -77.881058,39.700099,8645.652000 -77.425253,39.641857,13130.784000</kml:coordinates>
+            </kml:LineString>
+        </kml:Placemark>
+    </kml:Document>
+</kml:kml>
