@@ -851,7 +851,7 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.source',
                             label=None,
-                            width=25,
+                            width=27,
                             sticky='w',
                             columnspan=3,
                         )
@@ -859,18 +859,18 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.callsign',
                             label='Callsign',
-                            width=15,
+                            width=17,
                             sticky='w',
-                            columnspan=2,
+                            columnspan=3,
                         )
                         self.replace_text(self.__elements[f'{callsign}.callsign'], callsign)
                         self.__add_text_box(
                             window,
                             title=f'{callsign}.packets',
                             label='Packet #',
-                            width=15,
+                            width=17,
                             sticky='w',
-                            columnspan=2,
+                            columnspan=3,
                         )
 
                         self.__add_text_box(
@@ -882,12 +882,13 @@ class PacketRavenGUI:
                             row=self.__elements[f'{callsign}.source'].grid_info()['row'],
                             column=self.__elements[f'{callsign}.source'].grid_info()['column']
                                    + 4,
-                            columnspan=2,
+                            columnspan=3,
                         )
                         self.__add_text_box(
                             window,
                             title=f'{callsign}.age',
                             label='Packet Age',
+                            width=14,
                             units='s',
                             sticky='w',
                             row=self.__elements[f'{callsign}.callsign'].grid_info()['row'],
@@ -900,6 +901,7 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.interval',
                             label='Interval',
+                            width=14,
                             units='s',
                             sticky='w',
                             row=self.__elements[f'{callsign}.packets'].grid_info()['row'],
@@ -920,14 +922,15 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.coordinates',
                             label='Lat., Lon.',
-                            width=15,
+                            width=17,
                             sticky='w',
-                            columnspan=2,
+                            columnspan=3,
                         )
                         self.__add_text_box(
                             window,
                             title=f'{callsign}.distance',
                             label='Distance',
+                            width=14,
                             units='m',
                             sticky='w',
                         )
@@ -935,6 +938,7 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.ground_speed',
                             label='Ground Speed',
+                            width=14,
                             units='m/s',
                             sticky='w',
                         )
@@ -943,6 +947,7 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.altitude',
                             label='Alt.',
+                            width=14,
                             units='m',
                             sticky='w',
                             row=self.__elements[f'{callsign}.coordinates'].grid_info()['row'],
@@ -955,6 +960,7 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.ascent',
                             label='Ascent',
+                            width=14,
                             units='m',
                             sticky='w',
                             row=self.__elements[f'{callsign}.distance'].grid_info()['row'],
@@ -967,6 +973,7 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.ascent_rate',
                             label='Ascent Rate',
+                            width=14,
                             units='m/s',
                             sticky='w',
                             row=self.__elements[f'{callsign}.ground_speed'].grid_info()['row'],
@@ -989,6 +996,7 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.distance_downrange',
                             label='Downrange',
+                            width=14,
                             units='m',
                             sticky='w',
                         )
@@ -996,6 +1004,7 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.distance_overground',
                             label='Overground',
+                            width=14,
                             units='m',
                             sticky='w',
                         )
@@ -1004,6 +1013,7 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.maximum_altitude',
                             label='Max Alt.',
+                            width=14,
                             units='m',
                             sticky='w',
                             row=self.__elements[f'{callsign}.distance_downrange'].grid_info()[
@@ -1018,6 +1028,7 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.time_to_ground',
                             label='Est. Landing',
+                            width=14,
                             units='s',
                             sticky='w',
                             row=self.__elements[f'{callsign}.distance_overground'].grid_info()[
