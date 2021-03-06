@@ -153,7 +153,7 @@ class PacketRavenGUI:
 
         self.__toggles['log_file'] = tkinter.BooleanVar()
         log_file_checkbox = tkinter.Checkbutton(
-            log_file_frame, variable=self.__toggles['log_file'], command=self.__set_log_file_box
+            log_file_frame, variable=self.__toggles['log_file'], command=self.__toggle_log_file
         )
         log_file_checkbox.grid(row=0, column=0, padx=10)
         log_file_checkbox.select()
@@ -180,7 +180,7 @@ class PacketRavenGUI:
 
         self.__toggles['output_file'] = tkinter.BooleanVar()
         output_file_checkbox = tkinter.Checkbutton(
-            output_file_frame, variable=self.__toggles['output_file'], command=self.__set_output_file_box
+            output_file_frame, variable=self.__toggles['output_file'], command=self.__toggle_output_file
         )
         output_file_checkbox.grid(row=0, column=0, padx=10)
 
@@ -215,7 +215,7 @@ class PacketRavenGUI:
 
         self.__toggles['prediction_file'] = tkinter.BooleanVar()
         prediction_checkbox = tkinter.Checkbutton(
-            prediction_frame, variable=self.__toggles['prediction_file'], command=self.__set_prediction_file_box
+            prediction_frame, variable=self.__toggles['prediction_file'], command=self.__toggle_prediction_file
         )
         prediction_checkbox.grid(row=0, column=0, padx=10)
 
@@ -387,7 +387,7 @@ class PacketRavenGUI:
 
     @property
     def log_filename(self) -> Path:
-        if self.toggles['output_file']:
+        if self.toggles['log_file']:
             filename = self.__elements['log_file'].get()
             if len(filename) > 0:
                 filename = Path(filename)
@@ -441,12 +441,15 @@ class PacketRavenGUI:
 
     @property
     def prediction_filename(self) -> Path:
-        filename = self.__elements['prediction_file'].get()
-        if len(filename) > 0:
-            filename = Path(filename)
-            if filename.expanduser().resolve().is_dir():
-                self.prediction_filename = filename
-                filename = self.prediction_filename
+        if self.toggles['output_file']:
+            filename = self.__elements['prediction_file'].get()
+            if len(filename) > 0:
+                filename = Path(filename)
+                if filename.expanduser().resolve().is_dir():
+                    self.prediction_filename = filename
+                    filename = self.prediction_filename
+            else:
+                filename = None
         else:
             filename = None
         return filename
@@ -524,19 +527,24 @@ class PacketRavenGUI:
             ],
         )
 
-    def __set_log_file_box(self):
+    def __toggle_log_file(self):
         if self.toggles['log_file']:
             set_child_states(self.__elements['log_file_box'], state=tkinter.NORMAL)
+            get_logger(LOGGER.name, log_filename=self.log_filename)
         else:
             set_child_states(self.__elements['log_file_box'], state=tkinter.DISABLED)
+            for existing_file_handler in [
+                handler for handler in LOGGER.handlers if type(handler) is logging.FileHandler
+            ]:
+                LOGGER.removeHandler(existing_file_handler)
 
-    def __set_output_file_box(self):
+    def __toggle_output_file(self):
         if self.toggles['output_file']:
             set_child_states(self.__elements['output_file_box'], state=tkinter.NORMAL)
         else:
             set_child_states(self.__elements['output_file_box'], state=tkinter.DISABLED)
 
-    def __set_prediction_file_box(self):
+    def __toggle_prediction_file(self):
         if self.toggles['prediction_file']:
             set_child_states(self.__elements['prediction_file_box'], state=tkinter.NORMAL)
         else:

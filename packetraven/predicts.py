@@ -147,6 +147,10 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
             for stage in response['prediction']:
                 points.extend(stage['trajectory'])
 
+            for point in points:
+                if point['longitude'] > 180:
+                    point['longitude'] -= 360
+
             return PredictedTrajectory(
                 name='trajectory',
                 packets=[

@@ -145,8 +145,9 @@ def write_predictions(
     if output_filename is not None:
         prediction_tracks = []
         for packet_track in packet_tracks:
+            ascent_rates = packet_track.ascent_rates
             if ascent_rate is None:
-                average_ascent_rate = packet_track.ascent_rates[packet_track.ascent_rates > 0]
+                average_ascent_rate = ascent_rates[packet_track.ascent_rates > 0]
                 if average_ascent_rate > 0:
                     ascent_rate = average_ascent_rate
                 else:
@@ -155,6 +156,9 @@ def write_predictions(
                 burst_altitude = DEFAULT_BURST_ALTITUDE
             if sea_level_descent_rate is None:
                 sea_level_descent_rate = DEFAULT_SEA_LEVEL_DESCENT_RATE
+
+            if len(ascent_rates) > 2 and all(ascent_rates[-2:] < 0):
+                burst_altitude = packet_track.altitudes[-1] + 1
 
             prediction_query = CUSFBalloonPredictionQuery(
                 packet_track[-1].coordinates,
