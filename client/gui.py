@@ -88,11 +88,7 @@ class PacketRavenGUI:
         self.__frames['configuration'] = configuration_frame
 
         start_date_entry = self.__add_entry_box(
-            configuration_frame,
-            title='start_date',
-            label='Start Date',
-            width=22,
-            sticky='w',
+            configuration_frame, title='start_date', label='Start Date', width=22, sticky='w',
         )
         self.__add_entry_box(
             configuration_frame,
@@ -180,7 +176,9 @@ class PacketRavenGUI:
 
         self.__toggles['output_file'] = tkinter.BooleanVar()
         output_file_checkbox = tkinter.Checkbutton(
-            output_file_frame, variable=self.__toggles['output_file'], command=self.__toggle_output_file
+            output_file_frame,
+            variable=self.__toggles['output_file'],
+            command=self.__toggle_output_file,
         )
         output_file_checkbox.grid(row=0, column=0, padx=10)
 
@@ -215,7 +213,9 @@ class PacketRavenGUI:
 
         self.__toggles['prediction_file'] = tkinter.BooleanVar()
         prediction_checkbox = tkinter.Checkbutton(
-            prediction_frame, variable=self.__toggles['prediction_file'], command=self.__toggle_prediction_file
+            prediction_frame,
+            variable=self.__toggles['prediction_file'],
+            command=self.__toggle_prediction_file,
         )
         prediction_checkbox.grid(row=0, column=0, padx=10)
 
@@ -978,11 +978,10 @@ class PacketRavenGUI:
                             units='s',
                             sticky='w',
                             row=self.__elements[f'{callsign}.callsign'].grid_info()['row'],
-                            column=self.__elements[
-                                       f'{callsign}.callsign'
-                                   ].grid_info()[
+                            column=self.__elements[f'{callsign}.callsign'].grid_info()[
                                        'column'
-                                   ] + 3,
+                                   ]
+                                   + 3,
                         )
                         self.__add_text_box(
                             window,
