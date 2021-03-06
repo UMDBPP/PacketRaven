@@ -7,16 +7,18 @@ import sys
 import tkinter
 from tkinter import filedialog, messagebox, simpledialog
 from tkinter.ttk import Combobox, Separator
-from typing import Callable
+from typing import Callable, Collection
 
 from dateutil.parser import parse
 import numpy
 
 from client import DEFAULT_INTERVAL_SECONDS
-from client.retrieve import retrieve_packets
+from client.retrieve import retrieve_packets, write_predictions
 from packetraven.base import available_serial_ports, next_open_serial_port
 from packetraven.connections import APRSDatabaseTable, APRSfi, APRSis, SerialTNC, TextFileTNC
+from packetraven.packets import APRSPacket
 from packetraven.plotting import LivePlot
+from packetraven.predicts import PredictionError
 from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
 
@@ -25,15 +27,16 @@ LOGGER = get_logger('packetraven')
 
 class PacketRavenGUI:
     def __init__(
-            self,
-            callsigns: [str] = None,
-            start_date: datetime = None,
-            end_date: datetime = None,
-            log_filename: PathLike = None,
-            output_filename: PathLike = None,
-            interval_seconds: int = None,
-            igate: bool = False,
-            **kwargs,
+        self,
+        callsigns: [str] = None,
+        start_date: datetime = None,
+        end_date: datetime = None,
+        log_filename: PathLike = None,
+        output_filename: PathLike = None,
+        prediction_filename: PathLike = None,
+        interval_seconds: int = None,
+        igate: bool = False,
+        **kwargs,
     ):
         main_window = tkinter.Tk()
         main_window.title('PacketRaven')
@@ -43,20 +46,26 @@ class PacketRavenGUI:
             interval_seconds if interval_seconds is not None else DEFAULT_INTERVAL_SECONDS
         )
 
-        self.__connection_configuration = {
-            'aprs_fi': {'api_key': None},
+        self.__configuration = {
+            'aprs_fi': {'aprs_fi_key': None},
             'tnc': {'tnc': None},
             'database': {
-                'hostname': None,
-                'database': None,
-                'table': None,
-                'username': None,
-                'password': None,
+                'database_hostname': None,
+                'database_database': None,
+                'database_table': None,
+                'database_username': None,
+                'database_password': None,
             },
-            'ssh_tunnel': {'ssh_hostname': None, 'ssh_username': None, 'ssh_password': None},
+            'ssh_tunnel': {'ssh_hostname': None, 'ssh_username': None, 'ssh_password': None, },
+            'prediction': {
+                'prediction_ascent_rate': None,
+                'prediction_burst_altitude': None,
+                'prediction_descent_rate': None,
+                'prediction_api_url': None,
+            },
         }
 
-        for section_name, section in self.__connection_configuration.items():
+        for section_name, section in self.__configuration.items():
             section.update({key: value for key, value in kwargs.items() if key in section})
 
         self.igate = igate
@@ -65,7 +74,8 @@ class PacketRavenGUI:
         self.aprs_is = None
         self.__connections = []
 
-        self.__active = False
+        self.__running = False
+        self.__toggles = {}
         self.__packet_tracks = {}
 
         self.__frames = {}
@@ -78,7 +88,11 @@ class PacketRavenGUI:
         self.__frames['configuration'] = configuration_frame
 
         start_date_entry = self.__add_entry_box(
-            configuration_frame, title='start_date', label='Start Date', width=22, sticky='w'
+            configuration_frame,
+            title='start_date',
+            label='Start Date',
+            width=22,
+            sticky='w',
         )
         self.__add_entry_box(
             configuration_frame,
@@ -103,7 +117,7 @@ class PacketRavenGUI:
             configuration_frame,
             title='callsigns',
             label='Callsigns',
-            width=55,
+            width=63,
             columnspan=configuration_frame.grid_size()[0],
         )
         self.__file_selection_option = 'select file...'
@@ -113,7 +127,7 @@ class PacketRavenGUI:
             label='TNC',
             options=list(available_serial_ports()) + [self.__file_selection_option],
             option_select=self.__select_tnc,
-            width=52,
+            width=60,
             columnspan=configuration_frame.grid_size()[0],
             sticky='w',
         )
@@ -127,22 +141,91 @@ class PacketRavenGUI:
             pady=10,
         )
 
-        self.__add_file_box(
-            configuration_frame,
+        log_file_label = tkinter.Label(configuration_frame, text='Log')
+        log_file_label.grid(row=configuration_frame.grid_size()[1], column=0, sticky='w')
+
+        log_file_frame = tkinter.Frame(configuration_frame)
+        log_file_frame.grid(
+            row=log_file_label.grid_info()['row'],
+            column=1,
+            columnspan=configuration_frame.grid_size()[0] - 1,
+        )
+
+        self.__toggles['log_file'] = tkinter.BooleanVar()
+        log_file_checkbox = tkinter.Checkbutton(
+            log_file_frame, variable=self.__toggles['log_file'], command=self.__toggle_log_file
+        )
+        log_file_checkbox.grid(row=0, column=0, padx=10)
+        log_file_checkbox.select()
+
+        self.__elements['log_file_box'] = self.__add_file_box(
+            log_file_frame,
+            row=0,
+            column=1,
             title='log_file',
             file_select=self.__select_log_file,
-            label='Log',
             width=52,
-            columnspan=configuration_frame.grid_size()[0],
             sticky='w',
         )
-        self.__add_file_box(
-            configuration_frame,
+
+        output_file_label = tkinter.Label(configuration_frame, text='Output')
+        output_file_label.grid(row=configuration_frame.grid_size()[1], column=0, sticky='w')
+
+        output_file_frame = tkinter.Frame(configuration_frame)
+        output_file_frame.grid(
+            row=output_file_label.grid_info()['row'],
+            column=1,
+            columnspan=configuration_frame.grid_size()[0] - 1,
+        )
+
+        self.__toggles['output_file'] = tkinter.BooleanVar()
+        output_file_checkbox = tkinter.Checkbutton(
+            output_file_frame, variable=self.__toggles['output_file'], command=self.__toggle_output_file
+        )
+        output_file_checkbox.grid(row=0, column=0, padx=10)
+
+        self.__elements['output_file_box'] = self.__add_file_box(
+            output_file_frame,
+            row=0,
+            column=1,
             title='output_file',
             file_select=self.__select_output_file,
-            label='Output',
             width=52,
-            columnspan=configuration_frame.grid_size()[0],
+            sticky='w',
+        )
+
+        separator = Separator(configuration_frame, orient=tkinter.HORIZONTAL)
+        separator.grid(
+            row=configuration_frame.grid_size()[1],
+            column=0,
+            columnspan=configuration_frame.grid_size()[0] + 1,
+            sticky='ew',
+            pady=10,
+        )
+
+        prediction_label = tkinter.Label(configuration_frame, text='Predict')
+        prediction_label.grid(row=configuration_frame.grid_size()[1], column=0, sticky='w')
+
+        prediction_frame = tkinter.Frame(configuration_frame)
+        prediction_frame.grid(
+            row=prediction_label.grid_info()['row'],
+            column=1,
+            columnspan=configuration_frame.grid_size()[0] - 1,
+        )
+
+        self.__toggles['prediction_file'] = tkinter.BooleanVar()
+        prediction_checkbox = tkinter.Checkbutton(
+            prediction_frame, variable=self.__toggles['prediction_file'], command=self.__toggle_prediction_file
+        )
+        prediction_checkbox.grid(row=0, column=0, padx=10)
+
+        self.__elements['prediction_file_box'] = self.__add_file_box(
+            prediction_frame,
+            row=0,
+            column=1,
+            title='prediction_file',
+            file_select=self.__select_prediction_file,
+            width=52,
             sticky='w',
         )
 
@@ -190,7 +273,7 @@ class PacketRavenGUI:
         toggle_button.grid(row=control_frame.grid_size()[1], column=0, sticky='nsew')
 
         self.callsigns = callsigns
-        self.tncs = self.__connection_configuration['tnc']['tnc']
+        self.tncs = self.__configuration['tnc']['tnc']
 
         if start_date is not None:
             self.start_date = start_date
@@ -204,6 +287,12 @@ class PacketRavenGUI:
         self.output_filename = output_filename
         if self.output_filename is None:
             self.output_filename = Path('~') / 'Desktop'
+        set_child_states(self.__elements['output_file_box'], state=tkinter.DISABLED)
+
+        self.prediction_filename = prediction_filename
+        if self.prediction_filename is None:
+            self.prediction_filename = Path('~') / 'Desktop'
+        set_child_states(self.__elements['prediction_file_box'], state=tkinter.DISABLED)
 
         self.__windows['main'].protocol('WM_DELETE_WINDOW', self.close)
 
@@ -247,13 +336,15 @@ class PacketRavenGUI:
         return tncs
 
     @tncs.setter
-    def tncs(self, filenames: [str]):
+    def tncs(self, filenames: [PathLike]):
         if filenames is None:
             filenames = []
-        elif isinstance(filenames, str):
+        elif not isinstance(filenames, Collection) or isinstance(filenames, str):
             filenames = [filenames]
 
-        self.__connection_configuration['tnc']['tnc'] = filenames
+        filenames = [str(filename) for filename in filenames]
+
+        self.__configuration['tnc']['tnc'] = filenames
         self.replace_text(self.__elements['tnc'], ', '.join(filenames))
 
     @property
@@ -296,12 +387,15 @@ class PacketRavenGUI:
 
     @property
     def log_filename(self) -> Path:
-        filename = self.__elements['log_file'].get()
-        if len(filename) > 0:
-            filename = Path(filename)
-            if filename.expanduser().resolve().is_dir():
-                self.log_filename = filename
-                filename = self.log_filename
+        if self.toggles['log_file']:
+            filename = self.__elements['log_file'].get()
+            if len(filename) > 0:
+                filename = Path(filename)
+                if filename.expanduser().resolve().is_dir():
+                    self.log_filename = filename
+                    filename = self.log_filename
+            else:
+                filename = None
         else:
             filename = None
         return filename
@@ -319,12 +413,15 @@ class PacketRavenGUI:
 
     @property
     def output_filename(self) -> Path:
-        filename = self.__elements['output_file'].get()
-        if len(filename) > 0:
-            filename = Path(filename)
-            if filename.expanduser().resolve().is_dir():
-                self.output_filename = filename
-                filename = self.output_filename
+        if self.toggles['output_file']:
+            filename = self.__elements['output_file'].get()
+            if len(filename) > 0:
+                filename = Path(filename)
+                if filename.expanduser().resolve().is_dir():
+                    self.output_filename = filename
+                    filename = self.output_filename
+            else:
+                filename = None
         else:
             filename = None
         return filename
@@ -335,23 +432,65 @@ class PacketRavenGUI:
             if not isinstance(filename, Path):
                 filename = Path(filename)
             if filename.expanduser().resolve().is_dir():
-                filename = filename / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.txt'
+                filename = (
+                    filename / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson'
+                )
         else:
             filename = ''
         self.replace_text(self.__elements['output_file'], filename)
 
     @property
-    def active(self) -> bool:
-        return self.__active
+    def prediction_filename(self) -> Path:
+        if self.toggles['output_file']:
+            filename = self.__elements['prediction_file'].get()
+            if len(filename) > 0:
+                filename = Path(filename)
+                if filename.expanduser().resolve().is_dir():
+                    self.prediction_filename = filename
+                    filename = self.prediction_filename
+            else:
+                filename = None
+        else:
+            filename = None
+        return filename
 
-    @active.setter
-    def active(self, active: bool):
-        if active is not self.active:
+    @prediction_filename.setter
+    def prediction_filename(self, filename: PathLike):
+        if filename is not None:
+            if not isinstance(filename, Path):
+                filename = Path(filename)
+            if filename.expanduser().resolve().is_dir():
+                filename = (
+                    filename / f'packetraven_predict_{datetime.now():%Y%m%dT%H%M%S}.geojson'
+                )
+        else:
+            filename = ''
+        self.replace_text(self.__elements['prediction_file'], filename)
+
+    @property
+    def toggles(self) -> {str: bool}:
+        return {key: value.get() for key, value in self.__toggles.items()}
+
+    @property
+    def running(self) -> bool:
+        return self.__running
+
+    @running.setter
+    def running(self, running: bool):
+        if running is not self.running:
             self.toggle()
 
     @property
     def packet_tracks(self) -> {str: APRSTrack}:
         return self.__packet_tracks
+
+    def __select_tnc(self, event):
+        if event.widget.get() == self.__file_selection_option:
+            self.tncs = filedialog.askopenfilename(
+                title='Select TNC text file...',
+                defaultextension='.txt',
+                filetypes=[('Text', '*.txt')],
+            )
 
     def __select_log_file(self):
         self.log_filename = filedialog.asksaveasfilename(
@@ -367,29 +506,57 @@ class PacketRavenGUI:
             title='Create output file...',
             initialdir=self.output_filename.parent,
             initialfile=self.output_filename.stem,
-            defaultextension='.txt',
+            defaultextension='.geojson',
             filetypes=[
-                ('Text', '*.txt'),
                 ('GeoJSON', '*.geojson'),
+                ('Text', '*.txt'),
                 ('Keyhole Markup Language', '*.kml'),
             ],
         )
 
-    def __select_tnc(self, event):
-        if event.widget.get() == self.__file_selection_option:
-            self.tncs = filedialog.askopenfilename(
-                title='Select TNC text file...',
-                defaultextension='.txt',
-                filetypes=[('Text', '*.txt')],
-            )
+    def __select_prediction_file(self):
+        self.prediction_filename = filedialog.asksaveasfilename(
+            title='Create predict file...',
+            initialdir=self.prediction_filename.parent,
+            initialfile=self.prediction_filename.stem,
+            defaultextension='.geojson',
+            filetypes=[
+                ('GeoJSON', '*.geojson'),
+                ('Text', '*.txt'),
+                ('Keyhole Markup Language', '*.kml'),
+            ],
+        )
+
+    def __toggle_log_file(self):
+        if self.toggles['log_file']:
+            set_child_states(self.__elements['log_file_box'], state=tkinter.NORMAL)
+            get_logger(LOGGER.name, log_filename=self.log_filename)
+        else:
+            set_child_states(self.__elements['log_file_box'], state=tkinter.DISABLED)
+            for existing_file_handler in [
+                handler for handler in LOGGER.handlers if type(handler) is logging.FileHandler
+            ]:
+                LOGGER.removeHandler(existing_file_handler)
+
+    def __toggle_output_file(self):
+        if self.toggles['output_file']:
+            set_child_states(self.__elements['output_file_box'], state=tkinter.NORMAL)
+        else:
+            set_child_states(self.__elements['output_file_box'], state=tkinter.DISABLED)
+
+    def __toggle_prediction_file(self):
+        if self.toggles['prediction_file']:
+            set_child_states(self.__elements['prediction_file_box'], state=tkinter.NORMAL)
+        else:
+            set_child_states(self.__elements['prediction_file_box'], state=tkinter.DISABLED)
 
     def __add_combo_box(
-            self,
-            frame: tkinter.Frame,
-            title: str,
-            options: [str],
-            option_select: Callable = None,
-            **kwargs,
+        self,
+        frame: tkinter.Frame,
+        title: str,
+        options: [str],
+        option_select: Callable = None,
+        **kwargs,
     ) -> Combobox:
         width = kwargs['width'] if 'width' in kwargs else None
         combo_box = Combobox(frame, width=width)
@@ -399,8 +566,8 @@ class PacketRavenGUI:
         return self.__add_text_box(frame, title, text_box=combo_box, **kwargs)
 
     def __add_file_box(
-            self, frame: tkinter.Frame, title: str, file_select: Callable, **kwargs
-    ) -> tkinter.Entry:
+        self, frame: tkinter.Frame, title: str, file_select: Callable, **kwargs
+    ) -> tkinter.Frame:
         if 'row' not in kwargs:
             kwargs['row'] = frame.grid_size()[1]
         if 'column' not in kwargs:
@@ -430,7 +597,7 @@ class PacketRavenGUI:
         file_button.pack(side='left')
 
         self.__elements[title] = file_box
-        return file_box
+        return file_box_frame
 
     def __add_entry_box(self, frame: tkinter.Frame, title: str, **kwargs) -> tkinter.Entry:
         if 'text_box' not in kwargs:
@@ -440,16 +607,16 @@ class PacketRavenGUI:
         return self.__add_text_box(frame, title, **kwargs)
 
     def __add_text_box(
-            self,
-            frame: tkinter.Frame,
-            title: str,
-            label: str,
-            units: str = None,
-            row: int = None,
-            column: int = None,
-            width: int = 10,
-            text_box: tkinter.Entry = None,
-            **kwargs,
+        self,
+        frame: tkinter.Frame,
+        title: str,
+        label: str,
+        units: str = None,
+        row: int = None,
+        column: int = None,
+        width: int = 10,
+        text_box: tkinter.Entry = None,
+        **kwargs,
     ) -> tkinter.Text:
         if row is None:
             row = frame.grid_size()[1]
@@ -481,10 +648,12 @@ class PacketRavenGUI:
         return text_box
 
     def toggle(self):
-        if not self.active:
+        if not self.running:
             if self.log_filename is not None:
                 get_logger(LOGGER.name, self.log_filename)
-            self.__elements['log_file'].configure(state=tkinter.DISABLED)
+
+            if self.toggles['log_file']:
+                set_child_states(self.__elements['log_file_box'], tkinter.DISABLED)
 
             start_date = self.start_date
             self.__elements['start_date'].configure(state=tkinter.DISABLED)
@@ -527,7 +696,7 @@ class PacketRavenGUI:
                     if isinstance(connection, SerialTNC) or isinstance(connection, TextFileTNC)
                 ]
 
-                api_key = self.__connection_configuration['aprs_fi']['api_key']
+                api_key = self.__configuration['aprs_fi']['aprs_fi_key']
                 if api_key is None:
                     api_key = simpledialog.askstring(
                         'APRS.fi API Key',
@@ -539,32 +708,28 @@ class PacketRavenGUI:
                     aprs_api = APRSfi(self.callsigns, api_key=api_key)
                     LOGGER.info(f'established connection to {aprs_api.location}')
                     self.__connections.append(aprs_api)
-                    self.__connection_configuration['aprs_fi']['api_key'] = api_key
+                    self.__configuration['aprs_fi']['aprs_fi_key'] = api_key
                 except Exception as error:
                     connection_errors.append(f'aprs.fi - {error}')
 
                 if (
-                        'database' in self.__connection_configuration
-                        and self.__connection_configuration['database']['hostname'] is not None
+                    'database' in self.__configuration
+                    and self.__configuration['database']['database_hostname'] is not None
                 ):
                     try:
                         ssh_tunnel_kwargs = {}
-                        if 'ssh_tunnel' in self.__connection_configuration:
-                            ssh_hostname = self.__connection_configuration['ssh_tunnel'][
-                                'ssh_hostname'
-                            ]
+                        if 'ssh_tunnel' in self.__configuration:
+                            ssh_hostname = self.__configuration['ssh_tunnel']['ssh_hostname']
                             if ssh_hostname is not None:
-                                ssh_tunnel_kwargs.update(
-                                    self.__connection_configuration['ssh_tunnel']
-                                )
+                                ssh_tunnel_kwargs.update(self.__configuration['ssh_tunnel'])
                                 if '@' in ssh_hostname:
                                     (
                                         ssh_tunnel_kwargs['ssh_username'],
                                         ssh_tunnel_kwargs['ssh_hostname'],
                                     ) = ssh_hostname.split('@', 1)
                                 if (
-                                        'ssh_username' not in ssh_tunnel_kwargs
-                                        or ssh_tunnel_kwargs['ssh_username'] is None
+                                    'ssh_username' not in ssh_tunnel_kwargs
+                                    or ssh_tunnel_kwargs['ssh_username'] is None
                                 ):
                                     ssh_username = simpledialog.askstring(
                                         'SSH Tunnel Username',
@@ -576,8 +741,8 @@ class PacketRavenGUI:
                                     ssh_tunnel_kwargs['ssh_username'] = ssh_username
 
                                 if (
-                                        'ssh_password' not in ssh_tunnel_kwargs
-                                        or ssh_tunnel_kwargs['ssh_password'] is None
+                                    'ssh_password' not in ssh_tunnel_kwargs
+                                    or ssh_tunnel_kwargs['ssh_password'] is None
                                 ):
                                     password = simpledialog.askstring(
                                         'SSH Tunnel Password',
@@ -590,37 +755,40 @@ class PacketRavenGUI:
                                         raise ConnectionError('missing SSH password')
                                     ssh_tunnel_kwargs['ssh_password'] = password
 
-                        database_kwargs = self.__connection_configuration['database']
+                        database_kwargs = self.__configuration['database_database']
                         if (
-                                'username' not in database_kwargs
-                                or database_kwargs['username'] is None
+                            'username' not in database_kwargs
+                            or database_kwargs['database_username'] is None
                         ):
                             database_username = simpledialog.askstring(
                                 'Database Username',
                                 f'enter username for database '
-                                f'"{database_kwargs["hostname"]}/'
-                                f'{database_kwargs["database"]}"',
+                                f'"{database_kwargs["database_hostname"]}/'
+                                f'{database_kwargs["database_database"]}"',
                                 parent=self.__windows['main'],
                             )
                             if database_username is None or len(database_username) == 0:
                                 raise ConnectionError('missing database username')
-                            database_kwargs['username'] = database_username
+                            database_kwargs['database_username'] = database_username
 
                         if (
-                                'password' not in database_kwargs
-                                or database_kwargs['password'] is None
+                            'database_password' not in database_kwargs
+                            or database_kwargs['database_password'] is None
                         ):
                             database_password = simpledialog.askstring(
                                 'Database Password',
                                 f'enter password for database user '
-                                f'"{database_kwargs["username"]}"',
+                                f'"{database_kwargs["database_username"]}"',
                                 parent=self.__windows['main'],
                                 show='*',
                             )
                             if database_password is None or len(database_password) == 0:
                                 raise ConnectionError('missing database password')
-                            database_kwargs['password'] = database_password
-                        if 'table' not in database_kwargs or database_kwargs['table'] is None:
+                            database_kwargs['database_password'] = database_password
+                        if (
+                            'database_table' not in database_kwargs
+                            or database_kwargs['database_table'] is None
+                        ):
                             database_table = simpledialog.askstring(
                                 'Database Table',
                                 f'enter database table name',
@@ -628,15 +796,15 @@ class PacketRavenGUI:
                             )
                             if database_table is None or len(database_table) == 0:
                                 raise ConnectionError('missing database table name')
-                            database_kwargs['table'] = database_table
+                            database_kwargs['database_table'] = database_table
 
                         self.database = APRSDatabaseTable(
                             **database_kwargs, **ssh_tunnel_kwargs, callsigns=self.callsigns
                         )
                         LOGGER.info(f'connected to {self.database.location}')
                         self.__connections.append(self.database)
-                        self.__connection_configuration['database'].update(database_kwargs)
-                        self.__connection_configuration['ssh_tunnel'].update(ssh_tunnel_kwargs)
+                        self.__configuration['database_database'].update(database_kwargs)
+                        self.__configuration['ssh_tunnel'].update(ssh_tunnel_kwargs)
                     except ConnectionError as error:
                         connection_errors.append(f'database - {error}')
                         self.database = None
@@ -673,7 +841,7 @@ class PacketRavenGUI:
                     set_child_states(self.__windows[callsign], tkinter.DISABLED)
 
                 self.__toggle_text.set('Stop')
-                self.__active = True
+                self.__running = True
             except Exception as error:
                 messagebox.showerror(error.__class__.__name__, error)
                 if '\n' in str(error):
@@ -681,7 +849,7 @@ class PacketRavenGUI:
                         LOGGER.error(connection_error)
                 else:
                     LOGGER.error(error)
-                self.__active = False
+                self.__running = False
                 set_child_states(self.__frames['configuration'], tkinter.NORMAL)
 
             self.retrieve_packets()
@@ -698,20 +866,27 @@ class PacketRavenGUI:
                 set_child_states(self.__windows[callsign], tkinter.DISABLED)
             set_child_states(self.__frames['configuration'], tkinter.NORMAL)
 
+            if not self.toggles['log_file']:
+                set_child_states(self.__elements['log_file_box'], tkinter.DISABLED)
+            if not self.toggles['output_file']:
+                set_child_states(self.__elements['output_file_box'], tkinter.DISABLED)
+            if not self.toggles['prediction_file']:
+                set_child_states(self.__elements['prediction_file_box'], tkinter.DISABLED)
+
             self.__toggle_text.set('Start')
-            self.__active = False
+            self.__running = False
             self.__connections = []
 
             logging.shutdown()
 
     def retrieve_packets(self):
-        if self.active:
+        if self.running:
             try:
                 current_time = datetime.now()
 
                 existing_callsigns = list(self.packet_tracks)
 
-                parsed_packets = retrieve_packets(
+                new_packets = retrieve_packets(
                     self.__connections,
                     self.__packet_tracks,
                     self.database,
@@ -721,14 +896,32 @@ class PacketRavenGUI:
                     logger=LOGGER,
                 )
 
-                if len(parsed_packets) > 0:
+                if self.toggles['prediction_file'] and self.prediction_filename is not None:
+                    try:
+                        write_predictions(
+                            self.packet_tracks.values(), self.prediction_filename
+                        )
+                    except PredictionError as error:
+                        LOGGER.warning(f'{error.__class__.__name__} - {error}')
+                    except Exception as error:
+                        LOGGER.warning(
+                            f'error retrieving prediction trajectory - {error.__class__.__name__} - {error}'
+                        )
+
+                if len(new_packets) > 0:
                     for variable, plot in self.__plots.items():
                         plot.update(self.packet_tracks)
 
                 if self.aprs_is is not None:
-                    self.aprs_is.send(parsed_packets)
+                    for packets in new_packets.values():
+                        self.aprs_is.send(packets)
 
-                updated_callsigns = {packet.from_callsign for packet in parsed_packets}
+                updated_callsigns = {
+                    packet.from_callsign
+                    for packets in new_packets.values()
+                    for packet in packets
+                    if isinstance(packet, APRSPacket)
+                }
                 for callsign in updated_callsigns:
                     packet_track = self.packet_tracks[callsign]
                     packet_time = datetime.utcfromtimestamp(
@@ -744,7 +937,7 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.source',
                             label=None,
-                            width=25,
+                            width=27,
                             sticky='w',
                             columnspan=3,
                         )
@@ -752,18 +945,18 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.callsign',
                             label='Callsign',
-                            width=15,
+                            width=17,
                             sticky='w',
-                            columnspan=2,
+                            columnspan=3,
                         )
                         self.replace_text(self.__elements[f'{callsign}.callsign'], callsign)
                         self.__add_text_box(
                             window,
                             title=f'{callsign}.packets',
                             label='Packet #',
-                            width=15,
+                            width=17,
                             sticky='w',
-                            columnspan=2,
+                            columnspan=3,
                         )
 
                         self.__add_text_box(
@@ -775,24 +968,27 @@ class PacketRavenGUI:
                             row=self.__elements[f'{callsign}.source'].grid_info()['row'],
                             column=self.__elements[f'{callsign}.source'].grid_info()['column']
                                    + 4,
-                            columnspan=2,
+                            columnspan=3,
                         )
                         self.__add_text_box(
                             window,
                             title=f'{callsign}.age',
                             label='Packet Age',
+                            width=14,
                             units='s',
                             sticky='w',
                             row=self.__elements[f'{callsign}.callsign'].grid_info()['row'],
-                            column=self.__elements[f'{callsign}.callsign'].grid_info()[
+                            column=self.__elements[
+                                       f'{callsign}.callsign'
+                                   ].grid_info()[
                                        'column'
-                                   ]
-                                   + 3,
+                                   ] + 3,
                         )
                         self.__add_text_box(
                             window,
                             title=f'{callsign}.interval',
                             label='Interval',
+                            width=14,
                             units='s',
                             sticky='w',
                             row=self.__elements[f'{callsign}.packets'].grid_info()['row'],
@@ -813,14 +1009,15 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.coordinates',
                             label='Lat., Lon.',
-                            width=15,
+                            width=17,
                             sticky='w',
-                            columnspan=2,
+                            columnspan=3,
                         )
                         self.__add_text_box(
                             window,
                             title=f'{callsign}.distance',
                             label='Distance',
+                            width=14,
                             units='m',
                             sticky='w',
                         )
@@ -828,6 +1025,7 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.ground_speed',
                             label='Ground Speed',
+                            width=14,
                             units='m/s',
                             sticky='w',
                         )
@@ -836,6 +1034,7 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.altitude',
                             label='Alt.',
+                            width=14,
                             units='m',
                             sticky='w',
                             row=self.__elements[f'{callsign}.coordinates'].grid_info()['row'],
@@ -848,6 +1047,7 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.ascent',
                             label='Ascent',
+                            width=14,
                             units='m',
                             sticky='w',
                             row=self.__elements[f'{callsign}.distance'].grid_info()['row'],
@@ -860,6 +1060,7 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.ascent_rate',
                             label='Ascent Rate',
+                            width=14,
                             units='m/s',
                             sticky='w',
                             row=self.__elements[f'{callsign}.ground_speed'].grid_info()['row'],
@@ -882,6 +1083,7 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.distance_downrange',
                             label='Downrange',
+                            width=14,
                             units='m',
                             sticky='w',
                         )
@@ -889,6 +1091,7 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.distance_overground',
                             label='Overground',
+                            width=14,
                             units='m',
                             sticky='w',
                         )
@@ -897,6 +1100,7 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.maximum_altitude',
                             label='Max Alt.',
+                            width=14,
                             units='m',
                             sticky='w',
                             row=self.__elements[f'{callsign}.distance_downrange'].grid_info()[
@@ -911,6 +1115,7 @@ class PacketRavenGUI:
                             window,
                             title=f'{callsign}.time_to_ground',
                             label='Est. Landing',
+                            width=14,
                             units='s',
                             sticky='w',
                             row=self.__elements[f'{callsign}.distance_overground'].grid_info()[
@@ -1008,7 +1213,7 @@ class PacketRavenGUI:
                     if packet_track.time_to_ground >= timedelta(seconds=0):
                         time_to_ground_box.configure(state=tkinter.NORMAL)
                         current_time_to_ground = (
-                                packet_time + packet_track.time_to_ground - current_time
+                            packet_time + packet_track.time_to_ground - current_time
                         )
                         self.replace_text(
                             time_to_ground_box,
@@ -1028,7 +1233,7 @@ class PacketRavenGUI:
                     )
                     packet_age_box.configure(state=tkinter.DISABLED)
 
-                if self.active:
+                if self.running:
                     self.__windows['main'].after(
                         int(self.interval_seconds * 1000), self.retrieve_packets
                     )
@@ -1052,7 +1257,7 @@ class PacketRavenGUI:
 
     def close(self):
         try:
-            if self.active:
+            if self.running:
                 self.toggle()
             for plot in self.__plots.values():
                 plot.close()
@@ -1070,7 +1275,7 @@ def set_child_states(frame: tkinter.Frame, state: str = None, types: [type] = No
             set_child_states(child, state, types)
         else:
             if types is None or any(
-                    isinstance(child, selected_type) for selected_type in types
+                isinstance(child, selected_type) for selected_type in types
             ):
                 try:
                     child.configure(state=state)

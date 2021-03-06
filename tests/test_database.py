@@ -33,8 +33,8 @@ for credential, details in default_credentials.items():
         CREDENTIALS['database'][credential] = os.getenv(*details)
 
 if (
-        'ssh_hostname' in CREDENTIALS['database']
-        and CREDENTIALS['database']['ssh_hostname'] is not None
+    'ssh_hostname' in CREDENTIALS['database']
+    and CREDENTIALS['database']['ssh_hostname'] is not None
 ):
     hostname, port = split_URL_port(CREDENTIALS['database']['hostname'])
     if port is None:
