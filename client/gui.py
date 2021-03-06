@@ -16,6 +16,7 @@ from client import DEFAULT_INTERVAL_SECONDS
 from client.retrieve import retrieve_packets, write_predictions
 from packetraven.base import available_serial_ports, next_open_serial_port
 from packetraven.connections import APRSDatabaseTable, APRSfi, APRSis, SerialTNC, TextFileTNC
+from packetraven.packets import APRSPacket
 from packetraven.plotting import LivePlot
 from packetraven.predicts import PredictionError
 from packetraven.tracks import APRSTrack
@@ -74,6 +75,7 @@ class PacketRavenGUI:
         self.__connections = []
 
         self.__running = False
+        self.__toggles = {}
         self.__packet_tracks = {}
 
         self.__frames = {}
@@ -86,7 +88,11 @@ class PacketRavenGUI:
         self.__frames['configuration'] = configuration_frame
 
         start_date_entry = self.__add_entry_box(
-            configuration_frame, title='start_date', label='Start Date', width=22, sticky='w'
+            configuration_frame,
+            title='start_date',
+            label='Start Date',
+            width=22,
+            sticky='w',
         )
         self.__add_entry_box(
             configuration_frame,
@@ -111,7 +117,7 @@ class PacketRavenGUI:
             configuration_frame,
             title='callsigns',
             label='Callsigns',
-            width=55,
+            width=63,
             columnspan=configuration_frame.grid_size()[0],
         )
         self.__file_selection_option = 'select file...'
@@ -121,7 +127,7 @@ class PacketRavenGUI:
             label='TNC',
             options=list(available_serial_ports()) + [self.__file_selection_option],
             option_select=self.__select_tnc,
-            width=52,
+            width=60,
             columnspan=configuration_frame.grid_size()[0],
             sticky='w',
         )
@@ -135,22 +141,56 @@ class PacketRavenGUI:
             pady=10,
         )
 
-        self.__add_file_box(
-            configuration_frame,
+        log_file_label = tkinter.Label(configuration_frame, text='Log')
+        log_file_label.grid(row=configuration_frame.grid_size()[1], column=0, sticky='w')
+
+        log_file_frame = tkinter.Frame(configuration_frame)
+        log_file_frame.grid(
+            row=log_file_label.grid_info()['row'],
+            column=1,
+            columnspan=configuration_frame.grid_size()[0] - 1,
+        )
+
+        self.__toggles['log_file'] = tkinter.BooleanVar()
+        log_file_checkbox = tkinter.Checkbutton(
+            log_file_frame, variable=self.__toggles['log_file'], command=self.__set_log_file_box
+        )
+        log_file_checkbox.grid(row=0, column=0, padx=10)
+        log_file_checkbox.select()
+
+        self.__elements['log_file_box'] = self.__add_file_box(
+            log_file_frame,
+            row=0,
+            column=1,
             title='log_file',
             file_select=self.__select_log_file,
-            label='Log',
             width=52,
-            columnspan=configuration_frame.grid_size()[0],
             sticky='w',
         )
-        self.__add_file_box(
-            configuration_frame,
+
+        output_file_label = tkinter.Label(configuration_frame, text='Output')
+        output_file_label.grid(row=configuration_frame.grid_size()[1], column=0, sticky='w')
+
+        output_file_frame = tkinter.Frame(configuration_frame)
+        output_file_frame.grid(
+            row=output_file_label.grid_info()['row'],
+            column=1,
+            columnspan=configuration_frame.grid_size()[0] - 1,
+        )
+
+        self.__toggles['output_file'] = tkinter.BooleanVar()
+        output_file_checkbox = tkinter.Checkbutton(
+            output_file_frame, variable=self.__toggles['output_file'], command=self.__set_output_file_box
+        )
+        output_file_checkbox.grid(row=0, column=0, padx=10)
+
+        self.__elements['output_file_box'] = self.__add_file_box(
+            output_file_frame,
+            row=0,
+            column=1,
             title='output_file',
             file_select=self.__select_output_file,
-            label='Output',
             width=52,
-            columnspan=configuration_frame.grid_size()[0],
             sticky='w',
         )
 
@@ -173,9 +213,9 @@ class PacketRavenGUI:
             columnspan=configuration_frame.grid_size()[0] - 1,
         )
 
-        self.__run_prediction = tkinter.BooleanVar()
+        self.__toggles['prediction_file'] = tkinter.BooleanVar()
         prediction_checkbox = tkinter.Checkbutton(
-            prediction_frame, variable=self.__run_prediction, command=self.__set_prediction_file_box
+            prediction_frame, variable=self.__toggles['prediction_file'], command=self.__set_prediction_file_box
         )
         prediction_checkbox.grid(row=0, column=0, padx=10)
 
@@ -185,7 +225,7 @@ class PacketRavenGUI:
             column=1,
             title='prediction_file',
             file_select=self.__select_prediction_file,
-            width=44,
+            width=52,
             sticky='w',
         )
 
@@ -247,6 +287,7 @@ class PacketRavenGUI:
         self.output_filename = output_filename
         if self.output_filename is None:
             self.output_filename = Path('~') / 'Desktop'
+        set_child_states(self.__elements['output_file_box'], state=tkinter.DISABLED)
 
         self.prediction_filename = prediction_filename
         if self.prediction_filename is None:
@@ -346,12 +387,15 @@ class PacketRavenGUI:
 
     @property
     def log_filename(self) -> Path:
-        filename = self.__elements['log_file'].get()
-        if len(filename) > 0:
-            filename = Path(filename)
-            if filename.expanduser().resolve().is_dir():
-                self.log_filename = filename
-                filename = self.log_filename
+        if self.toggles['output_file']:
+            filename = self.__elements['log_file'].get()
+            if len(filename) > 0:
+                filename = Path(filename)
+                if filename.expanduser().resolve().is_dir():
+                    self.log_filename = filename
+                    filename = self.log_filename
+            else:
+                filename = None
         else:
             filename = None
         return filename
@@ -369,12 +413,15 @@ class PacketRavenGUI:
 
     @property
     def output_filename(self) -> Path:
-        filename = self.__elements['output_file'].get()
-        if len(filename) > 0:
-            filename = Path(filename)
-            if filename.expanduser().resolve().is_dir():
-                self.output_filename = filename
-                filename = self.output_filename
+        if self.toggles['output_file']:
+            filename = self.__elements['output_file'].get()
+            if len(filename) > 0:
+                filename = Path(filename)
+                if filename.expanduser().resolve().is_dir():
+                    self.output_filename = filename
+                    filename = self.output_filename
+            else:
+                filename = None
         else:
             filename = None
         return filename
@@ -416,6 +463,10 @@ class PacketRavenGUI:
         else:
             filename = ''
         self.replace_text(self.__elements['prediction_file'], filename)
+
+    @property
+    def toggles(self) -> {str: bool}:
+        return {key: value.get() for key, value in self.__toggles.items()}
 
     @property
     def running(self) -> bool:
@@ -472,6 +523,24 @@ class PacketRavenGUI:
                 ('Keyhole Markup Language', '*.kml'),
             ],
         )
+
+    def __set_log_file_box(self):
+        if self.toggles['log_file']:
+            set_child_states(self.__elements['log_file_box'], state=tkinter.NORMAL)
+        else:
+            set_child_states(self.__elements['log_file_box'], state=tkinter.DISABLED)
+
+    def __set_output_file_box(self):
+        if self.toggles['output_file']:
+            set_child_states(self.__elements['output_file_box'], state=tkinter.NORMAL)
+        else:
+            set_child_states(self.__elements['output_file_box'], state=tkinter.DISABLED)
+
+    def __set_prediction_file_box(self):
+        if self.toggles['prediction_file']:
+            set_child_states(self.__elements['prediction_file_box'], state=tkinter.NORMAL)
+        else:
+            set_child_states(self.__elements['prediction_file_box'], state=tkinter.DISABLED)
 
     def __add_combo_box(
         self,
@@ -570,17 +639,13 @@ class PacketRavenGUI:
         self.__elements[title] = text_box
         return text_box
 
-    def __set_prediction_file_box(self):
-        if self.__run_prediction.get():
-            set_child_states(self.__elements['prediction_file_box'], state=tkinter.NORMAL)
-        else:
-            set_child_states(self.__elements['prediction_file_box'], state=tkinter.DISABLED)
-
     def toggle(self):
         if not self.running:
             if self.log_filename is not None:
                 get_logger(LOGGER.name, self.log_filename)
-            self.__elements['log_file'].configure(state=tkinter.DISABLED)
+
+            if self.toggles['log_file']:
+                set_child_states(self.__elements['log_file_box'], tkinter.DISABLED)
 
             start_date = self.start_date
             self.__elements['start_date'].configure(state=tkinter.DISABLED)
@@ -793,6 +858,13 @@ class PacketRavenGUI:
                 set_child_states(self.__windows[callsign], tkinter.DISABLED)
             set_child_states(self.__frames['configuration'], tkinter.NORMAL)
 
+            if not self.toggles['log_file']:
+                set_child_states(self.__elements['log_file_box'], tkinter.DISABLED)
+            if not self.toggles['output_file']:
+                set_child_states(self.__elements['output_file_box'], tkinter.DISABLED)
+            if not self.toggles['prediction_file']:
+                set_child_states(self.__elements['prediction_file_box'], tkinter.DISABLED)
+
             self.__toggle_text.set('Start')
             self.__running = False
             self.__connections = []
@@ -806,7 +878,7 @@ class PacketRavenGUI:
 
                 existing_callsigns = list(self.packet_tracks)
 
-                parsed_packets = retrieve_packets(
+                new_packets = retrieve_packets(
                     self.__connections,
                     self.__packet_tracks,
                     self.database,
@@ -816,7 +888,7 @@ class PacketRavenGUI:
                     logger=LOGGER,
                 )
 
-                if self.__run_prediction.get() and self.prediction_filename is not None:
+                if self.toggles['prediction_file'] and self.prediction_filename is not None:
                     try:
                         write_predictions(
                             self.packet_tracks.values(), self.prediction_filename
@@ -828,14 +900,20 @@ class PacketRavenGUI:
                             f'error retrieving prediction trajectory - {error.__class__.__name__} - {error}'
                         )
 
-                if len(parsed_packets) > 0:
+                if len(new_packets) > 0:
                     for variable, plot in self.__plots.items():
                         plot.update(self.packet_tracks)
 
                 if self.aprs_is is not None:
-                    self.aprs_is.send(parsed_packets)
+                    for packets in new_packets.values():
+                        self.aprs_is.send(packets)
 
-                updated_callsigns = {packet.from_callsign for packet in parsed_packets}
+                updated_callsigns = {
+                    packet.from_callsign
+                    for packets in new_packets.values()
+                    for packet in packets
+                    if isinstance(packet, APRSPacket)
+                }
                 for callsign in updated_callsigns:
                     packet_track = self.packet_tracks[callsign]
                     packet_time = datetime.utcfromtimestamp(
@@ -892,10 +970,11 @@ class PacketRavenGUI:
                             units='s',
                             sticky='w',
                             row=self.__elements[f'{callsign}.callsign'].grid_info()['row'],
-                            column=self.__elements[f'{callsign}.callsign'].grid_info()[
+                            column=self.__elements[
+                                       f'{callsign}.callsign'
+                                   ].grid_info()[
                                        'column'
-                                   ]
-                                   + 3,
+                                   ] + 3,
                         )
                         self.__add_text_box(
                             window,

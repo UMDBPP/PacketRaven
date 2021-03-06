@@ -332,7 +332,7 @@ def main():
         try:
             while len(connections) > 0:
                 try:
-                    parsed_packets = retrieve_packets(
+                    new_packets = retrieve_packets(
                         connections,
                         packet_tracks,
                         database,
@@ -354,8 +354,10 @@ def main():
 
                 except Exception as error:
                     LOGGER.exception(f'{error.__class__.__name__} - {error}')
+                    new_packets = {}
                 if aprs_is is not None:
-                    aprs_is.send(parsed_packets)
+                    for packets in new_packets.values():
+                        aprs_is.send(packets)
                 time.sleep(interval_seconds)
         except KeyboardInterrupt:
             for connection in connections:

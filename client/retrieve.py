@@ -30,7 +30,7 @@ def retrieve_packets(
     start_date: datetime = None,
     end_date: datetime = None,
     logger: Logger = None,
-) -> [APRSPacket]:
+) -> {str: APRSPacket}:
     if logger is None:
         logger = LOGGER
 
@@ -49,9 +49,9 @@ def retrieve_packets(
 
     logger.debug(f'received {len(parsed_packets)} packets')
 
+    new_packets = {}
     if len(parsed_packets) > 0:
         updated_callsigns = set()
-        new_packets = {}
         for parsed_packet in parsed_packets:
             callsign = parsed_packet['callsign']
 
@@ -75,16 +75,19 @@ def retrieve_packets(
             if parsed_packet.source not in new_packets:
                 new_packets[parsed_packet.source] = []
             new_packets[parsed_packet.source].append(parsed_packet)
-            updated_callsigns.add(callsign)
+            if callsign not in updated_callsigns:
+                updated_callsigns.add(callsign)
 
-        parsed_packets = []
+        for source in new_packets:
+            new_packets[source] = list(sorted(new_packets[source]))
+
         for source, packets in new_packets.items():
             logger.info(f'received {len(packets)} new packet(s) from {source}: {packets}')
             parsed_packets.extend(packets)
 
-        parsed_packets = sorted(parsed_packets)
         if database is not None:
-            database.send(parsed_packets)
+            for packets in new_packets.values():
+                database.send(packets)
 
         updated_callsigns = sorted(updated_callsigns)
         for callsign in updated_callsigns:
@@ -125,7 +128,7 @@ def retrieve_packets(
                 [packet_tracks[callsign] for callsign in updated_callsigns], output_filename
             )
 
-    return parsed_packets
+    return new_packets
 
 
 def write_predictions(
