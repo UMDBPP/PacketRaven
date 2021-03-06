@@ -8,22 +8,29 @@ import numpy
 from packetraven import APRSDatabaseTable
 from packetraven.base import APRSPacketSource
 from packetraven.connections import TimeIntervalError
-from packetraven.tracks import APRSTrack
+from packetraven.predicts import (
+    CUSFBalloonPredictionQuery,
+    DEFAULT_ASCENT_RATE,
+    DEFAULT_BURST_ALTITUDE,
+    DEFAULT_SEA_LEVEL_DESCENT_RATE,
+    PredictionAPIURL,
+)
+from packetraven.tracks import APRSTrack, LocationPacketTrack
 from packetraven.utilities import get_logger
-from packetraven.writer import write_aprs_packet_tracks
+from packetraven.writer import write_packet_tracks
 
 LOGGER = get_logger('packetraven')
 
 
 def retrieve_packets(
-        connections: [APRSPacketSource],
-        packet_tracks: [APRSTrack],
-        database: APRSDatabaseTable = None,
-        output_filename: PathLike = None,
-        start_date: datetime = None,
-        end_date: datetime = None,
-        logger: Logger = None,
-) -> [APRSPacket]:
+    connections: [APRSPacketSource],
+    packet_tracks: [APRSTrack],
+    database: APRSDatabaseTable = None,
+    output_filename: PathLike = None,
+    start_date: datetime = None,
+    end_date: datetime = None,
+    logger: Logger = None,
+) -> {str: APRSPacket}:
     if logger is None:
         logger = LOGGER
 
@@ -42,9 +49,9 @@ def retrieve_packets(
 
     logger.debug(f'received {len(parsed_packets)} packets')
 
+    new_packets = {}
     if len(parsed_packets) > 0:
         updated_callsigns = set()
-        new_packets = {}
         for parsed_packet in parsed_packets:
             callsign = parsed_packet['callsign']
 
@@ -68,16 +75,19 @@ def retrieve_packets(
             if parsed_packet.source not in new_packets:
                 new_packets[parsed_packet.source] = []
             new_packets[parsed_packet.source].append(parsed_packet)
-            updated_callsigns.add(callsign)
+            if callsign not in updated_callsigns:
+                updated_callsigns.add(callsign)
 
-        parsed_packets = []
+        for source in new_packets:
+            new_packets[source] = list(sorted(new_packets[source]))
+
         for source, packets in new_packets.items():
             logger.info(f'received {len(packets)} new packet(s) from {source}: {packets}')
             parsed_packets.extend(packets)
 
-        parsed_packets = sorted(parsed_packets)
         if database is not None:
-            database.send(parsed_packets)
+            for packets in new_packets.values():
+                database.send(packets)
 
         updated_callsigns = sorted(updated_callsigns)
         for callsign in updated_callsigns:
@@ -102,7 +112,7 @@ def retrieve_packets(
 
                 if packet_track.time_to_ground >= timedelta(seconds=0):
                     current_time_to_ground = (
-                            packet_time + packet_track.time_to_ground - current_time
+                        packet_time + packet_track.time_to_ground - current_time
                     )
                     message += (
                         f'; currently falling from max altitude of {packet_track.coordinates[:, 2].max():.3f} m; '
@@ -114,8 +124,49 @@ def retrieve_packets(
                 logger.info(message)
 
         if output_filename is not None:
-            write_aprs_packet_tracks(
+            write_packet_tracks(
                 [packet_tracks[callsign] for callsign in updated_callsigns], output_filename
             )
 
-    return parsed_packets
+    return new_packets
+
+
+def write_predictions(
+    packet_tracks: [LocationPacketTrack],
+    output_filename: PathLike,
+    ascent_rate: float = None,
+    burst_altitude: float = None,
+    sea_level_descent_rate: float = None,
+    api_url: str = None,
+):
+    if api_url is None:
+        api_url = PredictionAPIURL.lukerenegar
+
+    if output_filename is not None:
+        prediction_tracks = []
+        for packet_track in packet_tracks:
+            ascent_rates = packet_track.ascent_rates
+            if ascent_rate is None:
+                average_ascent_rate = ascent_rates[packet_track.ascent_rates > 0]
+                if average_ascent_rate > 0:
+                    ascent_rate = average_ascent_rate
+                else:
+                    ascent_rate = DEFAULT_ASCENT_RATE
+            if burst_altitude is None:
+                burst_altitude = DEFAULT_BURST_ALTITUDE
+            if sea_level_descent_rate is None:
+                sea_level_descent_rate = DEFAULT_SEA_LEVEL_DESCENT_RATE
+
+            if len(ascent_rates) > 2 and all(ascent_rates[-2:] < 0):
+                burst_altitude = packet_track.altitudes[-1] + 1
+
+            prediction_query = CUSFBalloonPredictionQuery(
+                packet_track[-1].coordinates,
+                packet_track[-1].time,
+                ascent_rate=ascent_rate,
+                burst_altitude=burst_altitude,
+                sea_level_descent_rate=sea_level_descent_rate,
+                api_url=api_url,
+            )
+            prediction_tracks.append(prediction_query.predict)
+        write_packet_tracks(prediction_tracks, output_filename)

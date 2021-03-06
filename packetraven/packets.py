@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Any, Union
 
+from dateutil.parser import parse as parse_date
 import numpy
 from pyproj import CRS, Geod, Transformer
 
@@ -13,15 +14,18 @@ class LocationPacket:
     """ location packet encoding (x, y, z) and time """
 
     def __init__(
-            self,
-            time: datetime,
-            x: float,
-            y: float,
-            z: float = None,
-            crs: CRS = None,
-            source: str = None,
-            **kwargs,
+        self,
+        time: datetime,
+        x: float,
+        y: float,
+        z: float = None,
+        crs: CRS = None,
+        source: str = None,
+        **kwargs,
     ):
+        if isinstance(time, str):
+            time = parse_date(time)
+
         self.time = time
         self.coordinates = numpy.array((x, y, z if z is not None else 0))
         self.crs = crs if crs is not None else DEFAULT_CRS
@@ -160,15 +164,15 @@ class APRSPacket(LocationPacket):
     """ APRS packet containing parsed APRS fields, along with location and time """
 
     def __init__(
-            self,
-            from_callsign: str,
-            to_callsign: str,
-            time: datetime,
-            x: float,
-            y: float,
-            z: float = None,
-            crs: CRS = None,
-            **kwargs,
+        self,
+        from_callsign: str,
+        to_callsign: str,
+        time: datetime,
+        x: float,
+        y: float,
+        z: float = None,
+        crs: CRS = None,
+        **kwargs,
     ):
         """
         APRS packet object from raw packet and given datetime
@@ -188,7 +192,7 @@ class APRSPacket(LocationPacket):
 
     @classmethod
     def from_frame(
-            cls, frame: Union[str, bytes, dict], packet_time: datetime = None, **kwargs
+        cls, frame: Union[str, bytes, dict], packet_time: datetime = None, **kwargs
     ) -> 'APRSPacket':
         """
         APRS packet object from raw packet and given datetime
@@ -285,9 +289,9 @@ class APRSPacket(LocationPacket):
 
     def __eq__(self, other: 'APRSPacket') -> bool:
         return (
-                super().__eq__(other)
-                and self.from_callsign == other.from_callsign
-                and self['comment'] == other['comment']
+            super().__eq__(other)
+            and self.from_callsign == other.from_callsign
+            and self['comment'] == other['comment']
         )
 
     def __str__(self) -> str:

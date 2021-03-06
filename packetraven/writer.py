@@ -6,12 +6,13 @@ from geojson import Point
 import numpy
 from shapely.geometry import LineString
 
-from .tracks import APRSTrack
+from .packets import APRSPacket
+from .tracks import APRSTrack, LocationPacketTrack
 
 KML_STANDARD = '{http://www.opengis.net/kml/2.2}'
 
 
-def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLike):
+def write_packet_tracks(packet_tracks: [LocationPacketTrack], output_filename: PathLike):
     if not isinstance(output_filename, Path):
         output_filename = Path(output_filename)
     output_filename = output_filename.resolve().expanduser()
@@ -20,7 +21,12 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
         for packet_track_index, packet_track in enumerate(packet_tracks):
             packets.extend(packet_track)
         packets = sorted(packets)
-        lines = [f'{packet.time:%Y-%m-%d %H:%M:%S %Z}: {packet.frame}' for packet in packets]
+        lines = [
+            f'{packet.time:%Y-%m-%d %H:%M:%S %Z}: {packet.frame}'
+            if isinstance(packet, APRSPacket)
+            else f'{packet.time:%Y-%m-%d %H:%M:%S %Z}'
+            for packet in packets
+        ]
         with open(output_filename, 'w') as output_file:
             output_file.write('\n'.join(lines))
     elif output_filename.suffix == '.geojson':
@@ -31,33 +37,41 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
             ascent_rates = numpy.round(packet_track.ascent_rates, 3)
             ground_speeds = numpy.round(packet_track.ground_speeds, 3)
 
-            features.extend(
-                geojson.Feature(
-                    geometry=geojson.Point(packet.coordinates.tolist()),
-                    properties={
-                        'time': f'{packet.time:%Y%m%d%H%M%S}',
-                        'callsign': packet.from_callsign,
-                        'altitude': packet.coordinates[2],
-                        'ascent_rate': ascent_rates[packet_index],
-                        'ground_speed': ground_speeds[packet_index],
-                    },
+            for packet_index, packet in enumerate(packet_track):
+                properties = {
+                    'time': f'{packet.time:%Y%m%d%H%M%S}',
+                    'altitude': packet.coordinates[2],
+                    'ascent_rate': ascent_rates[packet_index],
+                    'ground_speed': ground_speeds[packet_index],
+                }
+
+                if isinstance(packet_track, APRSTrack):
+                    properties['callsign'] = packet.from_callsign
+
+                features.append(
+                    geojson.Feature(
+                        geometry=geojson.Point(packet.coordinates.tolist()),
+                        properties=properties,
+                    )
                 )
-                for packet_index, packet in enumerate(packet_track)
-            )
+
+            properties = {
+                'time': f'{packet_track.packets[-1].time:%Y%m%d%H%M%S}',
+                'altitude': packet_track.coordinates[-1, -1],
+                'ascent_rate': ascent_rates[-1],
+                'ground_speed': ground_speeds[-1],
+                'seconds_to_ground': packet_track.time_to_ground / timedelta(seconds=1),
+            }
+
+            if isinstance(packet_track, APRSTrack):
+                properties['callsign'] = packet_track.callsign
 
             features.append(
                 geojson.Feature(
                     geometry=geojson.LineString(
                         [packet.coordinates.tolist() for packet in packet_track.packets]
                     ),
-                    properties={
-                        'time': f'{packet_track.packets[-1].time:%Y%m%d%H%M%S}',
-                        'callsign': packet_track.callsign,
-                        'altitude': packet_track.coordinates[-1, -1],
-                        'ascent_rate': ascent_rates[-1],
-                        'ground_speed': ground_speeds[-1],
-                        'seconds_to_ground': packet_track.time_to_ground / timedelta(seconds=1),
-                    },
+                    properties=properties,
                 )
             )
 
@@ -82,7 +96,7 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
                 placemark = kml.Placemark(
                     KML_STANDARD,
                     f'1 {packet_track_index} {packet_index}',
-                    f'{packet_track.callsign} {packet.time:%Y%m%d%H%M%S}',
+                    f'{packet.time:%Y%m%d%H%M%S} {packet_track.callsign if isinstance(packet_track, APRSTrack) else ""}',
                     f'altitude={packet.coordinates[2]} '
                     f'ascent_rate={ascent_rates[packet_index]} '
                     f'ground_speed={ground_speeds[packet_index]}',
@@ -93,7 +107,7 @@ def write_aprs_packet_tracks(packet_tracks: [APRSTrack], output_filename: PathLi
             placemark = kml.Placemark(
                 KML_STANDARD,
                 f'1 {packet_track_index}',
-                packet_track.callsign,
+                packet_track.callsign if isinstance(packet_track, APRSTrack) else '',
                 f'altitude={packet_track.coordinates[-1, -1]} '
                 f'ascent_rate={ascent_rates[-1]} '
                 f'ground_speed={ground_speeds[-1]} '
