@@ -12,7 +12,7 @@ import requests
 from serial import Serial
 from shapely.geometry import Point
 from tablecrow import PostGresTable
-from tablecrow.table import split_URL_port
+from tablecrow.utilities import split_hostname_port
 
 from .base import (
     APRSPacketSink,
@@ -260,7 +260,7 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
             kwargs['primary_key'] = 'time'
         kwargs['fields'] = {**self.__default_fields, **kwargs['fields']}
         PostGresTable.__init__(
-            self, hostname=hostname, database=database, name=table, **kwargs
+            self, hostname=hostname, database=database, table_name=table, **kwargs
         )
         PacketSource.__init__(
             self, f'postgresql://{self.hostname}:{self.port}/{self.database}/{self.name}'
@@ -475,7 +475,7 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
 class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
     def __init__(self, callsigns: [str] = None, hostname: str = None):
         if hostname is not None:
-            self.__hostname, self.__port = split_URL_port(hostname)
+            self.__hostname, self.__port = split_hostname_port(hostname)
         else:
             self.__hostname, self.__port = ('rotate.aprs.net', 10152)
 
