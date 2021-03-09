@@ -5,8 +5,9 @@ import os
 import psycopg2
 import pytest
 from sshtunnel import SSHTunnelForwarder
-from tablecrow.table import random_open_tcp_port, split_URL_port
+from tablecrow.table import random_open_tcp_port
 from tablecrow.tables.postgres import PostGresTable, SSH_DEFAULT_PORT, database_has_table
+from tablecrow.utilities import split_hostname_port
 
 from packetraven.connections import APRSDatabaseTable
 from packetraven.packets import APRSPacket
@@ -36,11 +37,11 @@ if (
     'ssh_hostname' in CREDENTIALS['database']
     and CREDENTIALS['database']['ssh_hostname'] is not None
 ):
-    hostname, port = split_URL_port(CREDENTIALS['database']['hostname'])
+    hostname, port = split_hostname_port(CREDENTIALS['database']['hostname'])
     if port is None:
         port = PostGresTable.DEFAULT_PORT
 
-    ssh_hostname, ssh_port = split_URL_port(CREDENTIALS['database']['ssh_hostname'])
+    ssh_hostname, ssh_port = split_hostname_port(CREDENTIALS['database']['ssh_hostname'])
     if ssh_port is None:
         ssh_port = SSH_DEFAULT_PORT
 
@@ -68,7 +69,7 @@ else:
 
 @pytest.fixture
 def connection() -> psycopg2.connect:
-    hostname, port = split_URL_port(CREDENTIALS['database']['hostname'])
+    hostname, port = split_hostname_port(CREDENTIALS['database']['hostname'])
     if port is None:
         port = PostGresTable.DEFAULT_PORT
 
