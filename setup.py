@@ -8,7 +8,7 @@ import sys
 
 from setuptools import config, find_packages, setup
 
-BUILT_PACKAGES = {'numpy': [], 'pyproj': []}
+BUILT_PACKAGES = {'numpy': [], 'pyproj': [], 'shapely': []}
 is_conda = (Path(sys.prefix) / 'conda-meta').exists()
 
 if is_conda:
