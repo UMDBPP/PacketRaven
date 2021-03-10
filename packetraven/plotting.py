@@ -34,7 +34,7 @@ class LivePlot:
             raise NotImplementedError(f'unsupported plotting variable "{variable}"')
 
         self.packet_tracks = packet_tracks
-        self.predictions = predictions
+        self.predictions = predictions if predictions is not None else {}
         self.variable = variable
 
         self.window.protocol('WM_DELETE_WINDOW', self.window.iconify)
@@ -48,7 +48,7 @@ class LivePlot:
     ):
         if packet_tracks is not None:
             self.packet_tracks.update(packet_tracks)
-        if packet_tracks is not None:
+        if predictions is not None:
             self.predictions.update(predictions)
 
         if len(self.packet_tracks) > 0:
