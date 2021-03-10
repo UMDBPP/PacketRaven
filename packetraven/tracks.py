@@ -155,7 +155,6 @@ class LocationPacketTrack:
 
 
 class BalloonTrack(LocationPacketTrack):
-
     def __init__(self, name: str, packets: [LocationPacket] = None, crs: CRS = None):
         super().__init__(name, packets, crs)
         self.__has_burst = False
