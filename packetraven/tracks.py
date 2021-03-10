@@ -207,3 +207,7 @@ class PredictedTrajectory(LocationPacketTrack):
 
         super().__init__(name, packets, crs)
         self.prediction_time = prediction_time
+
+    @property
+    def landing_site(self) -> (float, float, float):
+        return self.coordinates[-1]
