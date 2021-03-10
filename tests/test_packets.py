@@ -136,28 +136,43 @@ def test_time_to_ground():
         packet_time=datetime(2019, 2, 3, 14, 38, 23),
     )
     packet_3 = APRSPacket.from_frame(
-        "W3EAX-13>APRS,KC3FIT-1,WIDE1*,WIDE2-1,qAR,KC3AWP-10:!/:JL2:u4wO   /A=043080|!j|  /W3EAX,326,0,20'C,"
+        "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=063614|!g|  /W3EAX,313,0,21'C,"
         'nearspace.umd.edu',
         packet_time=datetime(2019, 2, 3, 14, 39, 28),
     )
     packet_4 = APRSPacket.from_frame(
-        "W3EAX-13>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu"
+        "W3EAX-13>APRS,KC3FIT-1,WIDE1*,WIDE2-1,qAR,KC3AWP-10:!/:JL2:u4wO   /A=043080|!j|  /W3EAX,326,0,20'C,"
+        'nearspace.umd.edu',
+        packet_time=datetime(2019, 2, 3, 14, 41, 50),
+    )
+    packet_5 = APRSPacket.from_frame(
+        "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=063614|!g|  /W3EAX,313,0,21'C,"
+        'nearspace.umd.edu',
+        packet_time=datetime(2019, 2, 3, 14, 42, 34),
     )
 
     track = APRSTrack('W3EAX-13')
 
     track.append(packet_1)
 
+    assert not track.has_burst
     assert track.time_to_ground == timedelta(seconds=-1)
 
     track.append(packet_2)
 
-    assert track.time_to_ground >= timedelta(seconds=798)
+    assert track.has_burst
+    assert track.time_to_ground == timedelta(seconds=1603.148748)
 
     track.append(packet_3)
-    track.append(packet_4)
 
-    assert track.time_to_ground >= timedelta(days=1066)
+    assert not track.has_burst
+    assert track.time_to_ground == timedelta(seconds=-1)
+
+    track.append(packet_4)
+    track.append(packet_5)
+
+    assert track.has_burst
+    assert track.time_to_ground == timedelta(seconds=1545.354922)
 
 
 def test_sorting():

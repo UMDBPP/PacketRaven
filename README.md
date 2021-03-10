@@ -17,7 +17,7 @@ pip install packetraven
 
 #### listen to a TNC sending raw APRS strings over USB port COM4:
 
-```cmd
+```bash
 packetraven --tnc COM4
 ```
 
@@ -25,25 +25,25 @@ packetraven --tnc COM4
 
 you need an API key to connect to APRS.fi; you can get one from https://aprs.fi/page/api
 
-```cmd
+```bash
 packetraven --apikey <api_key> --callsigns W3EAX-8,W3EAX-14
 ```
 
 #### listen to a PostGIS database table:
 
-```cmd
+```bash
 packetraven --database <username>@<hostname>:5432/<database_name>/<table_name>
 ```
 
 #### watch a text file for new lines containing raw APRS strings:
 
-```cmd
+```bash
 packetraven --tnc http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-11/W3EAX-11_raw_NS95.txt
 ```
 
 #### listen to a TNC on COM3, watching specific callsigns, and synchronize new packets with a database table via SSH tunnel:
 
-```cmd
+```bash
 packetraven --tnc COM3 --callsigns W3EAX-8,W3EAX-14 --database <username>@<hostname>:5432/<database_name>/<table_name> --tunnel <ssh_username>@<hostname>:22
 ```
 
@@ -51,11 +51,11 @@ packetraven --tnc COM3 --callsigns W3EAX-8,W3EAX-14 --database <username>@<hostn
 
 to start the GUI, add `--gui` to any `packetraven` command
 
-```cmd
+```bash
 packetraven --gui
 ```
 
-```cmd
+```bash
 packetraven --callsigns W3EAX-8,W3EAX-14 --apikey <api_key> --gui
 ```
 
@@ -94,7 +94,7 @@ optional arguments:
   --prediction-api PREDICTION_API
                         API URL to use for prediction (one of ['https://predict.cusf.co.uk/api/v1/',
                         'https://predict.lukerenegar.com/api/v1.1/'])
-  --interval INTERVAL   seconds between each main loop (default: 5)
+  --interval INTERVAL   seconds between each main loop (default: 20)
   --gui                 start the graphical interface
 ```
 

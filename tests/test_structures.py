@@ -10,6 +10,8 @@ def test_index():
     assert list_1[-2] == 5
     assert list_1[-1] == 6
     assert list_1[-1] is list_1.tail.value
+    assert list_1[:2] == [0, 5]
+    assert list_1[[1, 3, 0]] == [5, 'foo', 0]
 
 
 def test_length():

@@ -693,7 +693,7 @@ class PacketRavenGUI:
                 self.__elements['tnc'].configure(state=tkinter.DISABLED)
                 for tnc in tncs:
                     try:
-                        if 'txt' in tnc:
+                        if Path(tnc).suffix in ['.txt', '.log']:
                             tnc = TextFileTNC(tnc, self.callsigns)
                             LOGGER.info(f'reading file {tnc.location}')
                         else:

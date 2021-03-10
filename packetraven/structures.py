@@ -1,3 +1,6 @@
+from typing import Any, Iterable, List, Union
+
+
 class DoublyLinkedList:
     """
     A linked list is a series of node objects, each with a link (object reference) to the next node in the series.
@@ -147,7 +150,7 @@ class DoublyLinkedList:
         return sum([1 for node_value in self if node_value == value])
 
     @property
-    def difference(self) -> []:
+    def difference(self) -> [Any]:
         """
         differences between each value
 
@@ -212,8 +215,15 @@ class DoublyLinkedList:
         else:
             self.head = node.next_node
 
-    def __getitem__(self, index: int):
-        return self._node_at_index(index).value
+    def __getitem__(self, index: Union[int, Iterable[int], slice]) -> Union[Any, List[Any]]:
+        if isinstance(index, int):
+            return self._node_at_index(index).value
+        elif isinstance(index, Iterable):
+            return [self.__getitem__(value) for value in index]
+        elif isinstance(index, slice):
+            return self.__getitem__(range(*(value for value in (index.start, index.stop, index.step) if value is not None)))
+        else:
+            raise ValueError(f'unrecognized index: {index}')
 
     def __setitem__(self, index: int, value):
         self._node_at_index(index).value = value

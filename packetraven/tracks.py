@@ -5,6 +5,7 @@ from dateutil.parser import parse as parse_date
 import numpy
 from pyproj import CRS
 
+from .model import SECONDS_TO_GROUND
 from .packets import APRSPacket, DEFAULT_CRS, LocationPacket
 from .structures import DoublyLinkedList
 
@@ -22,8 +23,12 @@ class LocationPacketTrack:
         """
 
         self.name = name
-        self.packets = DoublyLinkedList(packets)
+        self.packets = DoublyLinkedList(None)
         self.crs = crs if crs is not None else DEFAULT_CRS
+
+        if packets is not None:
+            for packet in packets:
+                self.append(packet)
 
     def append(self, packet: LocationPacket):
         if packet not in self.packets:
@@ -109,16 +114,13 @@ class LocationPacketTrack:
 
     @property
     def time_to_ground(self) -> timedelta:
-        """ estimated time to reach the ground at the current ascent rate """
+        """ estimated time to reach the ground at the current rate of descent """
 
         current_ascent_rate = self.ascent_rates[-1]
-
         if current_ascent_rate < 0:
             # TODO implement landing location as the intersection of the predicted descent track with a local DEM
             # TODO implement a time to impact calc based off of standard atmo
-            return timedelta(
-                seconds=self.packets[-1].coordinates[2] / abs(current_ascent_rate)
-            )
+            return timedelta(seconds=self.altitudes[-1] / abs(current_ascent_rate))
         else:
             return timedelta(seconds=-1)
 
@@ -157,7 +159,33 @@ class LocationPacketTrack:
         return str(list(self))
 
 
-class APRSTrack(LocationPacketTrack):
+class BalloonTrack(LocationPacketTrack):
+    def __init__(self, name: str, packets: [LocationPacket] = None, crs: CRS = None):
+        super().__init__(name, packets, crs)
+        self.__has_burst = False
+
+    @property
+    def time_to_ground(self) -> timedelta:
+        if self.has_burst:
+            # TODO implement landing location as the intersection of the predicted descent track with a local DEM
+            return timedelta(seconds=SECONDS_TO_GROUND(self.altitudes[-1]))
+        else:
+            return timedelta(seconds=-1)
+
+    @property
+    def has_burst(self) -> bool:
+        current_ascent_rate = self.ascent_rates[-1]
+        if current_ascent_rate > 0:
+            self.__has_burst = False
+        elif not self.__has_burst:
+            current_altitude = self.altitudes[-1]
+            max_altitude = numpy.max(self.altitudes)
+            if current_ascent_rate < -2 and max_altitude > current_altitude:
+                self.__has_burst = True
+        return self.__has_burst
+
+
+class APRSTrack(BalloonTrack):
     """ collection of APRS location packets """
 
     def __init__(self, callsign: str, packets: [APRSPacket] = None, crs: CRS = None):
@@ -169,8 +197,17 @@ class APRSTrack(LocationPacketTrack):
         :param crs: coordinate reference system to use
         """
 
-        self.callsign = callsign
+        if not isinstance(callsign, str):
+            callsign = str(callsign)
+        if len(callsign) > 9 or ' ' in callsign:
+            raise ValueError(f'unrecognized callsign format: "{callsign}"')
+
+        self.__callsign = callsign
         super().__init__(self.callsign, packets, crs)
+
+    @property
+    def callsign(self) -> str:
+        return self.__callsign
 
     def append(self, packet: APRSPacket):
         packet_callsign = packet['callsign']
