@@ -89,7 +89,7 @@ setup(
         'requests',
         'shapely',
         'sshtunnel',
-        'tablecrow>=1.3.2',
+        'tablecrow>=1.3.3',
     ],
     extras_require={
         'testing': ['flake8', 'pytest', 'pytest-cov', 'pytz'],
