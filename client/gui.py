@@ -153,7 +153,8 @@ class PacketRavenGUI:
             log_file_frame, variable=self.__toggles['log_file'], command=self.__toggle_log_file
         )
         log_file_checkbox.grid(row=0, column=0, padx=10)
-        log_file_checkbox.select()
+        if log_filename is not None:
+            log_file_checkbox.select()
 
         self.__elements['log_file_box'] = self.__add_file_box(
             log_file_frame,
@@ -182,6 +183,8 @@ class PacketRavenGUI:
             command=self.__toggle_output_file,
         )
         output_file_checkbox.grid(row=0, column=0, padx=10)
+        if output_filename is not None:
+            output_file_checkbox.select()
 
         self.__elements['output_file_box'] = self.__add_file_box(
             output_file_frame,
@@ -219,6 +222,8 @@ class PacketRavenGUI:
             command=self.__toggle_prediction_file,
         )
         prediction_checkbox.grid(row=0, column=0, padx=10)
+        if prediction_filename is not None:
+            prediction_checkbox.select()
 
         self.__elements['prediction_file_box'] = self.__add_file_box(
             prediction_frame,
@@ -284,16 +289,17 @@ class PacketRavenGUI:
         self.log_filename = log_filename
         if self.log_filename is None:
             self.log_filename = Path('~') / 'Desktop'
+        self.__toggle_log_file()
 
         self.output_filename = output_filename
         if self.output_filename is None:
             self.output_filename = Path('~') / 'Desktop'
-        set_child_states(self.__elements['output_file_box'], state=tkinter.DISABLED)
+        self.__toggle_output_file()
 
         self.prediction_filename = prediction_filename
         if self.prediction_filename is None:
             self.prediction_filename = Path('~') / 'Desktop'
-        set_child_states(self.__elements['prediction_file_box'], state=tkinter.DISABLED)
+        self.__toggle_prediction_file()
         self.__predictions = {}
 
         self.__windows['main'].protocol('WM_DELETE_WINDOW', self.close)
@@ -761,10 +767,10 @@ class PacketRavenGUI:
                                         raise ConnectionError('missing SSH password')
                                     ssh_tunnel_kwargs['ssh_password'] = password
 
-                        database_kwargs = self.__configuration['database_database']
+                        database_kwargs = {key.replace('database_', ''): value for key, value in self.__configuration['database'].items()}
                         if (
                             'username' not in database_kwargs
-                            or database_kwargs['database_username'] is None
+                            or database_kwargs['username'] is None
                         ):
                             database_username = simpledialog.askstring(
                                 'Database Username',
@@ -775,11 +781,11 @@ class PacketRavenGUI:
                             )
                             if database_username is None or len(database_username) == 0:
                                 raise ConnectionError('missing database username')
-                            database_kwargs['database_username'] = database_username
+                            database_kwargs['username'] = database_username
 
                         if (
-                            'database_password' not in database_kwargs
-                            or database_kwargs['database_password'] is None
+                            'password' not in database_kwargs
+                            or database_kwargs['password'] is None
                         ):
                             database_password = simpledialog.askstring(
                                 'Database Password',
@@ -790,10 +796,10 @@ class PacketRavenGUI:
                             )
                             if database_password is None or len(database_password) == 0:
                                 raise ConnectionError('missing database password')
-                            database_kwargs['database_password'] = database_password
+                            database_kwargs['password'] = database_password
                         if (
-                            'database_table' not in database_kwargs
-                            or database_kwargs['database_table'] is None
+                            'table' not in database_kwargs
+                            or database_kwargs['table'] is None
                         ):
                             database_table = simpledialog.askstring(
                                 'Database Table',
@@ -802,14 +808,14 @@ class PacketRavenGUI:
                             )
                             if database_table is None or len(database_table) == 0:
                                 raise ConnectionError('missing database table name')
-                            database_kwargs['database_table'] = database_table
+                            database_kwargs['table'] = database_table
 
                         self.database = APRSDatabaseTable(
                             **database_kwargs, **ssh_tunnel_kwargs, callsigns=self.callsigns
                         )
                         LOGGER.info(f'connected to {self.database.location}')
                         self.__connections.append(self.database)
-                        self.__configuration['database_database'].update(database_kwargs)
+                        self.__configuration['database'].update(database_kwargs)
                         self.__configuration['ssh_tunnel'].update(ssh_tunnel_kwargs)
                     except ConnectionError as error:
                         connection_errors.append(f'database - {error}')

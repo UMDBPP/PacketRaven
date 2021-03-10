@@ -383,7 +383,7 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
         kwargs['fields'] = {
             f'packet_{field}': field_type for field, field_type in kwargs['fields'].items()
         }
-        PacketDatabaseTable.__init__(self, hostname, database, table, **kwargs)
+        PacketDatabaseTable.__init__(self, hostname=hostname, database=database, table=table, **kwargs)
         location = f'postgres://{self.hostname}:{self.port}/{self.database}/{self.name}'
         APRSPacketSource.__init__(self, location, callsigns)
         APRSPacketSink.__init__(self, location)
