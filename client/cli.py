@@ -206,7 +206,7 @@ def main():
             for tnc_location in kwargs['tnc']:
                 tnc_location = tnc_location.strip()
                 try:
-                    if 'txt' in tnc_location:
+                    if Path(tnc_location).suffix in ['.txt', '.log']:
                         tnc_location = TextFileTNC(tnc_location, callsigns)
                         LOGGER.info(f'reading file {tnc_location.location}')
                         connections.append(tnc_location)
