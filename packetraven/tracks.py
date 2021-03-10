@@ -5,6 +5,7 @@ from dateutil.parser import parse as parse_date
 import numpy
 from pyproj import CRS
 
+from .model import SECONDS_TO_GROUND
 from .packets import APRSPacket, DEFAULT_CRS, LocationPacket
 from .structures import DoublyLinkedList
 
@@ -22,8 +23,12 @@ class LocationPacketTrack:
         """
 
         self.name = name
-        self.packets = DoublyLinkedList(packets)
+        self.packets = DoublyLinkedList(None)
         self.crs = crs if crs is not None else DEFAULT_CRS
+
+        if packets is not None:
+            for packet in packets:
+                self.append(packet)
 
     def append(self, packet: LocationPacket):
         if packet not in self.packets:
@@ -161,17 +166,9 @@ class BalloonTrack(LocationPacketTrack):
 
     @property
     def time_to_ground(self) -> timedelta:
-
         if self.has_burst:
             # TODO implement landing location as the intersection of the predicted descent track with a local DEM
-
-            # dh/dt, with a coefficient determined manually from historical flight data
-            # descent_rate = lambda altitude: -5.8e-08 * altitude ** 2 - 6.001
-
-            # integration of (1/(dh/dt))dh
-            seconds_to_ground = lambda altitude: 1695.02 * numpy.arctan(9.8311e-5 * altitude)
-
-            return timedelta(seconds=seconds_to_ground(self.altitudes[-1]))
+            return timedelta(seconds=SECONDS_TO_GROUND(self.altitudes[-1]))
         else:
             return timedelta(seconds=-1)
 
