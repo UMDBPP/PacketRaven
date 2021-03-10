@@ -4,7 +4,7 @@ from matplotlib import pyplot
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from packetraven.tracks import LocationPacketTrack
+from packetraven.tracks import LocationPacketTrack, PredictedTrajectory
 
 VARIABLES = {
     'altitude': {'x': 'times', 'y': 'altitudes', 'xlabel': 'time', 'ylabel': 'altitude (m)'},
@@ -24,20 +24,32 @@ VARIABLES = {
 
 
 class LivePlot:
-    def __init__(self, packet_tracks: {str: LocationPacketTrack}, variable: str):
+    def __init__(
+        self,
+        packet_tracks: {str: LocationPacketTrack},
+        variable: str,
+        predictions: {str: PredictedTrajectory} = None,
+    ):
         if variable not in VARIABLES:
             raise NotImplementedError(f'unsupported plotting variable "{variable}"')
 
         self.packet_tracks = packet_tracks
+        self.predictions = predictions
         self.variable = variable
 
         self.window.protocol('WM_DELETE_WINDOW', self.window.iconify)
 
         self.update()
 
-    def update(self, packet_tracks: {str: LocationPacketTrack} = None):
+    def update(
+        self,
+        packet_tracks: {str: LocationPacketTrack} = None,
+        predictions: {str: PredictedTrajectory} = None,
+    ):
         if packet_tracks is not None:
             self.packet_tracks.update(packet_tracks)
+        if packet_tracks is not None:
+            self.predictions.update(predictions)
 
         if len(self.packet_tracks) > 0:
             if self.window.state() == 'iconic':
@@ -48,12 +60,32 @@ class LivePlot:
             while len(self.axis.lines) > 0:
                 self.axis.lines.pop(-1)
 
+            packet_track_lines = {}
             for name, packet_track in self.packet_tracks.items():
-                self.axis.scatter(
+                lines = self.axis.plot(
                     getattr(packet_track, VARIABLES[self.variable]['x']),
                     getattr(packet_track, VARIABLES[self.variable]['y']),
+                    linewidth=3,
+                    marker='o',
                     label=packet_track.name,
-                    s=2,
+                )
+
+                packet_track_lines[name] = lines[0]
+
+            for name, packet_track in self.predictions.items():
+                color = (
+                    packet_track_lines[name].get_color()
+                    if name in packet_track_lines
+                    else None
+                )
+
+                self.axis.plot(
+                    getattr(packet_track, VARIABLES[self.variable]['x']),
+                    getattr(packet_track, VARIABLES[self.variable]['y']),
+                    '--',
+                    linewidth=0.5,
+                    color=color,
+                    label=f'{packet_track.name} prediction',
                 )
 
             self.axis.legend()

@@ -13,14 +13,15 @@ from dateutil.parser import parse
 import numpy
 
 from client import DEFAULT_INTERVAL_SECONDS
-from client.retrieve import retrieve_packets, write_predictions
+from client.retrieve import retrieve_packets
 from packetraven.base import available_serial_ports, next_open_serial_port
 from packetraven.connections import APRSDatabaseTable, APRSfi, APRSis, SerialTNC, TextFileTNC
 from packetraven.packets import APRSPacket
 from packetraven.plotting import LivePlot
-from packetraven.predicts import PredictionError
-from packetraven.tracks import APRSTrack
+from packetraven.predicts import PredictionError, get_predictions
+from packetraven.tracks import LocationPacketTrack, PredictedTrajectory
 from packetraven.utilities import get_logger
+from packetraven.writer import write_packet_tracks
 
 LOGGER = get_logger('packetraven')
 
@@ -56,11 +57,11 @@ class PacketRavenGUI:
                 'database_username': None,
                 'database_password': None,
             },
-            'ssh_tunnel': {'ssh_hostname': None, 'ssh_username': None, 'ssh_password': None, },
+            'ssh_tunnel': {'ssh_hostname': None, 'ssh_username': None, 'ssh_password': None},
             'prediction': {
                 'prediction_ascent_rate': None,
                 'prediction_burst_altitude': None,
-                'prediction_descent_rate': None,
+                'prediction_sea_level_descent_rate': None,
                 'prediction_api_url': None,
             },
         }
@@ -293,6 +294,7 @@ class PacketRavenGUI:
         if self.prediction_filename is None:
             self.prediction_filename = Path('~') / 'Desktop'
         set_child_states(self.__elements['prediction_file_box'], state=tkinter.DISABLED)
+        self.__predictions = {}
 
         self.__windows['main'].protocol('WM_DELETE_WINDOW', self.close)
 
@@ -441,7 +443,7 @@ class PacketRavenGUI:
 
     @property
     def prediction_filename(self) -> Path:
-        if self.toggles['output_file']:
+        if self.toggles['prediction_file']:
             filename = self.__elements['prediction_file'].get()
             if len(filename) > 0:
                 filename = Path(filename)
@@ -481,8 +483,12 @@ class PacketRavenGUI:
             self.toggle()
 
     @property
-    def packet_tracks(self) -> {str: APRSTrack}:
+    def packet_tracks(self) -> {str: LocationPacketTrack}:
         return self.__packet_tracks
+
+    @property
+    def predictions(self) -> {str: PredictedTrajectory}:
+        return self.__predictions if self.toggles['prediction_file'] else None
 
     def __select_tnc(self, event):
         if event.widget.get() == self.__file_selection_option:
@@ -830,7 +836,9 @@ class PacketRavenGUI:
                 for variable, enabled in self.__plot_toggles.items():
                     enabled = enabled.get()
                     if enabled and variable not in self.__plots:
-                        self.__plots[variable] = LivePlot(self.__packet_tracks, variable)
+                        self.__plots[variable] = LivePlot(
+                            self.packet_tracks, variable, self.predictions
+                        )
                     elif not enabled and variable in self.__plots:
                         self.__plots[variable].close()
                         del self.__plots[variable]
@@ -896,11 +904,20 @@ class PacketRavenGUI:
                     logger=LOGGER,
                 )
 
-                if self.toggles['prediction_file'] and self.prediction_filename is not None:
+                if self.toggles['prediction_file']:
                     try:
-                        write_predictions(
-                            self.packet_tracks.values(), self.prediction_filename
+                        self.__predictions = get_predictions(
+                            self.packet_tracks,
+                            **{
+                                key.replace('prediction_', ''): value
+                                for key, value in self.__configuration['prediction'].items()
+                                if 'prediction_' in key
+                            },
                         )
+                        if self.prediction_filename is not None:
+                            write_packet_tracks(
+                                self.__predictions.values(), self.prediction_filename
+                            )
                     except PredictionError as error:
                         LOGGER.warning(f'{error.__class__.__name__} - {error}')
                     except Exception as error:
@@ -910,7 +927,7 @@ class PacketRavenGUI:
 
                 if len(new_packets) > 0:
                     for variable, plot in self.__plots.items():
-                        plot.update(self.packet_tracks)
+                        plot.update(self.packet_tracks, self.predictions)
 
                 if self.aprs_is is not None:
                     for packets in new_packets.values():
