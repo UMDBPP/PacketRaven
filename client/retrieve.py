@@ -8,14 +8,7 @@ import numpy
 from packetraven import APRSDatabaseTable
 from packetraven.base import APRSPacketSource
 from packetraven.connections import TimeIntervalError
-from packetraven.predicts import (
-    CUSFBalloonPredictionQuery,
-    DEFAULT_ASCENT_RATE,
-    DEFAULT_BURST_ALTITUDE,
-    DEFAULT_SEA_LEVEL_DESCENT_RATE,
-    PredictionAPIURL,
-)
-from packetraven.tracks import APRSTrack, LocationPacketTrack
+from packetraven.tracks import APRSTrack
 from packetraven.utilities import get_logger
 from packetraven.writer import write_packet_tracks
 
@@ -129,44 +122,3 @@ def retrieve_packets(
             )
 
     return new_packets
-
-
-def write_predictions(
-    packet_tracks: [LocationPacketTrack],
-    output_filename: PathLike,
-    ascent_rate: float = None,
-    burst_altitude: float = None,
-    sea_level_descent_rate: float = None,
-    api_url: str = None,
-):
-    if api_url is None:
-        api_url = PredictionAPIURL.lukerenegar
-
-    if output_filename is not None:
-        prediction_tracks = []
-        for packet_track in packet_tracks:
-            ascent_rates = packet_track.ascent_rates
-            if ascent_rate is None:
-                average_ascent_rate = ascent_rates[packet_track.ascent_rates > 0]
-                if average_ascent_rate > 0:
-                    ascent_rate = average_ascent_rate
-                else:
-                    ascent_rate = DEFAULT_ASCENT_RATE
-            if burst_altitude is None:
-                burst_altitude = DEFAULT_BURST_ALTITUDE
-            if sea_level_descent_rate is None:
-                sea_level_descent_rate = DEFAULT_SEA_LEVEL_DESCENT_RATE
-
-            if len(ascent_rates) > 2 and all(ascent_rates[-2:] < 0):
-                burst_altitude = packet_track.altitudes[-1] + 1
-
-            prediction_query = CUSFBalloonPredictionQuery(
-                packet_track[-1].coordinates,
-                packet_track[-1].time,
-                ascent_rate=ascent_rate,
-                burst_altitude=burst_altitude,
-                sea_level_descent_rate=sea_level_descent_rate,
-                api_url=api_url,
-            )
-            prediction_tracks.append(prediction_query.predict)
-        write_packet_tracks(prediction_tracks, output_filename)

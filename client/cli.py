@@ -9,10 +9,11 @@ from dateutil.parser import parse as parse_date
 
 from client import DEFAULT_INTERVAL_SECONDS
 from client.gui import PacketRavenGUI
-from client.retrieve import retrieve_packets, write_predictions
+from client.retrieve import retrieve_packets
 from packetraven.connections import APRSDatabaseTable, APRSfi, APRSis, SerialTNC, TextFileTNC
-from packetraven.predicts import PredictionAPIURL, PredictionError
+from packetraven.predicts import PredictionAPIURL, PredictionError, get_predictions
 from packetraven.utilities import get_logger, read_configuration, repository_root
+from packetraven.writer import write_packet_tracks
 
 LOGGER = get_logger('packetraven')
 
@@ -169,7 +170,7 @@ def main():
             kwargs['prediction_burst_altitude'] = float(args.prediction_burst_altitude)
 
         if args.prediction_descent_rate is not None:
-            kwargs['prediction_descent_rate'] = float(args.prediction_descent_rate)
+            kwargs['prediction_sea_level_descent_rate'] = float(args.prediction_descent_rate)
 
         if args.prediction_api_url is not None:
             kwargs['prediction_api_url'] = args.prediction_api_url
@@ -344,7 +345,15 @@ def main():
 
                     if prediction_filename is not None:
                         try:
-                            write_predictions(packet_tracks.values(), prediction_filename)
+                            predictions = get_predictions(
+                                packet_tracks,
+                                **{
+                                    key.replace('prediction_', ''): value
+                                    for key, value in kwargs
+                                    if 'prediction_' in key
+                                },
+                            )
+                            write_packet_tracks(predictions.values(), prediction_filename)
                         except PredictionError as error:
                             LOGGER.warning(f'{error.__class__.__name__} - {error}')
                         except Exception as error:

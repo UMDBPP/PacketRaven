@@ -34,7 +34,9 @@ if os.name == 'nt':
             failed_pipwin_packages = []
             for pipwin_package in pipwin_dependencies + [required_package]:
                 try:
-                    subprocess.check_call([sys.executable, '-m', 'pipwin', 'install', pipwin_package.lower()])
+                    subprocess.check_call(
+                        [sys.executable, '-m', 'pipwin', 'install', pipwin_package.lower()]
+                    )
                 except subprocess.CalledProcessError:
                     failed_pipwin_packages.append(pipwin_package)
 
