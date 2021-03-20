@@ -89,6 +89,8 @@ def test_append():
     assert track[0] is packet_1
     assert track[1] is packet_2
     assert track[-1] is packet_2
+    assert track[:] == track
+    assert track[1:] == APRSTrack(track.name, track.packets[1:], track.crs)
 
 
 def test_values():
