@@ -151,7 +151,7 @@ class LocationPacketTrack:
         elif isinstance(index, Iterable) or isinstance(index, slice):
             if isinstance(index, numpy.ndarray) and index.dtype == bool:
                 index = numpy.where(index)[0]
-            if len(index) > 0:
+            if isinstance(index, slice) or len(index) > 0:
                 packets = self.packets[index]
             else:
                 packets = None
@@ -208,7 +208,7 @@ class BalloonTrack(LocationPacketTrack):
             else:
                 current_altitude = self.altitudes[-1]
                 # TODO implement landing location as the intersection of the predicted descent track with a local DEM
-                return timedelta(seconds=(current_altitude - min(self.altitudes)) / -current_ascent_rate)
+                return timedelta(seconds=current_altitude / -current_ascent_rate)
         else:
             return timedelta(seconds=-1)
 
@@ -221,7 +221,7 @@ class BalloonTrack(LocationPacketTrack):
             current_altitude = self.altitudes[-1]
             freefall_descent_rate = FREEFALL_DESCENT_RATE(current_altitude)
             freefall_descent_rate_uncertainty = FREEFALL_DESCENT_RATE_UNCERTAINTY(current_altitude)
-            if numpy.abs(current_ascent_rate - freefall_descent_rate) < freefall_descent_rate_uncertainty:
+            if numpy.abs(current_ascent_rate - freefall_descent_rate) < numpy.abs(freefall_descent_rate_uncertainty):
                 self.__falling = True
         return self.__falling
 

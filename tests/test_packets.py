@@ -173,8 +173,8 @@ def test_time_to_ground():
     track.append(packet_4)
     track.append(packet_5)
 
-    assert track.falling
-    assert track.time_to_ground == timedelta(seconds=1545.354922)
+    assert not track.falling
+    assert track.time_to_ground == timedelta(seconds=297.913704)
 
 
 def test_sorting():
