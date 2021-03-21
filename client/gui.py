@@ -15,7 +15,7 @@ import numpy
 from client import DEFAULT_INTERVAL_SECONDS
 from client.retrieve import retrieve_packets
 from packetraven.base import available_serial_ports, next_open_serial_port
-from packetraven.connections import APRSDatabaseTable, APRSfi, APRSis, SerialTNC, TextFileTNC
+from packetraven.connections import APRSDatabaseTable, APRSfi, APRSis, PacketGeoJSON, RawAPRSTextFile, SerialTNC
 from packetraven.packets import APRSPacket
 from packetraven.plotting import LivePlot
 from packetraven.predicts import PredictionError, get_predictions
@@ -63,7 +63,7 @@ class PacketRavenGUI:
                 'prediction_burst_altitude': None,
                 'prediction_sea_level_descent_rate': None,
                 'prediction_float_altitude': None,
-                'prediction_float_end_time': None,
+                'prediction_float_duration': None,
                 'prediction_api_url': None,
             },
         }
@@ -696,7 +696,7 @@ class PacketRavenGUI:
                 for tnc in tncs:
                     try:
                         if Path(tnc).suffix in ['.txt', '.log']:
-                            tnc = TextFileTNC(tnc, self.callsigns)
+                            tnc = RawAPRSTextFile(tnc, self.callsigns)
                             LOGGER.info(f'reading file {tnc.location}')
                         else:
                             tnc = SerialTNC(tnc, self.callsigns)
@@ -707,7 +707,7 @@ class PacketRavenGUI:
                 self.tncs = [
                     connection.location
                     for connection in self.__connections
-                    if isinstance(connection, SerialTNC) or isinstance(connection, TextFileTNC)
+                    if isinstance(connection, SerialTNC) or isinstance(connection, RawAPRSTextFile)
                 ]
 
                 api_key = self.__configuration['aprs_fi']['aprs_fi_key']
@@ -833,8 +833,11 @@ class PacketRavenGUI:
                         self.aprs_is = None
 
                 if len(self.__connections) == 0:
-                    connection_errors = '\n'.join(connection_errors)
-                    raise ConnectionError(f'no connections started\n{connection_errors}')
+                    if self.output_filename is not None and self.output_filename.exists():
+                        self.__connections.append(PacketGeoJSON(self.output_filename))
+                    else:
+                        connection_errors = '\n'.join(connection_errors)
+                        raise ConnectionError(f'no connections started\n{connection_errors}')
 
                 LOGGER.info(
                     f'listening for packets every {self.interval_seconds}s from {len(self.__connections)} '
@@ -912,7 +915,7 @@ class PacketRavenGUI:
                     logger=LOGGER,
                 )
 
-                if self.toggles['prediction_file']:
+                if self.toggles['prediction_file'] and len(new_packets) > 0:
                     try:
                         self.__predictions = get_predictions(
                             self.packet_tracks,

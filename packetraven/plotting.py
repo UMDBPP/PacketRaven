@@ -65,7 +65,7 @@ class LivePlot:
                 lines = self.axis.plot(
                     getattr(packet_track, VARIABLES[self.variable]['x']),
                     getattr(packet_track, VARIABLES[self.variable]['y']),
-                    linewidth=3,
+                    linewidth=2,
                     marker='o',
                     label=packet_track.name,
                 )

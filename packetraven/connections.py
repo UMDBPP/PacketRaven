@@ -1,13 +1,13 @@
 from datetime import datetime, timedelta
 from os import PathLike
 from pathlib import Path
-import re
 from time import sleep
 from typing import Any, Sequence
 from urllib.parse import urlparse
 
 import aprslib
 from dateutil.parser import parse as parse_date
+import geojson
 import requests
 from serial import Serial
 from shapely.geometry import Point
@@ -80,10 +80,10 @@ class SerialTNC(APRSPacketSource):
         self.serial_connection.close()
 
     def __repr__(self):
-        return f'{self.__class__.__name__}("{self.location}")'
+        return f'{self.__class__.__name__}({repr(self.location)}, {repr(self.callsigns)})'
 
 
-class TextFileTNC(APRSPacketSource):
+class RawAPRSTextFile(APRSPacketSource):
     def __init__(self, filename: PathLike = None, callsigns: str = None):
         """
         read APRS packets from a given text file where each line consists of the time sent (`YYYY-MM-DDTHH:MM:SS`) followed by
@@ -153,7 +153,82 @@ class TextFileTNC(APRSPacketSource):
         pass
 
     def __repr__(self):
-        return f'{self.__class__.__name__}("{self.location}")'
+        return f'{self.__class__.__name__}({repr(self.location)}, {repr(self.callsigns)})'
+
+
+class PacketGeoJSON(PacketSource):
+    def __init__(self, filename: PathLike = None):
+        """
+        read location packets from a given GeoJSON file
+
+        :param filename: path to GeoJSON file
+        """
+
+        if not urlparse(str(filename)).scheme in ['http', 'https', 'ftp', 'sftp']:
+            if not isinstance(filename, Path):
+                if isinstance(filename, str):
+                    filename = filename.strip('"')
+                filename = Path(filename)
+            filename = str(filename)
+
+        super().__init__(filename)
+        self.__last_access_time = None
+
+    @property
+    def packets(self) -> [LocationPacket]:
+        if self.__last_access_time is not None and self.interval is not None:
+            interval = datetime.now() - self.__last_access_time
+            if interval < self.interval:
+                raise TimeIntervalError(
+                    f'interval {interval} less than minimum interval {self.interval}'
+                )
+
+        if Path(self.location).exists():
+            with open(Path(self.location).expanduser().resolve()) as file_connection:
+                features = geojson.load(file_connection)
+        else:
+            response = requests.get(self.location, stream=True)
+            features = geojson.loads(response.text)
+
+        packets = []
+        for feature in features['features']:
+            if feature['geometry']['type'] == 'Point':
+                properties = feature['properties']
+                time = parse_date(properties['time'])
+                del properties['time']
+
+                if 'from' in properties:
+                    from_callsign = properties['from']
+                    to_callsign = properties['to']
+                    del properties['from'], properties['to']
+
+                    packet = APRSPacket(
+                        from_callsign,
+                        to_callsign,
+                        time,
+                        *feature['geometry']['coordinates'],
+                        source=self.location,
+                        **properties,
+                    )
+                else:
+                    packet = LocationPacket(
+                        time,
+                        *feature['geometry']['coordinates'],
+                        source=self.location,
+                        **properties,
+                    )
+
+                packets.append(packet)
+
+        self.__last_access_time = datetime.now()
+
+        return packets
+
+    def close(self):
+        pass
+
+    def __repr__(self):
+        return f'{self.__class__.__name__}({repr(self.location)})'
 
 
 class APRSfi(APRSPacketSource, NetworkConnection):
@@ -240,7 +315,7 @@ class APRSfi(APRSPacketSource, NetworkConnection):
         pass
 
     def __repr__(self):
-        return f'{self.__class__.__name__}({repr(self.callsigns)}, {repr(re.sub(".", "*", self.api_key))})'
+        return f'{self.__class__.__name__}({repr(self.callsigns)}, {repr("****")})'
 
 
 class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
@@ -254,10 +329,10 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
     }
 
     def __init__(self, hostname: str, database: str, table: str, **kwargs):
-        if 'fields' not in kwargs:
-            kwargs['fields'] = {}
         if 'primary_key' not in kwargs:
             kwargs['primary_key'] = 'time'
+        if 'fields' not in kwargs:
+            kwargs['fields'] = {}
         kwargs['fields'] = {**self.__default_fields, **kwargs['fields']}
         PostGresTable.__init__(
             self, hostname=hostname, database=database, table_name=table, **kwargs

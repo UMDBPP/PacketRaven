@@ -1,9 +1,9 @@
-from packetraven import TextFileTNC
+from packetraven import RawAPRSTextFile
 from packetraven.tracks import APRSTrack
 
 if __name__ == '__main__':
     filename = 'http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-11/W3EAX-11_raw_NS95.txt'
-    raw_packet_text_file = TextFileTNC(filename)
+    raw_packet_text_file = RawAPRSTextFile(filename)
 
     packets = raw_packet_text_file.packets
 
