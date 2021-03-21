@@ -37,7 +37,7 @@ class BalloonPredictionQuery(ABC):
         burst_altitude: float,
         sea_level_descent_rate: float,
         float_altitude: float = None,
-        float_stop_time: datetime = None,
+        float_end_time: datetime = None,
         name: str = None,
     ):
         """
@@ -50,7 +50,7 @@ class BalloonPredictionQuery(ABC):
         :param burst_altitude: altitude at which balloon will burst
         :param sea_level_descent_rate: descent rate at sea level (m/s)
         :param float_altitude: altitude of float (m)
-        :param float_stop_time: date and time of float end
+        :param float_end_time: date and time of float end
         :param name: name of prediction track
         """
 
@@ -64,9 +64,9 @@ class BalloonPredictionQuery(ABC):
             if launch_time.tzinfo is None or launch_time.tzinfo.utcoffset(launch_time) is None:
                 launch_time = UTC_TIMEZONE.localize(launch_time)
 
-        if float_stop_time is not None:
-            if float_stop_time.tzinfo is None or float_stop_time.tzinfo.utcoffset(float_stop_time) is None:
-                float_stop_time = UTC_TIMEZONE.localize(float_stop_time)
+        if float_end_time is not None:
+            if float_end_time.tzinfo is None or float_end_time.tzinfo.utcoffset(float_end_time) is None:
+                float_end_time = UTC_TIMEZONE.localize(float_end_time)
 
         self.api_url = api_url
         self.launch_site = launch_site
@@ -75,7 +75,7 @@ class BalloonPredictionQuery(ABC):
         self.burst_altitude = burst_altitude
         self.sea_level_descent_rate = sea_level_descent_rate
         self.float_altitude = float_altitude
-        self.float_stop_time = float_stop_time
+        self.float_end_time = float_end_time
         self.name = name
 
     @property
@@ -112,12 +112,12 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
         version: float = None,
         dataset_time: datetime = None,
         float_altitude: float = None,
-        float_stop_time: datetime = None,
+        float_end_time: datetime = None,
         api_url: PredictionAPIURL = None,
         name: str = None,
     ):
         if profile is None:
-            if float_altitude is not None or float_stop_time is not None:
+            if float_altitude is not None or float_end_time is not None:
                 profile = FlightProfile.float
             else:
                 profile = FlightProfile.standard
@@ -143,7 +143,7 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
             burst_altitude,
             sea_level_descent_rate,
             float_altitude,
-            float_stop_time,
+            float_end_time,
             name,
         )
 
@@ -181,10 +181,10 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
         if self.profile == FlightProfile.float:
             if self.float_altitude is None:
                 self.float_altitude = self.burst_altitude
-            if self.float_stop_time is None:
-                raise PredictionError('float stop time `float_stop_time` not provided')
+            if self.float_end_time is None:
+                raise PredictionError('float stop time `float_end_time` not provided')
             query['float_altitude'] = self.float_altitude
-            query['stop_datetime'] = self.float_stop_time.isoformat()
+            query['stop_datetime'] = self.float_end_time.isoformat()
 
         return query
 
@@ -219,7 +219,7 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
                             version=self.version,
                             dataset_time=self.dataset_time,
                             float_altitude=None,
-                            float_stop_time=None,
+                            float_end_time=None,
                             api_url=self.api_url,
                             name=self.name,
                         )
@@ -284,7 +284,7 @@ class LukeRenegarBalloonPredictionQuery(CUSFBalloonPredictionQuery):
         version: float = None,
         dataset_time: datetime = None,
         float_altitude: float = None,
-        float_stop_time: datetime = None,
+        float_end_time: datetime = None,
         api_url: str = None,
         name: str = None,
     ):
@@ -304,7 +304,7 @@ class LukeRenegarBalloonPredictionQuery(CUSFBalloonPredictionQuery):
             version,
             dataset_time,
             float_altitude,
-            float_stop_time,
+            float_end_time,
             api_url,
             name,
         )
@@ -342,7 +342,7 @@ def get_predictions(
     burst_altitude: float = None,
     sea_level_descent_rate: float = None,
     float_altitude: float = None,
-    float_stop_time: datetime = None,
+    float_end_time: datetime = None,
     api_url: str = None,
 ) -> [PredictedTrajectory]:
     if api_url is None:
@@ -372,7 +372,7 @@ def get_predictions(
             burst_altitude=burst_altitude,
             sea_level_descent_rate=sea_level_descent_rate,
             float_altitude=float_altitude,
-            float_stop_time=float_stop_time,
+            float_end_time=float_end_time,
             api_url=api_url,
             name=name,
         )

@@ -63,7 +63,7 @@ class PacketRavenGUI:
                 'prediction_burst_altitude': None,
                 'prediction_sea_level_descent_rate': None,
                 'prediction_float_altitude': None,
-                'prediction_float_stop_time': None,
+                'prediction_float_end_time': None,
                 'prediction_api_url': None,
             },
         }

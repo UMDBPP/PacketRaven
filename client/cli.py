@@ -58,7 +58,7 @@ def main():
         '--prediction-float-altitude', help='float altitude to use for prediction (m)'
     )
     args_parser.add_argument(
-        '--prediction-float-stop-time', help='descent rate to use for prediction (`%Y-%m-%dT%H:%M:%S`)'
+        '--prediction-float-end-time', help='float end time to use for prediction'
     )
     args_parser.add_argument(
         '--prediction-api',
@@ -181,8 +181,8 @@ def main():
         if args.prediction_float_altitude is not None:
             kwargs['prediction_float_altitude'] = float(args.prediction_descent_rate)
 
-        if args.prediction_float_stop_time is not None:
-            kwargs['prediction_float_stop_time'] = parse_date(args.prediction_float_stop_time)
+        if args.prediction_float_end_time is not None:
+            kwargs['prediction_float_end_time'] = parse_date(args.prediction_float_end_time)
 
         if args.prediction_api is not None:
             kwargs['prediction_api_url'] = args.prediction_api

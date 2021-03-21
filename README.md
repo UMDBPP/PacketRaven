@@ -62,11 +62,11 @@ packetraven --callsigns W3EAX-8,W3EAX-14 --apikey <api_key> --gui
 ## Usage:
 
 ```text
-usage: packetraven [-h] [--callsigns CALLSIGNS] [--aprsfi-key APRSFI_KEY] [--tnc TNC] [--database DATABASE] [--tunnel TUNNEL]
-                   [--igate] [--start START] [--end END] [--log LOG] [--output OUTPUT] [--prediction PREDICTION]
+usage: packetraven [-h] [--callsigns CALLSIGNS] [--aprsfi-key APRSFI_KEY] [--tnc TNC] [--database DATABASE] [--tunnel TUNNEL] [--igate]
+                   [--start START] [--end END] [--log LOG] [--output OUTPUT] [--prediction-output PREDICTION_OUTPUT]
                    [--prediction-ascent-rate PREDICTION_ASCENT_RATE] [--prediction-burst-altitude PREDICTION_BURST_ALTITUDE]
-                   [--prediction-descent-rate PREDICTION_DESCENT_RATE] [--prediction-api PREDICTION_API] [--interval INTERVAL]
-                   [--gui]
+                   [--prediction-descent-rate PREDICTION_DESCENT_RATE] [--prediction-float-altitude PREDICTION_FLOAT_ALTITUDE]
+                   [--prediction-float-end-time PREDICTION_FLOAT_END_TIME] [--prediction-api PREDICTION_API] [--interval INTERVAL] [--gui]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -74,8 +74,8 @@ optional arguments:
                         comma-separated list of callsigns to track
   --aprsfi-key APRSFI_KEY
                         APRS.fi API key (from https://aprs.fi/page/api)
-  --tnc TNC             comma-separated list of serial ports / text files of a TNC parsing APRS packets from analog audio to
-                        ASCII (set to `auto` to use the first open serial port)
+  --tnc TNC             comma-separated list of serial ports / text files of a TNC parsing APRS packets from analog audio to ASCII (set to
+                        `auto` to use the first open serial port)
   --database DATABASE   PostGres database table `user@hostname:port/database/table`
   --tunnel TUNNEL       SSH tunnel `user@hostname:port`
   --igate               send new packets to APRS-IS
@@ -83,7 +83,7 @@ optional arguments:
   --end END             end date / time, in any common date format
   --log LOG             path to log file to save log messages
   --output OUTPUT       path to output file to save packets
-  --prediction PREDICTION
+  --prediction-output PREDICTION_OUTPUT
                         path to output file to save most up-to-date predicted trajectory
   --prediction-ascent-rate PREDICTION_ASCENT_RATE
                         ascent rate to use for prediction (m/s)
@@ -91,6 +91,10 @@ optional arguments:
                         burst altitude to use for prediction (m)
   --prediction-descent-rate PREDICTION_DESCENT_RATE
                         descent rate to use for prediction (m/s)
+  --prediction-float-altitude PREDICTION_FLOAT_ALTITUDE
+                        float altitude to use for prediction (m)
+  --prediction-float-end-time PREDICTION_FLOAT_END_TIME
+                        float end time to use for prediction
   --prediction-api PREDICTION_API
                         API URL to use for prediction (one of ['https://predict.cusf.co.uk/api/v1/',
                         'https://predict.lukerenegar.com/api/v1.1/'])
