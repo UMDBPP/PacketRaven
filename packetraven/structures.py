@@ -1,5 +1,7 @@
 from typing import Any, Iterable, List, Union
 
+from numpy import int32, int64
+
 
 class DoublyLinkedList:
     """
@@ -149,6 +151,12 @@ class DoublyLinkedList:
 
         return sum([1 for node_value in self if node_value == value])
 
+    def sort(self):
+        sorted_values = sorted(self)
+        self.head = None
+        self.tail = None
+        self.extend(sorted_values)
+
     @property
     def difference(self) -> [Any]:
         """
@@ -216,12 +224,16 @@ class DoublyLinkedList:
             self.head = node.next_node
 
     def __getitem__(self, index: Union[int, Iterable[int], slice]) -> Union[Any, List[Any]]:
-        if isinstance(index, int):
+        if isinstance(index, int) or isinstance(index, int32) or isinstance(index, int64):
             return self._node_at_index(index).value
         elif isinstance(index, Iterable):
-            return [self.__getitem__(value) for value in index]
+            return self.__class__([self.__getitem__(value) for value in index])
         elif isinstance(index, slice):
-            return self.__getitem__(range(*(value for value in (index.start, index.stop, index.step) if value is not None)))
+            slice_parameters = [value for value in (index.start, index.stop, index.step) if value is not None]
+            if all(slice_parameter is None for slice_parameter in slice_parameters):
+                return self
+            else:
+                return self.__getitem__(range(*slice_parameters))
         else:
             raise ValueError(f'unrecognized index: {index}')
 

@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta
-from typing import Union
+from typing import Iterable, Union
 
 from dateutil.parser import parse as parse_date
 import numpy
+from pandas import DataFrame
 from pyproj import CRS
 
 from .model import SECONDS_TO_GROUND
@@ -35,6 +36,13 @@ class LocationPacketTrack:
             if packet.crs != self.crs:
                 packet.transform_to(self.crs)
             self.packets.append(packet)
+
+    def extend(self, packets: [LocationPacket]):
+        for packet in packets:
+            self.append(packet)
+
+    def sort(self):
+        self.packets.sort()
 
     @property
     def times(self) -> numpy.ndarray:
@@ -137,8 +145,13 @@ class LocationPacketTrack:
         """ total length of the packet track over the ground """
         return sum([distance.overground for distance in self.packets.difference])
 
-    def __getitem__(self, index: Union[int, slice]) -> LocationPacket:
-        return self.packets[index]
+    def __getitem__(self, index: Union[int, Iterable[int], slice]) -> Union[LocationPacket, 'LocationPacketTrack']:
+        if isinstance(index, int):
+            return self.packets[index]
+        elif isinstance(index, Iterable) or isinstance(index, slice):
+            return self.__class__(self.name, self.packets[index], self.crs)
+        else:
+            raise ValueError(f'unrecognized index: {index}')
 
     def __iter__(self):
         return iter(self.packets)
@@ -157,6 +170,22 @@ class LocationPacketTrack:
 
     def __str__(self) -> str:
         return str(list(self))
+
+    @property
+    def dataframe(self) -> DataFrame:
+        return DataFrame({
+            'name': [self.name for _ in range(len(self))],
+            'times': self.times,
+            'x': self.coordinates[:, 0],
+            'y': self.coordinates[:, 1],
+            'z': self.coordinates[:, 2],
+            'intervals': self.intervals,
+            'overground_distances': self.overground_distances,
+            'ascents': self.ascents,
+            'ascent_rates': self.ascent_rates,
+            'ground_speeds': self.ground_speeds,
+            'cumulative_overground_distances': self.cumulative_overground_distances,
+        })
 
 
 class BalloonTrack(LocationPacketTrack):

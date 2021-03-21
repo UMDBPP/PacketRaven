@@ -80,6 +80,7 @@ setup(
         'aprslib',
         'haversine',
         'numpy>=1.20.0',
+        'pandas',
         'pyserial',
         'geojson',
         'fastkml',
