@@ -45,8 +45,7 @@ def write_packet_tracks(packet_tracks: [LocationPacketTrack], output_filename: P
                     'ground_speed': ground_speeds[packet_index],
                 }
 
-                if isinstance(packet_track, APRSTrack):
-                    properties['callsign'] = packet.from_callsign
+                properties.update(packet.attributes)
 
                 features.append(
                     geojson.Feature(

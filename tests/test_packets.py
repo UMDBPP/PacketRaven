@@ -157,23 +157,23 @@ def test_time_to_ground():
 
     track.append(packet_1)
 
-    assert not track.has_burst
+    assert not track.falling
     assert track.time_to_ground == timedelta(seconds=-1)
 
     track.append(packet_2)
 
-    assert track.has_burst
+    assert track.falling
     assert track.time_to_ground == timedelta(seconds=1603.148748)
 
     track.append(packet_3)
 
-    assert not track.has_burst
+    assert not track.falling
     assert track.time_to_ground == timedelta(seconds=-1)
 
     track.append(packet_4)
     track.append(packet_5)
 
-    assert track.has_burst
+    assert track.falling
     assert track.time_to_ground == timedelta(seconds=1545.354922)
 
 

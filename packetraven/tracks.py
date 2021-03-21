@@ -6,7 +6,7 @@ import numpy
 from pandas import DataFrame
 from pyproj import CRS
 
-from .model import SECONDS_TO_GROUND
+from .model import FREEFALL_DESCENT_RATE, FREEFALL_DESCENT_RATE_UNCERTAINTY, FREEFALL_SECONDS_TO_GROUND
 from .packets import APRSPacket, DEFAULT_CRS, LocationPacket
 from .structures import DoublyLinkedList
 
@@ -149,7 +149,13 @@ class LocationPacketTrack:
         if isinstance(index, int):
             return self.packets[index]
         elif isinstance(index, Iterable) or isinstance(index, slice):
-            return self.__class__(self.name, self.packets[index], self.crs)
+            if isinstance(index, numpy.ndarray) and index.dtype == bool:
+                index = numpy.where(index)[0]
+            if len(index) > 0:
+                packets = self.packets[index]
+            else:
+                packets = None
+            return self.__class__(self.name, packets, self.crs)
         else:
             raise ValueError(f'unrecognized index: {index}')
 
@@ -191,27 +197,33 @@ class LocationPacketTrack:
 class BalloonTrack(LocationPacketTrack):
     def __init__(self, name: str, packets: [LocationPacket] = None, crs: CRS = None):
         super().__init__(name, packets, crs)
-        self.__has_burst = False
+        self.__falling = False
 
     @property
     def time_to_ground(self) -> timedelta:
-        if self.has_burst:
-            # TODO implement landing location as the intersection of the predicted descent track with a local DEM
-            return timedelta(seconds=SECONDS_TO_GROUND(self.altitudes[-1]))
+        current_ascent_rate = self.ascent_rates[-1]
+        if current_ascent_rate < 0:
+            if self.falling:
+                return timedelta(seconds=FREEFALL_SECONDS_TO_GROUND(self.altitudes[-1]))
+            else:
+                current_altitude = self.altitudes[-1]
+                # TODO implement landing location as the intersection of the predicted descent track with a local DEM
+                return timedelta(seconds=(current_altitude - min(self.altitudes)) / -current_ascent_rate)
         else:
             return timedelta(seconds=-1)
 
     @property
-    def has_burst(self) -> bool:
+    def falling(self) -> bool:
         current_ascent_rate = self.ascent_rates[-1]
-        if current_ascent_rate > 0:
-            self.__has_burst = False
-        elif not self.__has_burst:
+        if current_ascent_rate >= 0:
+            self.__falling = False
+        elif not self.__falling:
             current_altitude = self.altitudes[-1]
-            max_altitude = numpy.max(self.altitudes)
-            if current_ascent_rate < -2 and max_altitude > current_altitude:
-                self.__has_burst = True
-        return self.__has_burst
+            freefall_descent_rate = FREEFALL_DESCENT_RATE(current_altitude)
+            freefall_descent_rate_uncertainty = FREEFALL_DESCENT_RATE_UNCERTAINTY(current_altitude)
+            if numpy.abs(current_ascent_rate - freefall_descent_rate) < freefall_descent_rate_uncertainty:
+                self.__falling = True
+        return self.__falling
 
 
 class APRSTrack(BalloonTrack):

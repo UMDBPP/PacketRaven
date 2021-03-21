@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from datetime import datetime
+from datetime import datetime, timedelta
 from getpass import getpass
 from pathlib import Path
 import sys
@@ -10,7 +10,7 @@ from dateutil.parser import parse as parse_date
 from client import DEFAULT_INTERVAL_SECONDS
 from client.gui import PacketRavenGUI
 from client.retrieve import retrieve_packets
-from packetraven.connections import APRSDatabaseTable, APRSfi, APRSis, SerialTNC, TextFileTNC
+from packetraven.connections import APRSDatabaseTable, APRSfi, APRSis, PacketGeoJSON, RawAPRSTextFile, SerialTNC
 from packetraven.predicts import PredictionAPIURL, PredictionError, get_predictions
 from packetraven.utilities import get_logger, read_configuration, repository_root
 from packetraven.writer import write_packet_tracks
@@ -58,7 +58,7 @@ def main():
         '--prediction-float-altitude', help='float altitude to use for prediction (m)'
     )
     args_parser.add_argument(
-        '--prediction-float-end-time', help='float end time to use for prediction'
+        '--prediction-float-duration', help='duration of float (s)'
     )
     args_parser.add_argument(
         '--prediction-api',
@@ -181,8 +181,8 @@ def main():
         if args.prediction_float_altitude is not None:
             kwargs['prediction_float_altitude'] = float(args.prediction_descent_rate)
 
-        if args.prediction_float_end_time is not None:
-            kwargs['prediction_float_end_time'] = parse_date(args.prediction_float_end_time)
+        if args.prediction_float_duration is not None:
+            kwargs['prediction_float_duration'] = timedelta(seconds=float(args.prediction_float_duration))
 
         if args.prediction_api is not None:
             kwargs['prediction_api_url'] = args.prediction_api
@@ -219,7 +219,7 @@ def main():
                 tnc_location = tnc_location.strip()
                 try:
                     if Path(tnc_location).suffix in ['.txt', '.log']:
-                        tnc_location = TextFileTNC(tnc_location, callsigns)
+                        tnc_location = RawAPRSTextFile(tnc_location, callsigns)
                         LOGGER.info(f'reading file {tnc_location.location}')
                         connections.append(tnc_location)
                     else:
@@ -313,6 +313,13 @@ def main():
         else:
             database = None
 
+        if len(connections) == 0:
+            if output_filename is not None and output_filename.exists():
+                connections.append(PacketGeoJSON(output_filename))
+            else:
+                LOGGER.error(f'no connections started')
+                sys.exit(1)
+
         if using_igate:
             try:
                 aprs_is = APRSis(callsigns)
@@ -320,10 +327,6 @@ def main():
                 aprs_is = None
         else:
             aprs_is = None
-
-        if len(connections) == 0:
-            LOGGER.error(f'no connections started')
-            sys.exit(1)
 
         filter_message = 'retrieving packets'
         if start_date is not None and end_date is None:
@@ -355,7 +358,7 @@ def main():
                         logger=LOGGER,
                     )
 
-                    if prediction_filename is not None:
+                    if prediction_filename is not None and len(new_packets) > 0:
                         try:
                             predictions = get_predictions(
                                 packet_tracks,
