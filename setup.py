@@ -30,6 +30,7 @@ if os.name == 'nt':
                 import pipwin
             except:
                 subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pipwin'])
+                subprocess.check_call([sys.executable, '-m', 'pipwin', 'refresh'])
 
             failed_pipwin_packages = []
             for pipwin_package in pipwin_dependencies + [required_package]:
