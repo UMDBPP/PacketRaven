@@ -3,6 +3,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Optional, Tuple, Union
 
+from dateutil.parser import parse as parse_date
+import pytz
 import requests
 from shapely.geometry import Point
 
@@ -12,6 +14,7 @@ from packetraven.tracks import LocationPacketTrack, PredictedTrajectory
 DEFAULT_ASCENT_RATE = 5.5
 DEFAULT_BURST_ALTITUDE = 28000
 DEFAULT_SEA_LEVEL_DESCENT_RATE = 9
+UTC_TIMEZONE = pytz.utc
 
 
 class PredictionAPIURL(Enum):
@@ -29,10 +32,12 @@ class BalloonPredictionQuery(ABC):
         self,
         api_url: str,
         launch_site: Union[Tuple[float, float, Optional[float]], Point],
-        launch_datetime: datetime,
+        launch_time: datetime,
         ascent_rate: float,
         burst_altitude: float,
         sea_level_descent_rate: float,
+        float_altitude: float = None,
+        float_stop_time: datetime = None,
         name: str = None,
     ):
         """
@@ -40,10 +45,12 @@ class BalloonPredictionQuery(ABC):
 
         :param api_url: URL of API
         :param launch_site: location of balloon launch
-        :param launch_datetime: date and time of balloon launch
+        :param launch_time: date and time of balloon launch
         :param ascent_rate: average ascent rate (m/s)
         :param burst_altitude: altitude at which balloon will burst
         :param sea_level_descent_rate: descent rate at sea level (m/s)
+        :param float_altitude: altitude of float (m)
+        :param float_stop_time: date and time of float end
         :param name: name of prediction track
         """
 
@@ -53,12 +60,22 @@ class BalloonPredictionQuery(ABC):
         if name is None:
             name = 'prediction'
 
+        if launch_time is not None:
+            if launch_time.tzinfo is None or launch_time.tzinfo.utcoffset(launch_time) is None:
+                launch_time = UTC_TIMEZONE.localize(launch_time)
+
+        if float_stop_time is not None:
+            if float_stop_time.tzinfo is None or float_stop_time.tzinfo.utcoffset(float_stop_time) is None:
+                float_stop_time = UTC_TIMEZONE.localize(float_stop_time)
+
         self.api_url = api_url
         self.launch_site = launch_site
-        self.launch_datetime = launch_datetime
+        self.launch_time = launch_time
         self.ascent_rate = ascent_rate
         self.burst_altitude = burst_altitude
         self.sea_level_descent_rate = sea_level_descent_rate
+        self.float_altitude = float_altitude
+        self.float_stop_time = float_stop_time
         self.name = name
 
     @property
@@ -76,7 +93,7 @@ class BalloonPredictionQuery(ABC):
         raise NotImplementedError
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}({repr(self.api_url)}, {repr(self.launch_site)}, {repr(self.launch_datetime)}, {repr(self.ascent_rate)}, {repr(self.burst_altitude)}, {repr(self.sea_level_descent_rate)})'
+        return f'{self.__class__.__name__}({repr(self.api_url)}, {repr(self.launch_site)}, {repr(self.launch_time)}, {repr(self.ascent_rate)}, {repr(self.burst_altitude)}, {repr(self.sea_level_descent_rate)})'
 
 
 class PredictionError(Exception):
@@ -87,16 +104,28 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
     def __init__(
         self,
         launch_site: Union[Tuple[float, float], Point],
-        launch_datetime: datetime,
+        launch_time: datetime,
         ascent_rate: float,
         burst_altitude: float,
         sea_level_descent_rate: float,
         profile: FlightProfile = None,
         version: float = None,
-        dataset_datetime: datetime = None,
+        dataset_time: datetime = None,
+        float_altitude: float = None,
+        float_stop_time: datetime = None,
         api_url: PredictionAPIURL = None,
         name: str = None,
     ):
+        if profile is None:
+            if float_altitude is not None or float_stop_time is not None:
+                profile = FlightProfile.float
+            else:
+                profile = FlightProfile.standard
+
+        if dataset_time is not None:
+            if dataset_time.tzinfo is None or dataset_time.tzinfo.utcoffset(dataset_time) is None:
+                dataset_time = UTC_TIMEZONE.localize(dataset_time)
+
         if api_url is None:
             api_url = PredictionAPIURL.cusf
 
@@ -109,10 +138,12 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
         super().__init__(
             api_url,
             launch_site,
-            launch_datetime,
+            launch_time,
             ascent_rate,
             burst_altitude,
             sea_level_descent_rate,
+            float_altitude,
+            float_stop_time,
             name,
         )
 
@@ -125,14 +156,14 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
 
         self.profile = profile
         self.version = version
-        self.dataset_datetime = dataset_datetime
+        self.dataset_time = dataset_time
 
     @property
     def query(self) -> {str: Any}:
         query = {
             'launch_longitude': self.launch_site.x,
             'launch_latitude': self.launch_site.y,
-            'launch_datetime': f'{self.launch_datetime:%Y-%m-%dT%H:%M:%SZ}',
+            'launch_datetime': self.launch_time.isoformat(),
             'ascent_rate': self.ascent_rate,
             'burst_altitude': self.burst_altitude,
             'descent_rate': self.sea_level_descent_rate,
@@ -144,10 +175,65 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
             query['profile'] = self.profile.value
         if self.version is not None:
             query['version'] = self.version
-        if self.dataset_datetime is not None:
-            query['dataset'] = f'{self.dataset_datetime:%Y-%m-%dT%H:%M:%SZ}'
+        if self.dataset_time is not None:
+            query['dataset'] = self.dataset_time.isoformat()
+
+        if self.profile == FlightProfile.float:
+            if self.float_altitude is None:
+                self.float_altitude = self.burst_altitude
+            if self.float_stop_time is None:
+                raise PredictionError('float stop time `float_stop_time` not provided')
+            query['float_altitude'] = self.float_altitude
+            query['stop_datetime'] = self.float_stop_time.isoformat()
 
         return query
+
+    def get(self) -> {str: Any}:
+        response = requests.get(self.api_url, params=self.query)
+
+        if response.status_code == 200:
+            response = response.json()
+            if 'error' not in response:
+                # TODO tawhiri currently does not include descent when querying a float profile
+                # this code runs another prediction query with a standard profile and extracts the descent stage to append to the response from the original query
+                if self.profile == FlightProfile.float:
+                    for stage in response['prediction']:
+                        # if a descent stage exists, we don't need to do anything
+                        if stage['stage'] == 'descent':
+                            break
+                    else:
+                        for stage in response['prediction']:
+                            if stage['stage'] == 'float':
+                                float_end = stage['trajectory'][-1]
+                                break
+                        else:
+                            raise PredictionError('API did not return a float trajectory')
+
+                        standard_profile_query = self.__class__(
+                            launch_site=[float_end['longitude'], float_end['latitude'], float_end['altitude']],
+                            launch_time=parse_date(float_end['datetime']),
+                            ascent_rate=10,
+                            burst_altitude=float_end['altitude'] + 0.1,
+                            sea_level_descent_rate=self.sea_level_descent_rate,
+                            profile=FlightProfile.standard,
+                            version=self.version,
+                            dataset_time=self.dataset_time,
+                            float_altitude=None,
+                            float_stop_time=None,
+                            api_url=self.api_url,
+                            name=self.name,
+                        )
+
+                        for stage in standard_profile_query.get()['prediction']:
+                            if stage['stage'] == 'descent':
+                                response['prediction'].append(stage)
+                                break
+
+                return response
+            else:
+                raise PredictionError(response['error']['description'])
+        else:
+            raise ConnectionError(f'connection raised error {response.status_code}')
 
     @property
     def predict(self) -> PredictedTrajectory:
@@ -155,6 +241,7 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
 
         if 'error' not in response:
             points = []
+
             for stage in response['prediction']:
                 points.extend(stage['trajectory'])
 
@@ -183,7 +270,7 @@ class LukeRenegarBalloonPredictionQuery(CUSFBalloonPredictionQuery):
     def __init__(
         self,
         launch_site: Union[Tuple[float, float], Point],
-        launch_datetime: datetime,
+        launch_time: datetime,
         ascent_rate: float,
         burst_altitude: float,
         sea_level_descent_rate: float,
@@ -195,7 +282,9 @@ class LukeRenegarBalloonPredictionQuery(CUSFBalloonPredictionQuery):
         physics_model: str = None,
         profile: FlightProfile = None,
         version: float = None,
-        dataset_datetime: datetime = None,
+        dataset_time: datetime = None,
+        float_altitude: float = None,
+        float_stop_time: datetime = None,
         api_url: str = None,
         name: str = None,
     ):
@@ -207,13 +296,15 @@ class LukeRenegarBalloonPredictionQuery(CUSFBalloonPredictionQuery):
 
         super().__init__(
             launch_site,
-            launch_datetime,
+            launch_time,
             ascent_rate,
             burst_altitude,
             sea_level_descent_rate,
             profile,
             version,
-            dataset_datetime,
+            dataset_time,
+            float_altitude,
+            float_stop_time,
             api_url,
             name,
         )
@@ -250,6 +341,8 @@ def get_predictions(
     ascent_rate: float = None,
     burst_altitude: float = None,
     sea_level_descent_rate: float = None,
+    float_altitude: float = None,
+    float_stop_time: datetime = None,
     api_url: str = None,
 ) -> [PredictedTrajectory]:
     if api_url is None:
@@ -278,6 +371,8 @@ def get_predictions(
             ascent_rate=ascent_rate,
             burst_altitude=burst_altitude,
             sea_level_descent_rate=sea_level_descent_rate,
+            float_altitude=float_altitude,
+            float_stop_time=float_stop_time,
             api_url=api_url,
             name=name,
         )
