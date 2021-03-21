@@ -113,8 +113,8 @@ class TextFileTNC(APRSPacketSource):
                     f'interval {interval} less than minimum interval {self.interval}'
                 )
 
-        if isinstance(self.location, Path):
-            file_connection = open(self.location.expanduser().resolve())
+        if Path(self.location).exists():
+            file_connection = open(Path(self.location).expanduser().resolve())
             lines = file_connection.readlines()
         else:
             file_connection = requests.get(self.location, stream=True)

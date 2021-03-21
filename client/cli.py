@@ -43,7 +43,7 @@ def main():
     args_parser.add_argument('--log', help='path to log file to save log messages')
     args_parser.add_argument('--output', help='path to output file to save packets')
     args_parser.add_argument(
-        '--prediction', help='path to output file to save most up-to-date predicted trajectory'
+        '--prediction-output', help='path to output file to save most up-to-date predicted trajectory'
     )
     args_parser.add_argument(
         '--prediction-ascent-rate', help='ascent rate to use for prediction (m/s)'
@@ -53,6 +53,12 @@ def main():
     )
     args_parser.add_argument(
         '--prediction-descent-rate', help='descent rate to use for prediction (m/s)'
+    )
+    args_parser.add_argument(
+        '--prediction-float-altitude', help='float altitude to use for prediction (m)'
+    )
+    args_parser.add_argument(
+        '--prediction-float-stop-time', help='descent rate to use for prediction (`%Y-%m-%dT%H:%M:%S`)'
     )
     args_parser.add_argument(
         '--prediction-api',
@@ -151,8 +157,8 @@ def main():
     else:
         output_filename = None
 
-    if args.prediction is not None:
-        prediction_filename = Path(args.prediction).expanduser()
+    if args.prediction_output is not None:
+        prediction_filename = Path(args.prediction_output).expanduser()
         if prediction_filename.is_dir() or (
             not prediction_filename.exists() and prediction_filename.suffix == ''
         ):
@@ -172,8 +178,14 @@ def main():
         if args.prediction_descent_rate is not None:
             kwargs['prediction_sea_level_descent_rate'] = float(args.prediction_descent_rate)
 
-        if args.prediction_api_url is not None:
-            kwargs['prediction_api_url'] = args.prediction_api_url
+        if args.prediction_float_altitude is not None:
+            kwargs['prediction_float_altitude'] = float(args.prediction_descent_rate)
+
+        if args.prediction_float_stop_time is not None:
+            kwargs['prediction_float_stop_time'] = parse_date(args.prediction_float_stop_time)
+
+        if args.prediction_api is not None:
+            kwargs['prediction_api_url'] = args.prediction_api
     else:
         prediction_filename = None
 
@@ -349,7 +361,7 @@ def main():
                                 packet_tracks,
                                 **{
                                     key.replace('prediction_', ''): value
-                                    for key, value in kwargs
+                                    for key, value in kwargs.items()
                                     if 'prediction_' in key
                                 },
                             )
