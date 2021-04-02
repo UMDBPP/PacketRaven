@@ -305,7 +305,9 @@ def main():
                     database_kwargs['database_password'] = database_password
 
                 database = APRSDatabaseTable(
-                    **database_kwargs, **ssh_tunnel_kwargs, callsigns=callsigns
+                    **{key.replace('database_', ''): value
+                       for key, value in database_kwargs.items()},
+                    **ssh_tunnel_kwargs, callsigns=callsigns
                 )
                 LOGGER.info(f'connected to {database.location}')
                 connections.append(database)
