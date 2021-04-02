@@ -8,7 +8,6 @@ import time
 from dateutil.parser import parse as parse_date
 
 from client import DEFAULT_INTERVAL_SECONDS
-from client.gui import PacketRavenGUI
 from client.retrieve import retrieve_packets
 from packetraven.connections import APRSDatabaseTable, APRSfi, APRSis, PacketGeoJSON, RawAPRSTextFile, SerialTNC
 from packetraven.predicts import PredictionAPIURL, PredictionError, get_predictions
@@ -201,6 +200,8 @@ def main():
         }
 
     if using_gui:
+        from client.gui import PacketRavenGUI
+
         PacketRavenGUI(
             callsigns,
             start_date,
