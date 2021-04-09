@@ -53,3 +53,9 @@ jobs:
           POSTGRES_USERNAME: postgres
           POSTGRES_PASSWORD: test_password
         run: pytest --cov=packetraven
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == 3.9
+        uses: codecov/codecov-action@v1
+        with:
+          flags: python${{ matrix.python-version }}-${{ runner.os }}
+          fail_ci_if_error: true
