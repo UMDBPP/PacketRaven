@@ -7,8 +7,7 @@
 [![license](https://img.shields.io/github/license/umdbpp/packetraven)](https://opensource.org/licenses/MIT)
 [![style](https://sourceforge.net/p/oitnb/code/ci/default/tree/_doc/_static/oitnb.svg?format=raw)](https://sourceforge.net/p/oitnb/code)
 
-PacketRaven is a front-end data aggregator / dashboard, designed to track the progress of high-altitude balloon payload flights via location
-telemetry.
+PacketRaven is a dashboard built to track high-altitude balloon flights from their location telemetry.
 
 ```bash
 pip install packetraven
