@@ -179,7 +179,7 @@ def main():
             kwargs['prediction_sea_level_descent_rate'] = float(args.prediction_descent_rate)
 
         if args.prediction_float_altitude is not None:
-            kwargs['prediction_float_altitude'] = float(args.prediction_descent_rate)
+            kwargs['prediction_float_altitude'] = float(args.prediction_float_altitude)
 
         if args.prediction_float_duration is not None:
             kwargs['prediction_float_duration'] = timedelta(seconds=float(args.prediction_float_duration))

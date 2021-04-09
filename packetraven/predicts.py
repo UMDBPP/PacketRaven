@@ -204,8 +204,8 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
             response = response.json()
             if 'error' not in response:
                 # TODO tawhiri currently does not include descent when querying a float profile
-                # this code runs another prediction query with a standard profile and extracts the descent stage to append to the response from the original query
                 if self.profile == FlightProfile.float:
+                    # this code runs another prediction query with a standard profile and extracts the descent stage to append to the response from the original query
                     for stage in response['prediction']:
                         # if a descent stage exists, we don't need to do anything
                         if stage['stage'] == 'descent':
@@ -414,7 +414,7 @@ def get_predictions(
             if len(packets_at_float_altitude) > 0 and packets_at_float_altitude[-1].time == packet_track.times[-1]:
                 float_start_time = packets_at_float_altitude[0].time
                 descent_only = False
-            elif packet_track.ascent_rates[-1] > 0:
+            elif packet_track.ascent_rates[-1] >= 0:
                 float_start_time = prediction_start_time + timedelta(seconds=(float_altitude - prediction_start_location[2]) / ascent_rate)
                 descent_only = False
             else:
