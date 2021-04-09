@@ -381,7 +381,7 @@ def get_predictions(
     """
 
     if api_url is None:
-        api_url = PredictionAPIURL.lukerenegar
+        api_url = PredictionAPIURL.cusf
 
     if float_altitude is not None and float_duration is None:
         raise ValueError('`float_duration` was not provided')
