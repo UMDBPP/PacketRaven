@@ -8,7 +8,6 @@ import time
 from dateutil.parser import parse as parse_date
 
 from client import DEFAULT_INTERVAL_SECONDS
-from client.gui import PacketRavenGUI
 from client.retrieve import retrieve_packets
 from packetraven.connections import APRSDatabaseTable, APRSfi, APRSis, PacketGeoJSON, RawAPRSTextFile, SerialTNC
 from packetraven.predicts import PredictionAPIURL, PredictionError, get_predictions
@@ -201,6 +200,8 @@ def main():
         }
 
     if using_gui:
+        from client.gui import PacketRavenGUI
+
         PacketRavenGUI(
             callsigns,
             start_date,
@@ -304,7 +305,9 @@ def main():
                     database_kwargs['database_password'] = database_password
 
                 database = APRSDatabaseTable(
-                    **database_kwargs, **ssh_tunnel_kwargs, callsigns=callsigns
+                    **{key.replace('database_', ''): value
+                       for key, value in database_kwargs.items()},
+                    **ssh_tunnel_kwargs, callsigns=callsigns
                 )
                 LOGGER.info(f'connected to {database.location}')
                 connections.append(database)
