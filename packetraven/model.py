@@ -203,6 +203,7 @@ class VectorDataset(VectorField):
         v_name: str = 'v',
         x_name: str = 'lon',
         y_name: str = 'lat',
+        z_name: str = 'z',
         t_name: str = 'time',
         coordinate_system: pyproj.Proj = None,
     ):
@@ -214,12 +215,15 @@ class VectorDataset(VectorField):
         :param v_name: name of v variable
         :param x_name: name of x coordinate
         :param y_name: name of y coordinate
+        :param z_name: name of z coordinate
         :param t_name: name of time coordinate
         :param coordinate_system: coordinate system of observation
         """
 
         self.coordinate_system = (
-            coordinate_system if coordinate_system is not None else utilities.WGS84
+            coordinate_system
+            if coordinate_system is not None
+            else WGS84
         )
 
         variables_to_rename = {
@@ -229,11 +233,13 @@ class VectorDataset(VectorField):
             y_name: 'y',
             t_name: 'time',
         }
+        if z_name in dataset:
+            variables_to_rename[z_name] = 'z'
         self.dataset = dataset.rename(variables_to_rename)
 
         x, y = pyproj.transform(
             self.coordinate_system,
-            utilities.WEB_MERCATOR,
+            WEB_MERCATOR,
             *numpy.meshgrid(self.dataset['x'].values, self.dataset['y'].values),
         )
 
@@ -249,27 +255,19 @@ class VectorDataset(VectorField):
         self, variable: str, point: numpy.array, time: datetime
     ) -> xarray.DataArray:
         transformed_point = pyproj.transform(
-            utilities.WEB_MERCATOR, self.coordinate_system, point[0], point[1]
+            WEB_MERCATOR, self.coordinate_system, point[0], point[1]
         )
 
         x_name = f'{variable}_x'
         y_name = f'{variable}_y'
 
         x_range = slice(
-            self.dataset[x_name]
-                .sel({x_name: numpy.min(transformed_point[0]) - 1}, method='bfill')
-                .values.item(),
-            self.dataset[x_name]
-                .sel({x_name: numpy.max(transformed_point[0]) + 1}, method='ffill')
-                .values.item(),
+            self.dataset[x_name].sel({x_name: numpy.min(transformed_point[0]) - 1}, method='bfill').values.item(),
+            self.dataset[x_name].sel({x_name: numpy.max(transformed_point[0]) + 1}, method='ffill').values.item(),
         )
         y_range = slice(
-            self.dataset[y_name]
-                .sel({y_name: numpy.min(transformed_point[1]) - 1}, method='bfill')
-                .values.item(),
-            self.dataset[y_name]
-                .sel({y_name: numpy.max(transformed_point[1]) + 1}, method='ffill')
-                .values.item(),
+            self.dataset[y_name].sel({y_name: numpy.min(transformed_point[1]) - 1}, method='bfill').values.item(),
+            self.dataset[y_name].sel({y_name: numpy.max(transformed_point[1]) + 1}, method='ffill').values.item(),
         )
         time_range = slice(
             self.dataset['time'].sel(time=time, method='bfill').values,
@@ -280,7 +278,11 @@ class VectorDataset(VectorField):
             time_range = time_range.start
 
         cell = self.dataset[variable].sel(
-            {'time': time_range, x_name: x_range, y_name: y_range}
+            {
+                'time': time_range,
+                x_name: x_range,
+                y_name: y_range,
+            }
         )
 
         if len(transformed_point.shape) > 1:
@@ -302,29 +304,15 @@ class VectorDataset(VectorField):
     def v(self, point: numpy.array, time: datetime) -> float:
         return self._interpolate('v', point, time).values
 
-    def plot(self, time: datetime, axis: pyplot.Axes = None, **kwargs) -> quiver.Quiver:
-        if time is None:
-            time = self.dataset['time'].values[0]
 
-        if axis is None:
-            axis = pyplot.axes(projection=cartopy.crs.PlateCarree())
+class VectorGFS(VectorDataset):
+    opendap_url = 'http://nomads.ncep.noaa.gov:80/dods/gfs_0p25_1hr/gfs20210413/gfs_0p25_1hr_12z'
 
-        lon, lat = pyproj.transform(
-            utilities.WEB_MERCATOR,
-            utilities.WGS84,
-            *numpy.meshgrid(self.dataset['x'].values, self.dataset['y'].values),
+    def __init__(self):
+        dataset = xarray.open_dataset(self.opendap_url)
+
+        super().__init__(
+            dataset=dataset,
+            uname='ugrdprs',
+            vname='vgrdprs',
         )
-
-        quiver_plot = axis.quiver(
-            lon,
-            lat,
-            self.dataset['u'].sel(time=time, method='nearest'),
-            self.dataset['v'].sel(time=time, method='nearest'),
-            units='width',
-            **kwargs,
-        )
-        axis.quiverkey(
-            quiver_plot, 0.9, 0.9, 1, r'$1 \frac{m}{s}$', labelpos='E', coordinates='figure'
-        )
-
-        return quiver_plot
