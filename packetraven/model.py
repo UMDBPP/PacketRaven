@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from matplotlib import pyplot, quiver
 import numpy
 import pyproj
@@ -121,7 +123,7 @@ class RankineVortex(VectorField):
     """
 
     def __init__(
-        self,
+            self,
         center: (float, float),
         radius: float,
         period: timedelta,
