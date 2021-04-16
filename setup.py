@@ -94,7 +94,7 @@ setup(
         'tablecrow>=1.3.3',
     ],
     extras_require={
-        'testing': ['flake8', 'pytest', 'pytest-cov', 'pytz'],
+        'testing': ['flake8', 'pytest', 'pytest-cov', 'pytest-xdist', 'pytz'],
         'development': ['oitnb'],
     },
     entry_points={'console_scripts': ['packetraven=client.cli:main']},
