@@ -1,5 +1,4 @@
-from datetime import datetime, timedelta
-
+from dateutil.parser import parse as parse_date
 from matplotlib import pyplot, quiver
 import numpy
 import pyproj
@@ -25,16 +24,20 @@ class VectorField:
     Vector field of (u, v) values.
     """
 
-    def __init__(self, time_deltas: [timedelta], projection: CRS = None):
+    def __init__(self, time_deltas: [timedelta], crs: CRS = None):
         """
         Build vector field of (u, v) values.
 
         :param time_deltas: list of time deltas
-        :param projection: native projection of field
+        :param crs: native CRS of field
         """
 
-        self.time_deltas = [numpy.timedelta64(time_delta) for time_delta in time_deltas]
-        self.projection = projection if projection is not None else WGS84
+        if crs is None:
+            crs = WGS84
+        if not isinstance(time_deltas, numpy.ndarray) or time_deltas.dtype != numpy.timedelta64:
+            time_deltas = numpy.array(time_deltas, dtype='timedelta64[s]')
+        self.time_deltas = time_deltas
+        self.crs = crs
 
         time_delta = numpy.nanmean(self.time_deltas).item()
         if type(time_delta) is int:
@@ -75,7 +78,7 @@ class VectorField:
         :return: magnitude of uv vector in m/s
         """
 
-        return math.sqrt(self.u(point, time) ** 2 + self.v(point, time) ** 2)
+        return numpy.sqrt(self.u(point, time) ** 2 + self.v(point, time) ** 2)
 
     def direction(self, point: numpy.array, time: datetime) -> float:
         """
@@ -86,7 +89,7 @@ class VectorField:
         :return: radians from east of uv vector
         """
 
-        return math.atan2(self.u(point, time), self.v(point, time))
+        return numpy.arctan2(self.u(point, time), self.v(point, time))
 
     def plot(self, time: datetime, axis: pyplot.Axes = None, **kwargs) -> quiver.Quiver:
         """
@@ -114,7 +117,7 @@ class VectorField:
         return vector
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}({self.delta_t})'
+        return f'{self.__class__.__name__}({repr(self.delta_t)})'
 
 
 class RankineVortex(VectorField):
@@ -123,7 +126,7 @@ class RankineVortex(VectorField):
     """
 
     def __init__(
-            self,
+        self,
         center: (float, float),
         radius: float,
         period: timedelta,
@@ -146,10 +149,10 @@ class RankineVortex(VectorField):
         super().__init__(time_deltas)
 
     def u(self, point: numpy.array, time: datetime) -> float:
-        return -self.velocity(point, time) * numpy.cos(numpy.atan2(*(point - self.center)))
+        return -self.velocity(point, time) * numpy.cos(numpy.arctan2(*(point - self.center)))
 
     def v(self, point: numpy.array, time: datetime) -> float:
-        return self.velocity(point, time) * numpy.sin(numpy.atan2(*(point - self.center)))
+        return self.velocity(point, time) * numpy.sin(numpy.arctan2(*(point - self.center)))
 
     def velocity(self, point: numpy.array, time: datetime) -> float:
         radial_distance = numpy.sqrt(numpy.sum((point - self.center) ** 2))
@@ -161,7 +164,7 @@ class RankineVortex(VectorField):
 
     def plot(self, axis: pyplot.Axes = None, **kwargs) -> quiver.Quiver:
         if axis is None:
-            axis = pyplot.axes(projection=cartopy.crs.PlateCarree())
+            axis = pyplot.axes()
 
         points = []
         radii = numpy.linspace(1, self.radius * 2, 20)
@@ -201,13 +204,13 @@ class VectorDataset(VectorField):
     def __init__(
         self,
         dataset: xarray.Dataset,
-        u_name: str = 'u',
-        v_name: str = 'v',
-        x_name: str = 'lon',
-        y_name: str = 'lat',
-        z_name: str = 'z',
-        t_name: str = 'time',
-        coordinate_system: pyproj.Proj = None,
+        u_name: str = None,
+        v_name: str = None,
+        x_name: str = None,
+        y_name: str = None,
+        z_name: str = None,
+        t_name: str = None,
+        coordinate_system: CRS = None,
     ):
         """
         Create new velocity field from given observation.
@@ -222,54 +225,57 @@ class VectorDataset(VectorField):
         :param coordinate_system: coordinate system of observation
         """
 
-        self.coordinate_system = (
-            coordinate_system
-            if coordinate_system is not None
-            else WGS84
-        )
+        if coordinate_system is None:
+            coordinate_system = WGS84
 
-        variables_to_rename = {
-            u_name: 'u',
-            v_name: 'v',
-            x_name: 'x',
-            y_name: 'y',
-            t_name: 'time',
-        }
-        if z_name in dataset:
-            variables_to_rename[z_name] = 'z'
-        self.dataset = dataset.rename(variables_to_rename)
+        self.coordinate_system = coordinate_system
 
-        x, y = pyproj.transform(
-            self.coordinate_system,
-            WEB_MERCATOR,
-            *numpy.meshgrid(self.dataset['x'].values, self.dataset['y'].values),
-        )
+        if u_name is None:
+            u_name = 'u'
+        if v_name is None:
+            v_name = 'v'
+        if x_name is None:
+            x_name = 'lon'
+        if y_name is None:
+            y_name = 'lat'
+        if z_name is None:
+            z_name = 'z'
+        if t_name is None:
+            t_name = 'time'
 
-        self.dataset['x'] = x[0, :]
-        self.dataset['y'] = y[:, 0]
+        self.u_name = u_name
+        self.v_name = v_name
+        self.x_name = x_name
+        self.y_name = y_name
+        self.z_name = z_name
+        self.t_name = t_name
 
-        self.delta_x = numpy.mean(numpy.diff(self.dataset['x']))
-        self.delta_y = numpy.mean(numpy.diff(self.dataset['y']))
+        self.dataset = dataset
 
-        super().__init__(numpy.diff(self.dataset['time'].values))
+        self.delta_x = numpy.mean(numpy.diff(self.dataset[self.x_name]))
+        self.delta_y = numpy.mean(numpy.diff(self.dataset[self.x_name]))
 
-    def _interpolate(
-        self, variable: str, point: numpy.array, time: datetime
-    ) -> xarray.DataArray:
-        transformed_point = pyproj.transform(
-            WEB_MERCATOR, self.coordinate_system, point[0], point[1]
-        )
+        super().__init__(numpy.diff(self.dataset[self.t_name].values))
 
-        x_name = f'{variable}_x'
-        y_name = f'{variable}_y'
+    def _interpolate(self, variable: str, point: numpy.array, time: datetime) -> xarray.DataArray:
+        if not isinstance(point, numpy.ndarray):
+            point = numpy.array(point)
+        if isinstance(time, str):
+            time = parse_date(time)
+        elif isinstance(time, timedelta):
+            time += self.dataset[self.t_name][0]
 
         x_range = slice(
-            self.dataset[x_name].sel({x_name: numpy.min(transformed_point[0]) - 1}, method='bfill').values.item(),
-            self.dataset[x_name].sel({x_name: numpy.max(transformed_point[0]) + 1}, method='ffill').values.item(),
+            self.dataset[self.x_name].sel({self.x_name: numpy.min(point[0]) - 1}, method='bfill').values.item(),
+            self.dataset[self.x_name].sel({self.x_name: numpy.max(point[0]) + 1}, method='ffill').values.item(),
         )
         y_range = slice(
-            self.dataset[y_name].sel({y_name: numpy.min(transformed_point[1]) - 1}, method='bfill').values.item(),
-            self.dataset[y_name].sel({y_name: numpy.max(transformed_point[1]) + 1}, method='ffill').values.item(),
+            self.dataset[self.y_name].sel({
+                self.y_name: numpy.min(point[1]) - 1,
+            }, method='bfill').values.item(),
+            self.dataset[self.y_name].sel({
+                self.y_name: numpy.max(point[1]) + 1,
+            }, method='ffill').values.item(),
         )
         time_range = slice(
             self.dataset['time'].sel(time=time, method='bfill').values,
@@ -282,29 +288,35 @@ class VectorDataset(VectorField):
         cell = self.dataset[variable].sel(
             {
                 'time': time_range,
-                x_name: x_range,
-                y_name: y_range,
+                self.x_name: x_range,
+                self.y_name: y_range,
             }
         )
 
-        if len(transformed_point.shape) > 1:
+        if len(point.shape) > 1:
             cell = cell.interp({'time': time}) if 'time' in cell.dims else cell
             return xarray.concat(
                 [
-                    cell.interp({x_name: location[0], y_name: location[1]})
-                    for location in transformed_point.T
+                    cell.interp({
+                        self.x_name: location[0],
+                        self.y_name: location[1],
+                    })
+                    for location in point.T
                 ],
                 dim='point',
             )
         else:
-            cell = cell.interp({x_name: transformed_point[0], y_name: transformed_point[1]})
+            cell = cell.interp({
+                self.x_name: point[0],
+                self.y_name: point[1],
+            })
             return cell.interp({'time': time}) if 'time' in cell.dims else cell
 
     def u(self, point: numpy.array, time: datetime) -> float:
-        return self._interpolate('u', point, time).values
+        return self._interpolate(self.u_name, point, time).values
 
     def v(self, point: numpy.array, time: datetime) -> float:
-        return self._interpolate('v', point, time).values
+        return self._interpolate(self.v_name, point, time).values
 
 
 class VectorGFS(VectorDataset):
@@ -315,6 +327,7 @@ class VectorGFS(VectorDataset):
 
         super().__init__(
             dataset=dataset,
-            uname='ugrdprs',
-            vname='vgrdprs',
+            u_name='ugrdprs',
+            v_name='vgrdprs',
+            z_name='lev',
         )
