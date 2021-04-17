@@ -10,14 +10,22 @@ import time
 from dateutil.parser import parse as parse_date
 import numpy
 
-from .base import PacketSource
-from .connections import APRSDatabaseTable, APRSfi, APRSis, PacketDatabaseTable, PacketGeoJSON, RawAPRSTextFile, SerialTNC, \
-    TimeIntervalError
-from .packets import APRSPacket
-from .predicts import PredictionAPIURL, PredictionError, get_predictions
-from .tracks import APRSTrack, LocationPacketTrack
-from .utilities import get_logger, read_configuration, repository_root
-from .writer import write_packet_tracks
+from packetraven.base import PacketSource
+from packetraven.connections import (
+    APRSDatabaseTable,
+    APRSfi,
+    APRSis,
+    PacketDatabaseTable,
+    PacketGeoJSON,
+    RawAPRSTextFile,
+    SerialTNC,
+    TimeIntervalError,
+)
+from packetraven.packets import APRSPacket
+from packetraven.predicts import PredictionAPIURL, PredictionError, get_predictions
+from packetraven.tracks import APRSTrack, LocationPacketTrack
+from packetraven.utilities import get_logger, read_configuration, repository_root
+from packetraven.writer import write_packet_tracks
 
 LOGGER = get_logger('packetraven')
 
@@ -48,7 +56,8 @@ def main():
     args_parser.add_argument('--log', help='path to log file to save log messages')
     args_parser.add_argument('--output', help='path to output file to save packets')
     args_parser.add_argument(
-        '--prediction-output', help='path to output file to save most up-to-date predicted trajectory'
+        '--prediction-output',
+        help='path to output file to save most up-to-date predicted trajectory',
     )
     args_parser.add_argument(
         '--prediction-ascent-rate', help='ascent rate to use for prediction (m/s)'
@@ -62,9 +71,7 @@ def main():
     args_parser.add_argument(
         '--prediction-float-altitude', help='float altitude to use for prediction (m)'
     )
-    args_parser.add_argument(
-        '--prediction-float-duration', help='duration of float (s)'
-    )
+    args_parser.add_argument('--prediction-float-duration', help='duration of float (s)')
     args_parser.add_argument(
         '--prediction-api',
         help=f'API URL to use for prediction (one of {[entry.value for entry in PredictionAPIURL]})',
@@ -187,7 +194,9 @@ def main():
             kwargs['prediction_float_altitude'] = float(args.prediction_float_altitude)
 
         if args.prediction_float_duration is not None:
-            kwargs['prediction_float_duration'] = timedelta(seconds=float(args.prediction_float_duration))
+            kwargs['prediction_float_duration'] = timedelta(
+                seconds=float(args.prediction_float_duration)
+            )
 
         if args.prediction_api is not None:
             kwargs['prediction_api_url'] = args.prediction_api
@@ -311,9 +320,12 @@ def main():
                     database_kwargs['database_password'] = database_password
 
                 database = APRSDatabaseTable(
-                    **{key.replace('database_', ''): value
-                       for key, value in database_kwargs.items()},
-                    **ssh_tunnel_kwargs, callsigns=callsigns
+                    **{
+                        key.replace('database_', ''): value
+                        for key, value in database_kwargs.items()
+                    },
+                    **ssh_tunnel_kwargs,
+                    callsigns=callsigns,
                 )
                 LOGGER.info(f'connected to {database.location}')
                 connections.append(database)
@@ -495,7 +507,9 @@ def retrieve_packets(
                 )
 
                 if packet_track.time_to_ground >= timedelta(seconds=0):
-                    current_time_to_ground = packet_time + packet_track.time_to_ground - current_time
+                    current_time_to_ground = (
+                        packet_time + packet_track.time_to_ground - current_time
+                    )
                     message += (
                         f'; {packet_track} descending from max altitude of {packet_track.coordinates[:, 2].max():.3f} m'
                         f'; {current_time_to_ground / timedelta(seconds=1):.2f} s to the ground'

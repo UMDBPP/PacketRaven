@@ -5,7 +5,7 @@ from dateutil.parser import parse as parse_date
 import numpy
 from pyproj import CRS, Geod, Transformer
 
-from .parsing import InvalidPacketError, parse_raw_aprs
+from packetraven.parsing import InvalidPacketError, parse_raw_aprs
 
 DEFAULT_CRS = CRS.from_epsg(4326)
 

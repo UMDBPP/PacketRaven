@@ -14,6 +14,9 @@ from shapely.geometry import Point
 from tablecrow import PostGresTable
 from tablecrow.utilities import split_hostname_port
 
+from packetraven.packets import APRSPacket, LocationPacket
+from packetraven.parsing import InvalidPacketError
+from packetraven.utilities import get_logger, read_configuration, repository_root
 from .base import (
     APRSPacketSink,
     APRSPacketSource,
@@ -22,9 +25,6 @@ from .base import (
     PacketSource,
     next_open_serial_port,
 )
-from .packets import APRSPacket, LocationPacket
-from .parsing import InvalidPacketError
-from .utilities import get_logger, read_configuration, repository_root
 
 LOGGER = get_logger('connection')
 
@@ -458,7 +458,9 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
         kwargs['fields'] = {
             f'packet_{field}': field_type for field, field_type in kwargs['fields'].items()
         }
-        PacketDatabaseTable.__init__(self, hostname=hostname, database=database, table=table, **kwargs)
+        PacketDatabaseTable.__init__(
+            self, hostname=hostname, database=database, table=table, **kwargs
+        )
         location = f'postgres://{self.hostname}:{self.port}/{self.database}/{self.name}'
         APRSPacketSource.__init__(self, location, callsigns)
         APRSPacketSink.__init__(self, location)

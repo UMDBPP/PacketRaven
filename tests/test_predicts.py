@@ -17,7 +17,10 @@ def test_ground_prediction():
     response_json = cusf_api.get()
     predict = cusf_api.predict
 
-    assert all(stage in [entry['stage'] for entry in response_json['prediction']] for stage in ['ascent', 'descent'])
+    assert all(
+        stage in [entry['stage'] for entry in response_json['prediction']]
+        for stage in ['ascent', 'descent']
+    )
     assert len(predict) > 0
 
 
@@ -35,7 +38,10 @@ def test_ascending_prediction():
     response_json = cusf_api.get()
     predict = cusf_api.predict
 
-    assert all(stage in [entry['stage'] for entry in response_json['prediction']] for stage in ['ascent', 'descent'])
+    assert all(
+        stage in [entry['stage'] for entry in response_json['prediction']]
+        for stage in ['ascent', 'descent']
+    )
     assert len(predict) > 0
 
 
@@ -53,7 +59,10 @@ def test_descending_prediction():
     response_json = cusf_api.get()
     predict = cusf_api.predict
 
-    assert all(stage in [entry['stage'] for entry in response_json['prediction']] for stage in ['ascent', 'descent'])
+    assert all(
+        stage in [entry['stage'] for entry in response_json['prediction']]
+        for stage in ['ascent', 'descent']
+    )
     assert len(predict) > 0
 
 
@@ -65,12 +74,21 @@ def test_float_prediction():
     descent_rate = 9
 
     cusf_api = CUSFBalloonPredictionQuery(
-        launch_site, launch_datetime, ascent_rate, burst_altitude, descent_rate,
-        float_end_time=datetime.now() + timedelta(seconds=burst_altitude / ascent_rate) + timedelta(hours=1)
+        launch_site,
+        launch_datetime,
+        ascent_rate,
+        burst_altitude,
+        descent_rate,
+        float_end_time=datetime.now()
+                       + timedelta(seconds=burst_altitude / ascent_rate)
+                       + timedelta(hours=1),
     )
 
     response_json = cusf_api.get()
     predict = cusf_api.predict
 
-    assert all(stage in [entry['stage'] for entry in response_json['prediction']] for stage in ['ascent', 'float', 'descent'])
+    assert all(
+        stage in [entry['stage'] for entry in response_json['prediction']]
+        for stage in ['ascent', 'float', 'descent']
+    )
     assert len(predict) > 0

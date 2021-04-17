@@ -6,9 +6,13 @@ import numpy
 from pandas import DataFrame
 from pyproj import CRS
 
-from .model import FREEFALL_DESCENT_RATE, FREEFALL_DESCENT_RATE_UNCERTAINTY, FREEFALL_SECONDS_TO_GROUND
-from .packets import APRSPacket, DEFAULT_CRS, LocationPacket
-from .structures import DoublyLinkedList
+from packetraven.model import (
+    FREEFALL_DESCENT_RATE,
+    FREEFALL_DESCENT_RATE_UNCERTAINTY,
+    FREEFALL_SECONDS_TO_GROUND,
+)
+from packetraven.packets import APRSPacket, DEFAULT_CRS, LocationPacket
+from packetraven.structures import DoublyLinkedList
 
 
 class LocationPacketTrack:
@@ -145,7 +149,9 @@ class LocationPacketTrack:
         """ total length of the packet track over the ground """
         return sum([distance.overground for distance in self.packets.difference])
 
-    def __getitem__(self, index: Union[int, Iterable[int], slice]) -> Union[LocationPacket, 'LocationPacketTrack']:
+    def __getitem__(
+        self, index: Union[int, Iterable[int], slice]
+    ) -> Union[LocationPacket, 'LocationPacketTrack']:
         if isinstance(index, int):
             return self.packets[index]
         elif isinstance(index, Iterable) or isinstance(index, slice):
@@ -179,19 +185,21 @@ class LocationPacketTrack:
 
     @property
     def dataframe(self) -> DataFrame:
-        return DataFrame({
-            'name': [self.name for _ in range(len(self))],
-            'times': self.times,
-            'x': self.coordinates[:, 0],
-            'y': self.coordinates[:, 1],
-            'z': self.coordinates[:, 2],
-            'intervals': self.intervals,
-            'overground_distances': self.overground_distances,
-            'ascents': self.ascents,
-            'ascent_rates': self.ascent_rates,
-            'ground_speeds': self.ground_speeds,
-            'cumulative_overground_distances': self.cumulative_overground_distances,
-        })
+        return DataFrame(
+            {
+                'name': [self.name for _ in range(len(self))],
+                'times': self.times,
+                'x': self.coordinates[:, 0],
+                'y': self.coordinates[:, 1],
+                'z': self.coordinates[:, 2],
+                'intervals': self.intervals,
+                'overground_distances': self.overground_distances,
+                'ascents': self.ascents,
+                'ascent_rates': self.ascent_rates,
+                'ground_speeds': self.ground_speeds,
+                'cumulative_overground_distances': self.cumulative_overground_distances,
+            }
+        )
 
 
 class BalloonTrack(LocationPacketTrack):
@@ -220,8 +228,12 @@ class BalloonTrack(LocationPacketTrack):
         elif not self.__falling:
             current_altitude = self.altitudes[-1]
             freefall_descent_rate = FREEFALL_DESCENT_RATE(current_altitude)
-            freefall_descent_rate_uncertainty = FREEFALL_DESCENT_RATE_UNCERTAINTY(current_altitude)
-            if numpy.abs(current_ascent_rate - freefall_descent_rate) < numpy.abs(freefall_descent_rate_uncertainty):
+            freefall_descent_rate_uncertainty = FREEFALL_DESCENT_RATE_UNCERTAINTY(
+                current_altitude
+            )
+            if numpy.abs(current_ascent_rate - freefall_descent_rate) < numpy.abs(
+                freefall_descent_rate_uncertainty
+            ):
                 self.__falling = True
         return self.__falling
 

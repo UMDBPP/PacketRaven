@@ -13,15 +13,15 @@ from aprslib.packets.base import APRSPacket
 from dateutil.parser import parse
 import numpy
 
-from . import APRSDatabaseTable, APRSfi, RawAPRSTextFile, SerialTNC
-from .__main__ import DEFAULT_INTERVAL_SECONDS, LOGGER, retrieve_packets
-from .base import available_serial_ports, next_open_serial_port
-from .connections import APRSis, PacketGeoJSON
-from .plotting import LivePlot
-from .predicts import PredictionError, get_predictions
-from .tracks import LocationPacketTrack, PredictedTrajectory
-from .utilities import get_logger
-from .writer import write_packet_tracks
+from packetraven import APRSDatabaseTable, APRSfi, RawAPRSTextFile, SerialTNC
+from packetraven.__main__ import DEFAULT_INTERVAL_SECONDS, LOGGER, retrieve_packets
+from packetraven.base import available_serial_ports, next_open_serial_port
+from packetraven.connections import APRSis, PacketGeoJSON
+from packetraven.plotting import LivePlot
+from packetraven.predicts import PredictionError, get_predictions
+from packetraven.tracks import LocationPacketTrack, PredictedTrajectory
+from packetraven.utilities import get_logger
+from packetraven.writer import write_packet_tracks
 
 
 class PacketRavenGUI:
@@ -705,7 +705,8 @@ class PacketRavenGUI:
                 self.tncs = [
                     connection.location
                     for connection in self.__connections
-                    if isinstance(connection, SerialTNC) or isinstance(connection, RawAPRSTextFile)
+                    if isinstance(connection, SerialTNC)
+                       or isinstance(connection, RawAPRSTextFile)
                 ]
 
                 api_key = self.__configuration['aprs_fi']['aprs_fi_key']
@@ -767,7 +768,10 @@ class PacketRavenGUI:
                                         raise ConnectionError('missing SSH password')
                                     ssh_tunnel_kwargs['ssh_password'] = password
 
-                        database_kwargs = {key.replace('database_', ''): value for key, value in self.__configuration['database'].items()}
+                        database_kwargs = {
+                            key.replace('database_', ''): value
+                            for key, value in self.__configuration['database'].items()
+                        }
                         if (
                             'username' not in database_kwargs
                             or database_kwargs['username'] is None
@@ -797,10 +801,7 @@ class PacketRavenGUI:
                             if database_password is None or len(database_password) == 0:
                                 raise ConnectionError('missing database password')
                             database_kwargs['password'] = database_password
-                        if (
-                            'table' not in database_kwargs
-                            or database_kwargs['table'] is None
-                        ):
+                        if 'table' not in database_kwargs or database_kwargs['table'] is None:
                             database_table = simpledialog.askstring(
                                 'Database Table',
                                 f'enter database table name',

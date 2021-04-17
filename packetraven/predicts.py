@@ -9,9 +9,9 @@ import pytz
 import requests
 from shapely.geometry import Point
 
-from .packets import LocationPacket
-from .tracks import LocationPacketTrack, PredictedTrajectory
-from .utilities import get_logger
+from packetraven.packets import LocationPacket
+from packetraven.tracks import LocationPacketTrack, PredictedTrajectory
+from packetraven.utilities import get_logger
 
 DEFAULT_ASCENT_RATE = 5.5
 DEFAULT_BURST_ALTITUDE = 28000
@@ -71,7 +71,10 @@ class BalloonPredictionQuery(ABC):
                 launch_time = UTC_TIMEZONE.localize(launch_time)
 
         if float_end_time is not None:
-            if float_end_time.tzinfo is None or float_end_time.tzinfo.utcoffset(float_end_time) is None:
+            if (
+                float_end_time.tzinfo is None
+                or float_end_time.tzinfo.utcoffset(float_end_time) is None
+            ):
                 float_end_time = UTC_TIMEZONE.localize(float_end_time)
 
         self.api_url = api_url
@@ -131,7 +134,10 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
                 profile = FlightProfile.standard
 
         if dataset_time is not None:
-            if dataset_time.tzinfo is None or dataset_time.tzinfo.utcoffset(dataset_time) is None:
+            if (
+                dataset_time.tzinfo is None
+                or dataset_time.tzinfo.utcoffset(dataset_time) is None
+            ):
                 dataset_time = UTC_TIMEZONE.localize(dataset_time)
 
         if api_url is None:
@@ -219,7 +225,11 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
                             raise PredictionError('API did not return a float trajectory')
 
                         standard_profile_query = self.__class__(
-                            launch_site=[float_end['longitude'], float_end['latitude'], float_end['altitude']],
+                            launch_site=[
+                                float_end['longitude'],
+                                float_end['latitude'],
+                                float_end['altitude'],
+                            ],
                             launch_time=parse_date(float_end['datetime']),
                             ascent_rate=10,
                             burst_altitude=float_end['altitude'] + 0.1,
@@ -410,12 +420,19 @@ def get_predictions(
         prediction_start_time = packet_track[-1].time
 
         if float_altitude is not None and not packet_track.falling:
-            packets_at_float_altitude = packet_track[numpy.abs(float_altitude - packet_track.altitudes) < float_altitude_uncertainty]
-            if len(packets_at_float_altitude) > 0 and packets_at_float_altitude[-1].time == packet_track.times[-1]:
+            packets_at_float_altitude = packet_track[
+                numpy.abs(float_altitude - packet_track.altitudes) < float_altitude_uncertainty
+                ]
+            if (
+                len(packets_at_float_altitude) > 0
+                and packets_at_float_altitude[-1].time == packet_track.times[-1]
+            ):
                 float_start_time = packets_at_float_altitude[0].time
                 descent_only = False
             elif packet_track.ascent_rates[-1] >= 0:
-                float_start_time = prediction_start_time + timedelta(seconds=(float_altitude - prediction_start_location[2]) / ascent_rate)
+                float_start_time = prediction_start_time + timedelta(
+                    seconds=(float_altitude - prediction_start_location[2]) / ascent_rate
+                )
                 descent_only = False
             else:
                 float_start_time = None

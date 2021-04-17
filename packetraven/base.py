@@ -4,7 +4,7 @@ from datetime import timedelta
 import requests
 from serial.tools import list_ports
 
-from .packets import APRSPacket, LocationPacket
+from packetraven.packets import APRSPacket, LocationPacket
 
 
 class Connection(ABC):
