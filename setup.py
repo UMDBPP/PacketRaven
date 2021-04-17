@@ -105,5 +105,5 @@ setup(
         'testing': ['flake8', 'pytest', 'pytest-cov', 'pytest-xdist', 'pytz'],
         'development': ['oitnb'],
     },
-    entry_points={'console_scripts': ['packetraven=client.cli:main']},
+    entry_points={'console_scripts': ['packetraven=packetraven.__main__:main']},
 )

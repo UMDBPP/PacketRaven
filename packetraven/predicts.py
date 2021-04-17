@@ -9,9 +9,9 @@ import pytz
 import requests
 from shapely.geometry import Point
 
-from packetraven.packets import LocationPacket
-from packetraven.tracks import LocationPacketTrack, PredictedTrajectory
-from packetraven.utilities import get_logger
+from .packets import LocationPacket
+from .tracks import LocationPacketTrack, PredictedTrajectory
+from .utilities import get_logger
 
 DEFAULT_ASCENT_RATE = 5.5
 DEFAULT_BURST_ALTITUDE = 28000

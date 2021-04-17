@@ -1,1 +1,1 @@
-from packetraven.connections import APRSDatabaseTable, APRSfi, RawAPRSTextFile, SerialTNC
+from .connections import APRSDatabaseTable, APRSfi, RawAPRSTextFile, SerialTNC
