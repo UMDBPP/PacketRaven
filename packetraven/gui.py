@@ -13,15 +13,15 @@ from aprslib.packets.base import APRSPacket
 from dateutil.parser import parse
 import numpy
 
-from packetraven import APRSDatabaseTable, APRSfi, RawAPRSTextFile, SerialTNC
-from packetraven.__main__ import DEFAULT_INTERVAL_SECONDS, LOGGER, retrieve_packets
-from packetraven.base import available_serial_ports, next_open_serial_port
-from packetraven.connections import APRSis, PacketGeoJSON
-from packetraven.plotting import LivePlot
-from packetraven.predicts import PredictionError, get_predictions
-from packetraven.tracks import LocationPacketTrack, PredictedTrajectory
-from packetraven.utilities import get_logger
-from packetraven.writer import write_packet_tracks
+from . import APRSDatabaseTable, APRSfi, RawAPRSTextFile, SerialTNC
+from .__main__ import DEFAULT_INTERVAL_SECONDS, LOGGER, retrieve_packets
+from .base import available_serial_ports, next_open_serial_port
+from .connections import APRSis, PacketGeoJSON
+from .plotting import LivePlot
+from .predicts import PredictionError, get_predictions
+from .tracks import LocationPacketTrack, PredictedTrajectory
+from .utilities import get_logger
+from .writer import write_packet_tracks
 
 
 class PacketRavenGUI:
