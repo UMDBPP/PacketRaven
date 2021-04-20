@@ -474,8 +474,7 @@ def retrieve_packets(
             new_packets[source] = list(sorted(new_packets[source]))
 
         for source, packets in new_packets.items():
-            logger.info(f'received {len(packets)} new packet(s) from {source}: {packets}')
-            parsed_packets.extend(packets)
+            logger.info(f'received {len(packets)} new packet(s) from {source}')
 
         if database is not None:
             for packets in new_packets.values():
@@ -489,33 +488,29 @@ def retrieve_packets(
                 / numpy.timedelta64(1, 's')
             )
 
-            message = ''
+            packet_track.sort()
+
             try:
+                packet_prefix = f'{callsign:8} packet #{len(packet_track)}'
+
                 coordinate_string = ', '.join(
                     f'{coordinate:.3f}°' for coordinate in packet_track.coordinates[-1, :2]
                 )
-                message += (
-                    f'{callsign:8} #{len(packet_track)} ({coordinate_string}, {packet_track.coordinates[-1, 2]:.2f}m)'
-                    f'; {(current_time - packet_time) / timedelta(seconds=1):.2f}s old'
-                    f'; {packet_track.intervals[-1]:.2f}s since last packet'
-                    f'; {packet_track.overground_distances[-1]:.2f}m distance over ground ({packet_track.ground_speeds[-1]:.2f}m/s), '
-                    f'{packet_track.ascents[-1]:.2f}m ascent ({packet_track.ascent_rates[-1]:.2f}m/s)'
-                )
+                logger.info(f'{packet_prefix} - ({coordinate_string}, {packet_track.coordinates[-1, 2]:.2f}m)')
+
+                logger.info(
+                    f'{packet_prefix} - {(current_time - packet_time) / timedelta(seconds=1):.2f}s old ({packet_track.intervals[-1]:.2f}s since previous packet, average interval {numpy.mean(packet_track.intervals):.2f}s)')
+                logger.info(
+                    f'{packet_prefix} - {packet_track.overground_distances[-1]:.2f}m distance over ground ({packet_track.ground_speeds[-1]:.2f}m/s)')
+                logger.info(f'{packet_prefix} - {packet_track.ascents[-1]:.2f}m ascent ({packet_track.ascent_rates[-1]:.2f}m/s)')
 
                 if packet_track.time_to_ground >= timedelta(seconds=0):
-                    current_time_to_ground = (
-                        packet_time + packet_track.time_to_ground - current_time
-                    )
-                    message += (
-                        f'; {packet_track} descending from max altitude of {packet_track.coordinates[:, 2].max():.3f} m'
-                        f'; {current_time_to_ground / timedelta(seconds=1):.2f} s to the ground'
-                    )
-            except Exception as error:
-                LOGGER.exception(f'{error.__class__.__name__} - {error}')
-            finally:
-                logger.info(message)
+                    logger.info(f'{packet_prefix} - descending from max altitude of {packet_track.coordinates[:, 2].max():.3f} m')
 
-            packet_track.sort()
+                    current_time_to_ground = packet_time + packet_track.time_to_ground - current_time
+                    logger.info(f'{packet_prefix} - {current_time_to_ground / timedelta(seconds=1):.2f} s to the ground')
+            except Exception as error:
+                logger.exception(f'{error.__class__.__name__} - {error}')
 
         if output_filename is not None:
             write_packet_tracks(
