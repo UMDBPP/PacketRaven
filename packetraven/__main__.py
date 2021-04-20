@@ -509,7 +509,7 @@ def retrieve_packets(
             )
             try:
                 message = f'{callsign:8} - ' \
-                          f'current altitude: {packet_track.altitudes[-1]:6.1f} m' \
+                          f'altitude: {packet_track.altitudes[-1]:6.1f} m' \
                           f'; avg. ascent rate: {numpy.mean(packet_track.ascent_rates[packet_track.ascent_rates > 0]):5.1f} m/s' \
                           f'; avg. descent rate: {numpy.mean(packet_track.ascent_rates[packet_track.ascent_rates < 0]):5.1f} m/s' \
                           f'; avg. ground speed: {numpy.mean(packet_track.ground_speeds):5.1f} m/s' \
