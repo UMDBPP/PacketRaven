@@ -8,6 +8,7 @@ import sys
 import time
 
 from dateutil.parser import parse as parse_date
+import humanize as humanize
 import numpy
 
 from packetraven.base import PacketSource
@@ -27,7 +28,7 @@ from packetraven.tracks import APRSTrack, LocationPacketTrack
 from packetraven.utilities import get_logger, read_configuration, repository_root
 from packetraven.writer import write_packet_tracks
 
-LOGGER = get_logger('packetraven')
+LOGGER = get_logger('packetraven', log_format='%(asctime)s | %(message)s')
 
 CREDENTIALS_FILENAME = repository_root() / 'credentials.config'
 DEFAULT_INTERVAL_SECONDS = 20
@@ -410,10 +411,6 @@ def main():
             sys.exit(0)
 
 
-if __name__ == '__main__':
-    main()
-
-
 def retrieve_packets(
     connections: [PacketSource],
     packet_tracks: [LocationPacketTrack],
@@ -478,8 +475,7 @@ def retrieve_packets(
             new_packets[source] = list(sorted(new_packets[source]))
 
         for source, packets in new_packets.items():
-            logger.info(f'received {len(packets)} new packet(s) from {source}: {packets}')
-            parsed_packets.extend(packets)
+            logger.info(f'received {len(packets)} new packet(s) from {source}')
 
         if database is not None:
             for packets in new_packets.values():
@@ -492,34 +488,43 @@ def retrieve_packets(
                 (packet_track.times[-1] - numpy.datetime64('1970-01-01T00:00:00Z'))
                 / numpy.timedelta64(1, 's')
             )
-
-            message = ''
+            packet_track.sort()
             try:
-                coordinate_string = ', '.join(
-                    f'{coordinate:.3f}°' for coordinate in packet_track.coordinates[-1, :2]
+                coordinate_string = ', '.join(f'{coordinate:.3f}°'
+                                              for coordinate in packet_track.coordinates[-1, :2])
+                logger.info(
+                    f'{callsign:8} - packet #{len(packet_track):<3} - ({coordinate_string}, {packet_track.coordinates[-1, 2]:9.2f}m)'
+                    f'; packet time is {packet_time} ({humanize.naturaltime(current_time - packet_time)}, {packet_track.intervals[-1]:6.1f} s interval)'
+                    f'; traveled {packet_track.overground_distances[-1]:6.1f} m ({packet_track.ground_speeds[-1]:5.1f} m/s) over the ground'
+                    f', and {packet_track.ascents[-1]:6.1f} m ({packet_track.ascent_rates[-1]:5.1f} m/s) vertically, since the previous packet'
                 )
-                message += (
-                    f'{callsign:8} #{len(packet_track)} ({coordinate_string}, {packet_track.coordinates[-1, 2]:.2f}m)'
-                    f'; {(current_time - packet_time) / timedelta(seconds=1):.2f}s old'
-                    f'; {packet_track.intervals[-1]:.2f}s since last packet'
-                    f'; {packet_track.overground_distances[-1]:.2f}m distance over ground ({packet_track.ground_speeds[-1]:.2f}m/s), '
-                    f'{packet_track.ascents[-1]:.2f}m ascent ({packet_track.ascent_rates[-1]:.2f}m/s)'
-                )
+            except Exception as error:
+                logger.exception(f'{error.__class__.__name__} - {error}')
+
+        for callsign in updated_callsigns:
+            packet_track = packet_tracks[callsign]
+            packet_time = datetime.utcfromtimestamp(
+                (packet_track.times[-1] - numpy.datetime64('1970-01-01T00:00:00Z'))
+                / numpy.timedelta64(1, 's')
+            )
+            try:
+                message = f'{callsign:8} - ' \
+                          f'altitude: {packet_track.altitudes[-1]:6.1f} m' \
+                          f'; avg. ascent rate: {numpy.mean(packet_track.ascent_rates[packet_track.ascent_rates > 0]):5.1f} m/s' \
+                          f'; avg. descent rate: {numpy.mean(packet_track.ascent_rates[packet_track.ascent_rates < 0]):5.1f} m/s' \
+                          f'; avg. ground speed: {numpy.mean(packet_track.ground_speeds):5.1f} m/s' \
+                          f'; avg. packet interval: {numpy.mean(packet_track.intervals):6.1f} s'
 
                 if packet_track.time_to_ground >= timedelta(seconds=0):
-                    current_time_to_ground = (
-                        packet_time + packet_track.time_to_ground - current_time
-                    )
-                    message += (
-                        f'; {packet_track} descending from max altitude of {packet_track.coordinates[:, 2].max():.3f} m'
-                        f'; {current_time_to_ground / timedelta(seconds=1):.2f} s to the ground'
-                    )
-            except Exception as error:
-                LOGGER.exception(f'{error.__class__.__name__} - {error}')
-            finally:
+                    landing_time = packet_time + packet_track.time_to_ground
+                    time_to_ground = current_time - landing_time
+                    message += f'; estimated landing: {landing_time:%Y-%m-%d %H:%M:%S} ({humanize.naturaltime(time_to_ground)})' \
+                               f'; max altitude: {packet_track.coordinates[:, 2].max():.2f} m'
+
                 logger.info(message)
 
-            packet_track.sort()
+            except Exception as error:
+                logger.exception(f'{error.__class__.__name__} - {error}')
 
         if output_filename is not None:
             write_packet_tracks(
@@ -534,3 +539,7 @@ def retrieve_packets(
         connections.pop(output_filename_index)
 
     return new_packets
+
+
+if __name__ == '__main__':
+    main()

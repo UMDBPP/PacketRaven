@@ -461,7 +461,7 @@ def get_predictions(
         prediction = prediction_query.predict
 
         if packet_track.time_to_ground >= timedelta(seconds=0):
-            LOGGER.info(f'predicted landing location: {prediction.coordinates[-1]}')
+            LOGGER.info(f'"{packet_track.name}" predicted landing location: {prediction.coordinates[-1]}')
 
         prediction_tracks[name] = prediction
 
