@@ -410,10 +410,6 @@ def main():
             sys.exit(0)
 
 
-if __name__ == '__main__':
-    main()
-
-
 def retrieve_packets(
     connections: [PacketSource],
     packet_tracks: [LocationPacketTrack],
@@ -534,3 +530,7 @@ def retrieve_packets(
         connections.pop(output_filename_index)
 
     return new_packets
+
+
+if __name__ == '__main__':
+    main()
