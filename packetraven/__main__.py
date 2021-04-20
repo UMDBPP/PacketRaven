@@ -8,6 +8,7 @@ import sys
 import time
 
 from dateutil.parser import parse as parse_date
+import humanize as humanize
 import numpy
 
 from packetraven.base import PacketSource
@@ -27,7 +28,7 @@ from packetraven.tracks import APRSTrack, LocationPacketTrack
 from packetraven.utilities import get_logger, read_configuration, repository_root
 from packetraven.writer import write_packet_tracks
 
-LOGGER = get_logger('packetraven')
+LOGGER = get_logger('packetraven', log_format='%(asctime)s | %(message)s')
 
 CREDENTIALS_FILENAME = repository_root() / 'credentials.config'
 DEFAULT_INTERVAL_SECONDS = 20
@@ -487,28 +488,41 @@ def retrieve_packets(
                 (packet_track.times[-1] - numpy.datetime64('1970-01-01T00:00:00Z'))
                 / numpy.timedelta64(1, 's')
             )
-
             packet_track.sort()
-
             try:
-                packet_prefix = f'{callsign:8} packet #{len(packet_track)}'
-
-                coordinate_string = ', '.join(
-                    f'{coordinate:.3f}°' for coordinate in packet_track.coordinates[-1, :2]
+                coordinate_string = ', '.join(f'{coordinate:.3f}°'
+                                              for coordinate in packet_track.coordinates[-1, :2])
+                logger.info(
+                    f'{callsign:8} - packet #{len(packet_track):<3} - ({coordinate_string}, {packet_track.coordinates[-1, 2]:9.2f}m)'
+                    f'; packet time is {packet_time} ({humanize.naturaltime(current_time - packet_time)}, {packet_track.intervals[-1]:6.1f} s interval)'
+                    f'; traveled {packet_track.overground_distances[-1]:6.1f} m ({packet_track.ground_speeds[-1]:5.1f} m/s) over the ground'
+                    f', and {packet_track.ascents[-1]:6.1f} m ({packet_track.ascent_rates[-1]:5.1f} m/s) vertically, since the previous packet'
                 )
-                logger.info(f'{packet_prefix} - ({coordinate_string}, {packet_track.coordinates[-1, 2]:.2f}m)')
+            except Exception as error:
+                logger.exception(f'{error.__class__.__name__} - {error}')
 
-                logger.info(
-                    f'{packet_prefix} - {(current_time - packet_time) / timedelta(seconds=1):.2f}s old ({packet_track.intervals[-1]:.2f}s since previous packet, average interval {numpy.mean(packet_track.intervals):.2f}s)')
-                logger.info(
-                    f'{packet_prefix} - {packet_track.overground_distances[-1]:.2f}m distance over ground ({packet_track.ground_speeds[-1]:.2f}m/s)')
-                logger.info(f'{packet_prefix} - {packet_track.ascents[-1]:.2f}m ascent ({packet_track.ascent_rates[-1]:.2f}m/s)')
+        for callsign in updated_callsigns:
+            packet_track = packet_tracks[callsign]
+            packet_time = datetime.utcfromtimestamp(
+                (packet_track.times[-1] - numpy.datetime64('1970-01-01T00:00:00Z'))
+                / numpy.timedelta64(1, 's')
+            )
+            try:
+                message = f'{callsign:8} - ' \
+                          f'current altitude: {packet_track.altitudes[-1]:6.1f} m' \
+                          f'; avg. ascent rate: {numpy.mean(packet_track.ascent_rates[packet_track.ascent_rates > 0]):5.1f} m/s' \
+                          f'; avg. descent rate: {numpy.mean(packet_track.ascent_rates[packet_track.ascent_rates < 0]):5.1f} m/s' \
+                          f'; avg. ground speed: {numpy.mean(packet_track.ground_speeds):5.1f} m/s' \
+                          f'; avg. packet interval: {numpy.mean(packet_track.intervals):6.1f} s'
 
                 if packet_track.time_to_ground >= timedelta(seconds=0):
-                    logger.info(f'{packet_prefix} - descending from max altitude of {packet_track.coordinates[:, 2].max():.3f} m')
+                    landing_time = packet_time + packet_track.time_to_ground
+                    time_to_ground = current_time - landing_time
+                    message += f'; estimated landing: {landing_time:%Y-%m-%d %H:%M:%S} ({humanize.naturaltime(time_to_ground)})' \
+                               f'; max altitude: {packet_track.coordinates[:, 2].max():.2f} m'
 
-                    current_time_to_ground = packet_time + packet_track.time_to_ground - current_time
-                    logger.info(f'{packet_prefix} - {current_time_to_ground / timedelta(seconds=1):.2f} s to the ground')
+                logger.info(message)
+
             except Exception as error:
                 logger.exception(f'{error.__class__.__name__} - {error}')
 
