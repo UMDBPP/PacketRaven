@@ -9,7 +9,6 @@ from tkinter import filedialog, messagebox, simpledialog
 from tkinter.ttk import Combobox, Separator
 from typing import Callable, Collection
 
-from aprslib.packets.base import APRSPacket
 from dateutil.parser import parse
 import numpy
 
@@ -17,6 +16,7 @@ from packetraven import APRSDatabaseTable, APRSfi, RawAPRSTextFile, SerialTNC
 from packetraven.__main__ import DEFAULT_INTERVAL_SECONDS, LOGGER, retrieve_packets
 from packetraven.base import available_serial_ports, next_open_serial_port
 from packetraven.connections import APRSis, PacketGeoJSON
+from packetraven.packets import APRSPacket
 from packetraven.plotting import LivePlot
 from packetraven.predicts import PredictionError, get_predictions
 from packetraven.tracks import LocationPacketTrack, PredictedTrajectory
