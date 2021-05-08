@@ -89,6 +89,7 @@ setup(
         'aprslib',
         'haversine',
         'humanize',
+        'kiss',
         'numpy>=1.20.0',
         'pandas',
         'pyserial',
