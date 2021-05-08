@@ -88,6 +88,7 @@ setup(
     install_requires=[
         'aprslib',
         'haversine',
+        'kiss',
         'numpy>=1.20.0',
         'pandas',
         'pyserial',
