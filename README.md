@@ -62,11 +62,12 @@ packetraven --callsigns W3EAX-8,W3EAX-14 --apikey <api_key> --gui
 ## Usage:
 
 ```text
-usage: packetraven [-h] [--callsigns CALLSIGNS] [--aprsfi-key APRSFI_KEY] [--tnc TNC] [--database DATABASE] [--tunnel TUNNEL] [--igate]
-                   [--start START] [--end END] [--log LOG] [--output OUTPUT] [--prediction-output PREDICTION_OUTPUT]
+usage: packetraven [-h] [--callsigns CALLSIGNS] [--aprsfi-key APRSFI_KEY] [--tnc TNC] [--database DATABASE] [--tunnel TUNNEL]
+                   [--igate] [--start START] [--end END] [--log LOG] [--output OUTPUT] [--prediction-output PREDICTION_OUTPUT]
                    [--prediction-ascent-rate PREDICTION_ASCENT_RATE] [--prediction-burst-altitude PREDICTION_BURST_ALTITUDE]
                    [--prediction-descent-rate PREDICTION_DESCENT_RATE] [--prediction-float-altitude PREDICTION_FLOAT_ALTITUDE]
-                   [--prediction-float-end-time PREDICTION_FLOAT_END_TIME] [--prediction-api PREDICTION_API] [--interval INTERVAL] [--gui]
+                   [--prediction-float-duration PREDICTION_FLOAT_DURATION] [--prediction-api PREDICTION_API] [--interval INTERVAL]
+                   [--gui]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -74,8 +75,8 @@ optional arguments:
                         comma-separated list of callsigns to track
   --aprsfi-key APRSFI_KEY
                         APRS.fi API key (from https://aprs.fi/page/api)
-  --tnc TNC             comma-separated list of serial ports / text files of a TNC parsing APRS packets from analog audio to ASCII (set to
-                        `auto` to use the first open serial port)
+  --tnc TNC             comma-separated list of serial ports / text files of a TNC parsing APRS packets from analog audio to ASCII
+                        (set to `auto` to use the first open serial port)
   --database DATABASE   PostGres database table `user@hostname:port/database/table`
   --tunnel TUNNEL       SSH tunnel `user@hostname:port`
   --igate               send new packets to APRS-IS
@@ -93,8 +94,8 @@ optional arguments:
                         descent rate to use for prediction (m/s)
   --prediction-float-altitude PREDICTION_FLOAT_ALTITUDE
                         float altitude to use for prediction (m)
-  --prediction-float-end-time PREDICTION_FLOAT_END_TIME
-                        float end time to use for prediction
+  --prediction-float-duration PREDICTION_FLOAT_DURATION
+                        duration of float (s)
   --prediction-api PREDICTION_API
                         API URL to use for prediction (one of ['https://predict.cusf.co.uk/api/v1/',
                         'https://predict.lukerenegar.com/api/v1.1/'])
@@ -109,26 +110,24 @@ to retrieve packets directly from https://aprs.fi:
 ```python
 from packetraven import APRSfi
 
-callsigns = ['W3EAX-8', 'W3EAX-12', 'KC3FXX', 'KC3ZRB']
-api_key = '<api_key>' # enter your APRS.fi API key here - you can get one from https://aprs.fi/page/api
+aprs_fi = APRSfi(
+    callsigns=['W3EAX-8', 'W3EAX-12', 'KC3FXX', 'KC3ZRB'],
+    api_key='<api_key>',  # enter your APRS.fi API key here - you can get one from https://aprs.fi/page/api
+)
 
-aprs_fi = APRSfi(callsigns, api_key)
-aprs_fi_packets = aprs_fi.packets
-
-print(aprs_fi_packets)
+print(aprs_fi.packets)
 ```
 
 or parse packets from a TNC sending parsed APRS over a USB connection:
 
 ```python
 from packetraven import SerialTNC
- 
-serial_port = 'COM5' # set to `'auto'` to connect to the first open serial port  
 
-tnc = SerialTNC(serial_port)
-tnc_packets = tnc.packets
+tnc = SerialTNC(
+    serial_port='COM5',  # set to `'auto'` to connect to the first open serial port
+)
 
-print(tnc_packets)
+print(tnc.packets)
 ```
 
 or connect to a PostGreSQL database running PostGIS:
@@ -136,24 +135,17 @@ or connect to a PostGreSQL database running PostGIS:
 ```python
 from packetraven import APRSDatabaseTable
 
-callsigns = ['W3EAX-8', 'W3EAX-12', 'KC3FXX', 'KC3ZRB']
+table = APRSDatabaseTable(
+    hostname='<hostname>:5432',
+    database='<database_name>',
+    table='packets',
+    callsigns=['W3EAX-8', 'W3EAX-12', 'KC3FXX', 'KC3ZRB'],
+    username='<username>',
+    password='<password>',
+    ssh_hostname=None,
+    ssh_username=None,
+    ssh_password=None,
+)
 
-hostname = '<hostname>:5432'
-database = '<database_name>'
-table = 'packets'
-
-username = '<username>'
-password = '<password>'
-
-# parameters for an SSH tunnel
-ssh_hostname = None
-ssh_username = None
-ssh_password = None
-
-table = APRSDatabaseTable(hostname, database, table, callsigns, 
-                          username=username, password=password, 
-                          ssh_hostname=ssh_hostname, ssh_username=ssh_hostname, ssh_password=ssh_password)
-table_packets = table.packets
-
-print(table_packets)
+print(table.packets)
 ```
