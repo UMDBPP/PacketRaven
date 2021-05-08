@@ -5,7 +5,7 @@ import os
 import psycopg2
 import pytest
 from sshtunnel import SSHTunnelForwarder
-from tablecrow.table import random_open_tcp_port
+from tablecrow.tables.base import random_open_tcp_port
 from tablecrow.tables.postgres import PostGresTable, SSH_DEFAULT_PORT, database_has_table
 from tablecrow.utilities import split_hostname_port
 
