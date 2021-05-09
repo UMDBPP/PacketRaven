@@ -73,7 +73,7 @@ class InvalidPacketError(Exception):
 
 def decompress_longitude(compressed_longitude: str) -> float:
     """
-    Decode longitude string from APRS compressed format (shifted ASCII in base 91) to a float.
+    Decode longitude string from APRS compressed format (shifted ASCII in model.py 91) to a float.
 
     :param compressed_longitude: compressed APRS longitude string
     :return: longitude
@@ -91,7 +91,7 @@ def decompress_longitude(compressed_longitude: str) -> float:
 
 def decompress_latitude(compressed_latitude: str) -> float:
     """
-    Decode latitude string from APRS compressed format (shifted ASCII in base 91) to a float.
+    Decode latitude string from APRS compressed format (shifted ASCII in model.py 91) to a float.
 
     :param compressed_latitude: compressed APRS latitude string
     :return: latitude

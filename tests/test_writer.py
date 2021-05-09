@@ -6,9 +6,9 @@ import pytest
 import pytz
 
 from packetraven.packets import APRSPacket
-from packetraven.tracks import APRSTrack
+from packetraven.packets.tracks import APRSTrack
+from packetraven.packets.writer import write_packet_tracks
 from packetraven.utilities import repository_root
-from packetraven.writer import write_packet_tracks
 
 REFERENCE_DIRECTORY = repository_root() / 'tests' / 'reference'
 

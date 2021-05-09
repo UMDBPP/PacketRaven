@@ -7,7 +7,7 @@ import numpy
 from shapely.geometry import LineString
 
 from packetraven.packets import APRSPacket
-from packetraven.tracks import APRSTrack, LocationPacketTrack
+from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
 
 KML_STANDARD = '{http://www.opengis.net/kml/2.2}'
 

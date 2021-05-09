@@ -11,7 +11,6 @@ from dateutil.parser import parse as parse_date
 import humanize as humanize
 import numpy
 
-from packetraven.base import PacketSource
 from packetraven.connections import (
     APRSDatabaseTable,
     APRSfi,
@@ -22,11 +21,12 @@ from packetraven.connections import (
     SerialTNC,
     TimeIntervalError,
 )
+from packetraven.connections.base import PacketSource
 from packetraven.packets import APRSPacket
+from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
+from packetraven.packets.writer import write_packet_tracks
 from packetraven.predicts import PredictionAPIURL, PredictionError, get_predictions
-from packetraven.tracks import APRSTrack, LocationPacketTrack
 from packetraven.utilities import get_logger, read_configuration, repository_root
-from packetraven.writer import write_packet_tracks
 
 LOGGER = get_logger('packetraven', log_format='%(asctime)s | %(message)s')
 
@@ -490,8 +490,9 @@ def retrieve_packets(
             )
             packet_track.sort()
             try:
-                coordinate_string = ', '.join(f'{coordinate:.3f}°'
-                                              for coordinate in packet_track.coordinates[-1, :2])
+                coordinate_string = ', '.join(
+                    f'{coordinate:.3f}°' for coordinate in packet_track.coordinates[-1, :2]
+                )
                 logger.info(
                     f'{callsign:8} - packet #{len(packet_track):<3} - ({coordinate_string}, {packet_track.coordinates[-1, 2]:9.2f}m)'
                     f'; packet time is {packet_time} ({humanize.naturaltime(current_time - packet_time)}, {packet_track.intervals[-1]:6.1f} s interval)'
@@ -508,18 +509,22 @@ def retrieve_packets(
                 / numpy.timedelta64(1, 's')
             )
             try:
-                message = f'{callsign:8} - ' \
-                          f'altitude: {packet_track.altitudes[-1]:6.1f} m' \
-                          f'; avg. ascent rate: {numpy.mean(packet_track.ascent_rates[packet_track.ascent_rates > 0]):5.1f} m/s' \
-                          f'; avg. descent rate: {numpy.mean(packet_track.ascent_rates[packet_track.ascent_rates < 0]):5.1f} m/s' \
-                          f'; avg. ground speed: {numpy.mean(packet_track.ground_speeds):5.1f} m/s' \
-                          f'; avg. packet interval: {numpy.mean(packet_track.intervals):6.1f} s'
+                message = (
+                    f'{callsign:8} - '
+                    f'altitude: {packet_track.altitudes[-1]:6.1f} m'
+                    f'; avg. ascent rate: {numpy.mean(packet_track.ascent_rates[packet_track.ascent_rates > 0]):5.1f} m/s'
+                    f'; avg. descent rate: {numpy.mean(packet_track.ascent_rates[packet_track.ascent_rates < 0]):5.1f} m/s'
+                    f'; avg. ground speed: {numpy.mean(packet_track.ground_speeds):5.1f} m/s'
+                    f'; avg. packet interval: {numpy.mean(packet_track.intervals):6.1f} s'
+                )
 
                 if packet_track.time_to_ground >= timedelta(seconds=0):
                     landing_time = packet_time + packet_track.time_to_ground
                     time_to_ground = current_time - landing_time
-                    message += f'; estimated landing: {landing_time:%Y-%m-%d %H:%M:%S} ({humanize.naturaltime(time_to_ground)})' \
-                               f'; max altitude: {packet_track.coordinates[:, 2].max():.2f} m'
+                    message += (
+                        f'; estimated landing: {landing_time:%Y-%m-%d %H:%M:%S} ({humanize.naturaltime(time_to_ground)})'
+                        f'; max altitude: {packet_track.coordinates[:, 2].max():.2f} m'
+                    )
 
                 logger.info(message)
 

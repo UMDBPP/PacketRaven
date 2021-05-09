@@ -9,7 +9,7 @@ from tablecrow.tables.base import random_open_tcp_port
 from tablecrow.tables.postgres import PostGresTable, SSH_DEFAULT_PORT, database_has_table
 from tablecrow.utilities import split_hostname_port
 
-from packetraven.connections import APRSDatabaseTable
+from packetraven import APRSDatabaseTable
 from packetraven.packets import APRSPacket
 from packetraven.utilities import read_configuration, repository_root
 

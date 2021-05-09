@@ -10,7 +10,7 @@ import requests
 from shapely.geometry import Point
 
 from packetraven.packets import LocationPacket
-from packetraven.tracks import LocationPacketTrack, PredictedTrajectory
+from packetraven.packets.tracks import LocationPacketTrack, PredictedTrajectory
 from packetraven.utilities import get_logger
 
 DEFAULT_ASCENT_RATE = 5.5
@@ -422,7 +422,7 @@ def get_predictions(
         if float_altitude is not None and not packet_track.falling:
             packets_at_float_altitude = packet_track[
                 numpy.abs(float_altitude - packet_track.altitudes) < float_altitude_uncertainty
-                ]
+            ]
             if (
                 len(packets_at_float_altitude) > 0
                 and packets_at_float_altitude[-1].time == packet_track.times[-1]
@@ -461,7 +461,9 @@ def get_predictions(
         prediction = prediction_query.predict
 
         if packet_track.time_to_ground >= timedelta(seconds=0):
-            LOGGER.info(f'"{packet_track.name}" predicted landing location: {prediction.coordinates[-1]}')
+            LOGGER.info(
+                f'"{packet_track.name}" predicted landing location: {prediction.coordinates[-1]}'
+            )
 
         prediction_tracks[name] = prediction
 

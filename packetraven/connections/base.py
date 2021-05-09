@@ -5,6 +5,15 @@ import requests
 from serial.tools import list_ports
 
 from packetraven.packets import APRSPacket, LocationPacket
+from packetraven.utilities import get_logger, repository_root
+
+LOGGER = get_logger('connection')
+
+CREDENTIALS_FILENAME = repository_root() / 'credentials.config'
+
+
+class TimeIntervalError(Exception):
+    pass
 
 
 class Connection(ABC):

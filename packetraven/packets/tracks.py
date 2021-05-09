@@ -12,7 +12,7 @@ from packetraven.model import (
     FREEFALL_SECONDS_TO_GROUND,
 )
 from packetraven.packets import APRSPacket, DEFAULT_CRS, LocationPacket
-from packetraven.structures import DoublyLinkedList
+from packetraven.packets.structures import DoublyLinkedList
 
 
 class LocationPacketTrack:

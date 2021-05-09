@@ -4,7 +4,7 @@ from matplotlib import pyplot
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from packetraven.tracks import LocationPacketTrack, PredictedTrajectory
+from packetraven.packets.tracks import LocationPacketTrack, PredictedTrajectory
 
 VARIABLES = {
     'altitude': {'x': 'times', 'y': 'altitudes', 'xlabel': 'time', 'ylabel': 'altitude (m)'},

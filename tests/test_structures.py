@@ -1,4 +1,4 @@
-from packetraven.structures import DoublyLinkedList
+from packetraven.packets.structures import DoublyLinkedList
 
 
 def test_index():

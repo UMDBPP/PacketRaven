@@ -4,7 +4,7 @@ import numpy
 import pytest
 
 from packetraven.packets import APRSPacket
-from packetraven.tracks import APRSTrack
+from packetraven.packets.tracks import APRSTrack
 
 
 def test_from_frame():
