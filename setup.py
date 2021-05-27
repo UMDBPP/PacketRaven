@@ -103,8 +103,8 @@ setup(
         'tablecrow>=1.3.6',
     ],
     extras_require={
-        'testing': ['flake8', 'pytest', 'pytest-cov', 'pytest-xdist', 'pytz'],
-        'development': ['oitnb'],
+        'testing': ['pytest', 'pytest-cov', 'pytest-xdist', 'pytz'],
+        'development': ['flake8', 'isort', 'oitnb'],
     },
     entry_points={'console_scripts': ['packetraven=packetraven.__main__:main']},
 )
