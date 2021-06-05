@@ -25,7 +25,7 @@ from packetraven.connections.base import PacketSource
 from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
 from packetraven.packets.writer import write_packet_tracks
-from packetraven.predicts import get_predictions, PredictionAPIURL, PredictionError
+from packetraven.predicts import PredictionAPIURL, PredictionError, get_predictions
 from packetraven.utilities import get_logger, read_configuration, repository_root
 
 LOGGER = get_logger('packetraven', log_format='%(asctime)s | %(message)s')
@@ -43,7 +43,7 @@ def main():
     args_parser.add_argument(
         '--tnc',
         help='comma-separated list of serial ports / text files of a TNC parsing APRS packets from analog audio to ASCII'
-        ' (set to `auto` to use the first open serial port)',
+             ' (set to `auto` to use the first open serial port)',
     )
     args_parser.add_argument(
         '--database', help='PostGres database table `user@hostname:port/database/table`'
@@ -479,7 +479,7 @@ def retrieve_packets(
 
         if database is not None:
             for packets in new_packets.values():
-                database.send(packets)
+                database.send(packet for packet in packets if packet.source != database.location)
 
         updated_callsigns = sorted(updated_callsigns)
         for callsign in updated_callsigns:
@@ -494,7 +494,7 @@ def retrieve_packets(
                     f'{coordinate:.3f}°' for coordinate in packet_track.coordinates[-1, :2]
                 )
                 logger.info(
-                    f'{callsign:8} - packet #{len(packet_track):<3} - ({coordinate_string}, {packet_track.coordinates[-1, 2]:9.2f}m)'
+                    f'{callsign:9} - packet #{len(packet_track):<3} - ({coordinate_string}, {packet_track.coordinates[-1, 2]:9.2f}m)'
                     f'; packet time is {packet_time} ({humanize.naturaltime(current_time - packet_time)}, {packet_track.intervals[-1]:6.1f} s interval)'
                     f'; traveled {packet_track.overground_distances[-1]:6.1f} m ({packet_track.ground_speeds[-1]:5.1f} m/s) over the ground'
                     f', and {packet_track.ascents[-1]:6.1f} m ({packet_track.ascent_rates[-1]:5.1f} m/s) vertically, since the previous packet'
@@ -510,7 +510,7 @@ def retrieve_packets(
             )
             try:
                 message = (
-                    f'{callsign:8} - '
+                    f'{callsign:9} - '
                     f'altitude: {packet_track.altitudes[-1]:6.1f} m'
                     f'; avg. ascent rate: {numpy.mean(packet_track.ascent_rates[packet_track.ascent_rates > 0]):5.1f} m/s'
                     f'; avg. descent rate: {numpy.mean(packet_track.ascent_rates[packet_track.ascent_rates < 0]):5.1f} m/s'
