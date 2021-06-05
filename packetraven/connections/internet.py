@@ -168,7 +168,7 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
         for packet in packets:
             if packet.crs != self.crs:
                 packet.transform_to(self.crs)
-        records = [self.__packet_record(packet) for packet in packets]
+        records = [self.__packet_record(packet) for packet in packets if packet not in self]
         PostGresTable.insert(self, records)
 
     def __contains__(self, packet: LocationPacket) -> bool:

@@ -101,6 +101,7 @@ setup(
         'shapely',
         'sshtunnel',
         'tablecrow>=1.3.6',
+        'teek',
     ],
     extras_require={
         'testing': ['pytest', 'pytest-cov', 'pytest-xdist', 'pytz'],

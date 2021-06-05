@@ -4,13 +4,12 @@ from os import PathLike
 from pathlib import Path
 import re
 import sys
-import tkinter
-from tkinter import filedialog, messagebox, simpledialog
-from tkinter.ttk import Combobox, Separator
+from tkinter import messagebox, simpledialog
 from typing import Callable, Collection
 
 from dateutil.parser import parse
 import numpy
+import teek
 
 from packetraven import APRSDatabaseTable, APRSfi, RawAPRSTextFile, SerialTNC
 from packetraven.__main__ import DEFAULT_INTERVAL_SECONDS, LOGGER, retrieve_packets
@@ -38,8 +37,7 @@ class PacketRavenGUI:
         igate: bool = False,
         **kwargs,
     ):
-        main_window = tkinter.Tk()
-        main_window.title('PacketRaven')
+        main_window = teek.Window('PacketRaven')
         self.__windows = {'main': main_window}
 
         self.interval_seconds = (
@@ -85,8 +83,8 @@ class PacketRavenGUI:
 
         self.__plots = {}
 
-        configuration_frame = tkinter.Frame(main_window)
-        configuration_frame.grid(row=main_window.grid_size()[1], column=0, pady=10)
+        configuration_frame = teek.Frame(main_window)
+        configuration_frame.grid(row=len(main_window.grid_rows), column=0, pady=10)
         self.__frames['configuration'] = configuration_frame
 
         start_date_entry = self.__add_entry_box(
@@ -102,11 +100,11 @@ class PacketRavenGUI:
             sticky='e',
         )
 
-        separator = Separator(configuration_frame, orient=tkinter.HORIZONTAL)
+        separator = teek.Separator(configuration_frame, orient='horizontal')
         separator.grid(
-            row=configuration_frame.grid_size()[1],
+            row=len(configuration_frame.grid_rows),
             column=0,
-            columnspan=configuration_frame.grid_size()[0] + 1,
+            columnspan=len(configuration_frame.grid_columns) + 1,
             sticky='ew',
             pady=10,
         )
@@ -116,9 +114,9 @@ class PacketRavenGUI:
             title='callsigns',
             label='Callsigns',
             width=63,
-            columnspan=configuration_frame.grid_size()[0],
+            columnspan=len(configuration_frame.grid_columns),
         )
-        self.__file_selection_option = 'select file...'
+        self.__file_selection_option = 'select file(s)...'
         self.__add_combo_box(
             configuration_frame,
             title='tnc',
@@ -126,36 +124,35 @@ class PacketRavenGUI:
             options=list(available_serial_ports()) + [self.__file_selection_option],
             option_select=self.__select_tnc,
             width=60,
-            columnspan=configuration_frame.grid_size()[0],
+            columnspan=len(configuration_frame.grid_columns),
             sticky='w',
         )
 
-        separator = Separator(configuration_frame, orient=tkinter.HORIZONTAL)
+        separator = teek.Separator(configuration_frame, orient='horizontal')
         separator.grid(
-            row=configuration_frame.grid_size()[1],
+            row=len(configuration_frame.grid_rows),
             column=0,
-            columnspan=configuration_frame.grid_size()[0] + 1,
+            columnspan=len(configuration_frame.grid_columns) + 1,
             sticky='ew',
             pady=10,
         )
 
-        log_file_label = tkinter.Label(configuration_frame, text='Log')
-        log_file_label.grid(row=configuration_frame.grid_size()[1], column=0, sticky='w')
+        log_file_label = teek.Label(configuration_frame, text='Log')
+        log_file_label.grid(row=len(configuration_frame.grid_rows), column=0, sticky='w')
 
-        log_file_frame = tkinter.Frame(configuration_frame)
+        log_file_frame = teek.Frame(configuration_frame)
         log_file_frame.grid(
             row=log_file_label.grid_info()['row'],
             column=1,
-            columnspan=configuration_frame.grid_size()[0] - 1,
+            columnspan=len(configuration_frame.grid_columns) - 1,
         )
 
-        self.__toggles['log_file'] = tkinter.BooleanVar()
-        log_file_checkbox = tkinter.Checkbutton(
+        self.__toggles['log_file'] = teek.BooleanVar()
+        self.__toggles['log_file'].set(log_filename is not None)
+        log_file_checkbox = teek.Checkbutton(
             log_file_frame, variable=self.__toggles['log_file'], command=self.__toggle_log_file
         )
         log_file_checkbox.grid(row=0, column=0, padx=10)
-        if log_filename is not None:
-            log_file_checkbox.select()
 
         self.__elements['log_file_box'] = self.__add_file_box(
             log_file_frame,
@@ -167,25 +164,24 @@ class PacketRavenGUI:
             sticky='w',
         )
 
-        output_file_label = tkinter.Label(configuration_frame, text='Output')
-        output_file_label.grid(row=configuration_frame.grid_size()[1], column=0, sticky='w')
+        output_file_label = teek.Label(configuration_frame, text='Output')
+        output_file_label.grid(row=len(configuration_frame.grid_rows), column=0, sticky='w')
 
-        output_file_frame = tkinter.Frame(configuration_frame)
+        output_file_frame = teek.Frame(configuration_frame)
         output_file_frame.grid(
             row=output_file_label.grid_info()['row'],
             column=1,
-            columnspan=configuration_frame.grid_size()[0] - 1,
+            columnspan=len(configuration_frame.grid_columns) - 1,
         )
 
-        self.__toggles['output_file'] = tkinter.BooleanVar()
-        output_file_checkbox = tkinter.Checkbutton(
+        self.__toggles['output_file'] = teek.BooleanVar()
+        self.__toggles['output_file'].set(output_filename is not None)
+        output_file_checkbox = teek.Checkbutton(
             output_file_frame,
             variable=self.__toggles['output_file'],
             command=self.__toggle_output_file,
         )
         output_file_checkbox.grid(row=0, column=0, padx=10)
-        if output_filename is not None:
-            output_file_checkbox.select()
 
         self.__elements['output_file_box'] = self.__add_file_box(
             output_file_frame,
@@ -197,34 +193,33 @@ class PacketRavenGUI:
             sticky='w',
         )
 
-        separator = Separator(configuration_frame, orient=tkinter.HORIZONTAL)
+        separator = teek.Separator(configuration_frame, orient='horizontal')
         separator.grid(
-            row=configuration_frame.grid_size()[1],
+            row=len(configuration_frame.grid_rows),
             column=0,
-            columnspan=configuration_frame.grid_size()[0] + 1,
+            columnspan=len(configuration_frame.grid_columns) + 1,
             sticky='ew',
             pady=10,
         )
 
-        prediction_label = tkinter.Label(configuration_frame, text='Predict')
-        prediction_label.grid(row=configuration_frame.grid_size()[1], column=0, sticky='w')
+        prediction_label = teek.Label(configuration_frame, text='Predict')
+        prediction_label.grid(row=len(configuration_frame.grid_rows), column=0, sticky='w')
 
-        prediction_frame = tkinter.Frame(configuration_frame)
+        prediction_frame = teek.Frame(configuration_frame)
         prediction_frame.grid(
             row=prediction_label.grid_info()['row'],
             column=1,
-            columnspan=configuration_frame.grid_size()[0] - 1,
+            columnspan=len(configuration_frame.grid_columns) - 1,
         )
 
-        self.__toggles['prediction_file'] = tkinter.BooleanVar()
-        prediction_checkbox = tkinter.Checkbutton(
+        self.__toggles['prediction_file'] = teek.BooleanVar()
+        self.__toggles['prediction_file'].set(prediction_filename is not None)
+        prediction_checkbox = teek.Checkbutton(
             prediction_frame,
             variable=self.__toggles['prediction_file'],
             command=self.__toggle_prediction_file,
         )
         prediction_checkbox.grid(row=0, column=0, padx=10)
-        if prediction_filename is not None:
-            prediction_checkbox.select()
 
         self.__elements['prediction_file_box'] = self.__add_file_box(
             prediction_frame,
@@ -236,48 +231,49 @@ class PacketRavenGUI:
             sticky='w',
         )
 
-        separator = Separator(configuration_frame, orient=tkinter.HORIZONTAL)
+        separator = teek.Separator(configuration_frame, orient='horizontal')
         separator.grid(
-            row=configuration_frame.grid_size()[1],
+            row=len(configuration_frame.grid_rows),
             column=0,
-            columnspan=configuration_frame.grid_size()[0] + 1,
+            columnspan=len(configuration_frame.grid_columns) + 1,
             sticky='ew',
             pady=10,
         )
 
-        plot_label = tkinter.Label(configuration_frame, text='Plots')
-        plot_label.grid(row=configuration_frame.grid_size()[1], column=0, sticky='w')
+        plot_label = teek.Label(configuration_frame, text='Plots')
+        plot_label.grid(row=len(configuration_frame.grid_rows), column=0, sticky='w')
 
-        plot_checkbox_frame = tkinter.Frame(configuration_frame)
+        plot_checkbox_frame = teek.Frame(configuration_frame)
         plot_checkbox_frame.grid(
             row=plot_label.grid_info()['row'],
             column=0,
-            columnspan=configuration_frame.grid_size()[0] - 1,
+            columnspan=len(configuration_frame.grid_columns) - 1,
         )
 
         plot_variables = ['altitude', 'ascent_rate', 'ground_speed']
         self.__plot_toggles = {}
         for plot_index, plot in enumerate(plot_variables):
-            boolean_var = tkinter.BooleanVar()
-            plot_checkbox = tkinter.Checkbutton(
+            boolean_var = teek.BooleanVar()
+            boolean_var.set(False)
+            plot_checkbox = teek.Checkbutton(
                 plot_checkbox_frame, text=plot, variable=boolean_var
             )
             plot_checkbox.grid(row=0, column=plot_index, padx=10)
             self.__plot_toggles[plot] = boolean_var
 
-        separator = Separator(main_window, orient=tkinter.HORIZONTAL)
-        separator.grid(row=main_window.grid_size()[1], column=0, sticky='ew')
+        separator = teek.Separator(main_window, orient='horizontal')
+        separator.grid(row=len(main_window.grid_rows), column=0, sticky='ew')
 
-        control_frame = tkinter.Frame(main_window)
-        control_frame.grid(row=main_window.grid_size()[1], column=0, pady=10)
+        control_frame = teek.Frame(main_window)
+        control_frame.grid(row=len(main_window.grid_rows), column=0, pady=10)
         self.__frames['controls'] = control_frame
 
-        self.__toggle_text = tkinter.StringVar()
+        self.__toggle_text = teek.StringVar()
         self.__toggle_text.set('Start')
-        toggle_button = tkinter.Button(
+        toggle_button = teek.Button(
             control_frame, textvariable=self.__toggle_text, command=self.toggle
         )
-        toggle_button.grid(row=control_frame.grid_size()[1], column=0, sticky='nsew')
+        toggle_button.grid(row=len(control_frame.grid_rows), column=0, sticky='nsew')
 
         self.callsigns = callsigns
         self.tncs = self.__configuration['tnc']['tnc']
@@ -303,13 +299,13 @@ class PacketRavenGUI:
         self.__toggle_prediction_file()
         self.__predictions = {}
 
-        self.__windows['main'].protocol('WM_DELETE_WINDOW', self.close)
+        self.__windows['main'].on_delete_window.connect(self.close)
 
-        main_window.mainloop()
+        teek.run()
 
     @property
     def callsigns(self) -> [str]:
-        callsigns = self.__elements['callsigns'].get()
+        callsigns = self.__elements['callsigns'].text
         if len(callsigns) > 0:
             callsigns = [
                 callsign.strip().upper()
@@ -332,7 +328,7 @@ class PacketRavenGUI:
     def tncs(self) -> [str]:
         """ locations of TNCs parsing APRS audio into ASCII frames """
         tncs = []
-        for tnc in self.__elements['tnc'].get().split(','):
+        for tnc in self.__elements['tnc'].text.split(','):
             tnc = tnc.strip()
             if len(tnc) > 0:
                 if tnc.upper() == 'AUTO':
@@ -358,7 +354,7 @@ class PacketRavenGUI:
 
     @property
     def start_date(self) -> datetime:
-        start_date = self.__elements['start_date'].get()
+        start_date = self.__elements['start_date'].text
         if len(start_date) > 0:
             start_date = parse(start_date)
         else:
@@ -377,7 +373,7 @@ class PacketRavenGUI:
 
     @property
     def end_date(self) -> datetime:
-        end_date = self.__elements['end_date'].get()
+        end_date = self.__elements['end_date'].text
         if len(end_date) > 0:
             end_date = parse(end_date)
         else:
@@ -397,7 +393,7 @@ class PacketRavenGUI:
     @property
     def log_filename(self) -> Path:
         if self.toggles['log_file']:
-            filename = self.__elements['log_file'].get()
+            filename = self.__elements['log_file'].text
             if len(filename) > 0:
                 filename = Path(filename)
                 if filename.expanduser().resolve().is_dir():
@@ -423,7 +419,7 @@ class PacketRavenGUI:
     @property
     def output_filename(self) -> Path:
         if self.toggles['output_file']:
-            filename = self.__elements['output_file'].get()
+            filename = self.__elements['output_file'].text
             if len(filename) > 0:
                 filename = Path(filename)
                 if filename.expanduser().resolve().is_dir():
@@ -451,7 +447,7 @@ class PacketRavenGUI:
     @property
     def prediction_filename(self) -> Path:
         if self.toggles['prediction_file']:
-            filename = self.__elements['prediction_file'].get()
+            filename = self.__elements['prediction_file'].text
             if len(filename) > 0:
                 filename = Path(filename)
                 if filename.expanduser().resolve().is_dir():
@@ -497,27 +493,27 @@ class PacketRavenGUI:
     def predictions(self) -> {str: PredictedTrajectory}:
         return self.__predictions if self.toggles['prediction_file'] else None
 
-    def __select_tnc(self, event):
-        if event.widget.get() == self.__file_selection_option:
-            self.tncs = filedialog.askopenfilename(
-                title='Select TNC text file...',
+    def __select_tnc(self):
+        if self.__elements['tnc'].text == self.__file_selection_option:
+            self.tncs = teek.dialog.open_multiple_files(
+                title='Select TNC text file(s)...',
                 defaultextension='.txt',
                 filetypes=[('Text', '*.txt')],
             )
 
     def __select_log_file(self):
-        self.log_filename = filedialog.asksaveasfilename(
+        self.log_filename = teek.dialog.save_file(
             title='Create log file...',
-            initialdir=self.log_filename.parent,
+            initialdir=str(self.log_filename.parent),
             initialfile=self.log_filename.stem,
             defaultextension='.txt',
             filetypes=[('Text', '*.txt')],
         )
 
     def __select_output_file(self):
-        self.output_filename = filedialog.asksaveasfilename(
+        self.output_filename = teek.dialog.save_file(
             title='Create output file...',
-            initialdir=self.output_filename.parent,
+            initialdir=str(self.output_filename.parent),
             initialfile=self.output_filename.stem,
             defaultextension='.geojson',
             filetypes=[
@@ -528,9 +524,9 @@ class PacketRavenGUI:
         )
 
     def __select_prediction_file(self):
-        self.prediction_filename = filedialog.asksaveasfilename(
+        self.prediction_filename = teek.dialog.save_file(
             title='Create predict file...',
-            initialdir=self.prediction_filename.parent,
+            initialdir=str(self.prediction_filename.parent),
             initialfile=self.prediction_filename.stem,
             defaultextension='.geojson',
             filetypes=[
@@ -540,49 +536,49 @@ class PacketRavenGUI:
             ],
         )
 
-    def __toggle_log_file(self):
-        if self.toggles['log_file']:
-            set_child_states(self.__elements['log_file_box'], state=tkinter.NORMAL)
+    def __toggle_log_file(self, value: bool = None):
+        if (value is not None and value) or self.toggles['log_file']:
+            set_child_states(self.__elements['log_file_box'], state='normal')
             get_logger(LOGGER.name, log_filename=self.log_filename)
         else:
-            set_child_states(self.__elements['log_file_box'], state=tkinter.DISABLED)
+            set_child_states(self.__elements['log_file_box'], state='disabled')
             for existing_file_handler in [
                 handler for handler in LOGGER.handlers if type(handler) is logging.FileHandler
             ]:
                 LOGGER.removeHandler(existing_file_handler)
 
-    def __toggle_output_file(self):
-        if self.toggles['output_file']:
-            set_child_states(self.__elements['output_file_box'], state=tkinter.NORMAL)
+    def __toggle_output_file(self, value: bool = None):
+        if (value is not None and value) or self.toggles['output_file']:
+            set_child_states(self.__elements['output_file_box'], state='normal')
         else:
-            set_child_states(self.__elements['output_file_box'], state=tkinter.DISABLED)
+            set_child_states(self.__elements['output_file_box'], state='disabled')
 
-    def __toggle_prediction_file(self):
-        if self.toggles['prediction_file']:
-            set_child_states(self.__elements['prediction_file_box'], state=tkinter.NORMAL)
+    def __toggle_prediction_file(self, value: bool = None):
+        if (value is not None and value) or self.toggles['prediction_file']:
+            set_child_states(self.__elements['prediction_file_box'], state='normal')
         else:
-            set_child_states(self.__elements['prediction_file_box'], state=tkinter.DISABLED)
+            set_child_states(self.__elements['prediction_file_box'], state='disabled')
 
     def __add_combo_box(
         self,
-        frame: tkinter.Frame,
+        frame: teek.Frame,
         title: str,
         options: [str],
         option_select: Callable = None,
         **kwargs,
-    ) -> Combobox:
+    ) -> teek.Combobox:
         width = kwargs['width'] if 'width' in kwargs else None
-        combo_box = Combobox(frame, width=width)
-        combo_box['values'] = options
+        combo_box = teek.Combobox(frame, width=width)
+        combo_box.config['values'] = options
         if option_select is not None:
             combo_box.bind('<<ComboboxSelected>>', option_select)
         return self.__add_text_box(frame, title, text_box=combo_box, **kwargs)
 
     def __add_file_box(
-        self, frame: tkinter.Frame, title: str, file_select: Callable, **kwargs
-    ) -> tkinter.Frame:
+        self, frame: teek.Frame, title: str, file_select: Callable, **kwargs
+    ) -> teek.Frame:
         if 'row' not in kwargs:
-            kwargs['row'] = frame.grid_size()[1]
+            kwargs['row'] = len(frame.grid_rows)
         if 'column' not in kwargs:
             kwargs['column'] = 0
         file_box_kwargs = {
@@ -594,17 +590,17 @@ class PacketRavenGUI:
             file_box_kwargs['columnspan'] -= 1
 
         if 'label' in kwargs:
-            text_label = tkinter.Label(frame, text=kwargs['label'])
+            text_label = teek.Label(frame, text=kwargs['label'])
             text_label.grid(row=kwargs['row'], column=kwargs['column'], sticky='w')
             file_box_kwargs['column'] += 1
 
-        file_box_frame = tkinter.Frame(frame)
+        file_box_frame = teek.Frame(frame)
         file_box_frame.grid(**file_box_kwargs)
 
-        file_box = tkinter.Entry(
+        file_box = teek.Entry(
             file_box_frame, width=kwargs['width'] if 'width' in kwargs else None
         )
-        file_button = tkinter.Button(file_box_frame, text='...', command=file_select)
+        file_button = teek.Button(file_box_frame, text='...', command=file_select)
 
         file_box.pack(side='left')
         file_button.pack(side='left')
@@ -612,27 +608,27 @@ class PacketRavenGUI:
         self.__elements[title] = file_box
         return file_box_frame
 
-    def __add_entry_box(self, frame: tkinter.Frame, title: str, **kwargs) -> tkinter.Entry:
+    def __add_entry_box(self, frame: teek.Frame, title: str, **kwargs) -> teek.Entry:
         if 'text_box' not in kwargs:
-            kwargs['text_box'] = tkinter.Entry(
+            kwargs['text_box'] = teek.Entry(
                 frame, width=kwargs['width'] if 'width' in kwargs else None
             )
         return self.__add_text_box(frame, title, **kwargs)
 
     def __add_text_box(
         self,
-        frame: tkinter.Frame,
+        frame: teek.Frame,
         title: str,
         label: str,
         units: str = None,
         row: int = None,
         column: int = None,
         width: int = 10,
-        text_box: tkinter.Entry = None,
+        text_box: teek.Entry = None,
         **kwargs,
-    ) -> tkinter.Text:
+    ) -> teek.Text:
         if row is None:
-            row = frame.grid_size()[1]
+            row = len(frame.grid_rows)
         if column is None:
             column = 0
 
@@ -643,17 +639,17 @@ class PacketRavenGUI:
                 kwargs['columnspan'] -= 1
 
         if label is not None:
-            text_label = tkinter.Label(frame, text=label)
+            text_label = teek.Label(frame, text=label)
             text_label.grid(row=row, column=column, sticky='w')
             column += 1
 
         if text_box is None:
-            text_box = tkinter.Text(frame, width=width, height=1)
+            text_box = teek.Text(frame, width=width, height=1)
         text_box.grid(row=row, column=column, **kwargs)
         column += 1
 
         if units is not None:
-            units_label = tkinter.Label(frame, text=units)
+            units_label = teek.Label(frame, text=units)
             units_label.grid(row=row, column=column)
             column += 1
 
@@ -666,16 +662,16 @@ class PacketRavenGUI:
                 get_logger(LOGGER.name, self.log_filename)
 
             if self.toggles['log_file']:
-                set_child_states(self.__elements['log_file_box'], tkinter.DISABLED)
+                set_child_states(self.__elements['log_file_box'], 'disabled')
 
             start_date = self.start_date
-            self.__elements['start_date'].configure(state=tkinter.DISABLED)
+            self.__elements['start_date'].config['state'] = 'disabled'
 
             end_date = self.end_date
-            self.__elements['end_date'].configure(state=tkinter.DISABLED)
+            self.__elements['end_date'].config['state'] = 'disabled'
 
             callsigns = self.callsigns
-            self.__elements['callsigns'].configure(state=tkinter.DISABLED)
+            self.__elements['callsigns'].config['state'] = 'disabled'
 
             filter_message = 'retrieving packets'
             if start_date is not None and end_date is None:
@@ -691,7 +687,7 @@ class PacketRavenGUI:
             connection_errors = []
             try:
                 tncs = self.tncs
-                self.__elements['tnc'].configure(state=tkinter.DISABLED)
+                self.__elements['tnc'].config['state'] = 'disabled'
                 for tnc in tncs:
                     try:
                         if Path(tnc).suffix in ['.txt', '.log']:
@@ -854,10 +850,10 @@ class PacketRavenGUI:
                         self.__plots[variable].close()
                         del self.__plots[variable]
 
-                set_child_states(self.__frames['configuration'], tkinter.DISABLED)
+                set_child_states(self.__frames['configuration'], 'disabled')
 
                 for callsign in self.packet_tracks:
-                    set_child_states(self.__windows[callsign], tkinter.DISABLED)
+                    set_child_states(self.__windows[callsign], 'disabled')
 
                 self.__toggle_text.set('Stop')
                 self.__running = True
@@ -869,7 +865,7 @@ class PacketRavenGUI:
                 else:
                     LOGGER.error(error)
                 self.__running = False
-                set_child_states(self.__frames['configuration'], tkinter.NORMAL)
+                set_child_states(self.__frames['configuration'], 'normal')
 
             self.retrieve_packets()
         else:
@@ -882,15 +878,15 @@ class PacketRavenGUI:
             LOGGER.info(f'closed {len(self.__connections)} connections')
 
             for callsign in self.packet_tracks:
-                set_child_states(self.__windows[callsign], tkinter.DISABLED)
-            set_child_states(self.__frames['configuration'], tkinter.NORMAL)
+                set_child_states(self.__windows[callsign], 'disabled')
+            set_child_states(self.__frames['configuration'], 'normal')
 
             if not self.toggles['log_file']:
-                set_child_states(self.__elements['log_file_box'], tkinter.DISABLED)
+                set_child_states(self.__elements['log_file_box'], 'disabled')
             if not self.toggles['output_file']:
-                set_child_states(self.__elements['output_file_box'], tkinter.DISABLED)
+                set_child_states(self.__elements['output_file_box'], 'disabled')
             if not self.toggles['prediction_file']:
-                set_child_states(self.__elements['prediction_file_box'], tkinter.DISABLED)
+                set_child_states(self.__elements['prediction_file_box'], 'disabled')
 
             self.__toggle_text.set('Start')
             self.__running = False
@@ -958,8 +954,7 @@ class PacketRavenGUI:
                     )
 
                     if callsign not in existing_callsigns:
-                        window = tkinter.Toplevel()
-                        window.title(callsign)
+                        window = teek.Window(callsign)
 
                         self.__add_text_box(
                             window,
@@ -1023,9 +1018,9 @@ class PacketRavenGUI:
                             + 3,
                         )
 
-                        separator = Separator(window, orient=tkinter.HORIZONTAL)
+                        separator = teek.Separator(window, orient='horizontal')
                         separator.grid(
-                            row=window.grid_size()[1],
+                            row=len(window.grid_rows),
                             column=0,
                             columnspan=7,
                             sticky='ew',
@@ -1097,9 +1092,9 @@ class PacketRavenGUI:
                             + 3,
                         )
 
-                        separator = Separator(window, orient=tkinter.HORIZONTAL)
+                        separator = teek.Separator(window, orient='horizontal')
                         separator.grid(
-                            row=window.grid_size()[1],
+                            row=len(window.grid_rows),
                             column=0,
                             columnspan=7,
                             sticky='ew',
@@ -1154,27 +1149,25 @@ class PacketRavenGUI:
                             + 3,
                         )
 
-                        separator = Separator(window, orient=tkinter.VERTICAL)
+                        separator = teek.Separator(window, orient='vertical')
                         separator.grid(
                             row=0,
                             column=3,
-                            rowspan=window.grid_size()[1] + 2,
+                            rowspan=len(window.grid_rows) + 2,
                             sticky='ns',
                             padx=10,
                         )
 
-                        window.protocol('WM_DELETE_WINDOW', window.iconify)
+                        window.on_delete_window.connect(window.iconify)
 
                         self.__windows[callsign] = window
 
                     window = self.__windows[callsign]
 
-                    if window.state() == 'iconic':
-                        window.deiconify()
-                    if window.focus_get() is None:
-                        window.focus_force()
+                    window.deiconify()
+                    window.focus()
 
-                    set_child_states(window, tkinter.NORMAL)
+                    set_child_states(window, 'normal')
 
                     self.replace_text(
                         self.__elements[f'{callsign}.packets'], len(packet_track)
@@ -1238,7 +1231,7 @@ class PacketRavenGUI:
 
                     time_to_ground_box = self.__elements[f'{callsign}.time_to_ground']
                     if packet_track.time_to_ground >= timedelta(seconds=0):
-                        time_to_ground_box.configure(state=tkinter.NORMAL)
+                        time_to_ground_box.config['state'] = 'normal'
                         current_time_to_ground = (
                             packet_time + packet_track.time_to_ground - current_time
                         )
@@ -1248,21 +1241,21 @@ class PacketRavenGUI:
                         )
                     else:
                         self.replace_text(time_to_ground_box, '')
-                        time_to_ground_box.configure(state=tkinter.DISABLED)
+                        time_to_ground_box.config['state'] = 'disabled'
 
-                    set_child_states(window, tkinter.DISABLED, [tkinter.Text])
+                    set_child_states(window, 'disabled', [teek.Text])
 
                     packet_age_box = self.__elements[f'{callsign}.age']
-                    packet_age_box.configure(state=tkinter.NORMAL)
+                    packet_age_box.config['state'] = 'normal'
                     self.replace_text(
                         packet_age_box,
                         f'{(current_time - packet_time) / timedelta(seconds=1):.2f}',
                     )
-                    packet_age_box.configure(state=tkinter.DISABLED)
+                    packet_age_box.config['state'] = 'disabled'
 
                 if self.running:
-                    self.__windows['main'].after(
-                        int(self.interval_seconds * 1000), self.retrieve_packets
+                    teek.after(
+                        ms=int(self.interval_seconds * 1000), callback=self.retrieve_packets
                     )
             except KeyboardInterrupt:
                 self.close()
@@ -1270,17 +1263,15 @@ class PacketRavenGUI:
                 LOGGER.exception(f'{error.__class__.__name__} - {error}')
 
     @staticmethod
-    def replace_text(element: tkinter.Entry, value: str):
-        if isinstance(element, tkinter.Text):
-            start_index = '1.0'
-        else:
-            start_index = 0
-
+    def replace_text(element: teek.Entry, value: str):
         if value is None:
             value = ''
 
-        element.delete(start_index, tkinter.END)
-        element.insert(start_index, value)
+        if isinstance(element, teek.Text):
+            element.delete(element.start, element.end)
+            element.insert(element.start, str(value))
+        elif isinstance(element, teek.Entry):
+            element.text = str(value)
 
     def close(self):
         try:
@@ -1288,23 +1279,28 @@ class PacketRavenGUI:
                 self.toggle()
             for plot in self.__plots.values():
                 plot.close()
-            self.__windows['main'].destroy()
+            teek.quit()
         except Exception as error:
             LOGGER.exception(f'{error.__class__.__name__} - {error}')
         sys.exit()
 
 
-def set_child_states(frame: tkinter.Frame, state: str = None, types: [type] = None):
+def set_child_states(frame: teek.Frame, state: str = None, types: [type] = None):
     if state is None:
-        state = tkinter.NORMAL
+        state = 'normal'
     for child in frame.winfo_children():
-        if isinstance(child, tkinter.Frame):
+        if isinstance(child, teek.Frame):
             set_child_states(child, state, types)
         else:
             if types is None or any(
                 isinstance(child, selected_type) for selected_type in types
             ):
                 try:
-                    child.configure(state=state)
-                except tkinter.TclError:
+                    child.config['state'] = state
+                except teek.TclError:
                     continue
+                except KeyError:
+                    if state == 'normal':
+                        child.state.discard('disabled')
+                    else:
+                        child.state.add(state)
