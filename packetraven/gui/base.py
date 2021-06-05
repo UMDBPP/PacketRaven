@@ -20,7 +20,7 @@ from packetraven.gui.plotting import LivePlot
 from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import LocationPacketTrack, PredictedTrajectory
 from packetraven.packets.writer import write_packet_tracks
-from packetraven.predicts import PredictionError, get_predictions
+from packetraven.predicts import get_predictions, PredictionError
 from packetraven.utilities import get_logger
 
 
@@ -703,7 +703,7 @@ class PacketRavenGUI:
                     connection.location
                     for connection in self.__connections
                     if isinstance(connection, SerialTNC)
-                       or isinstance(connection, RawAPRSTextFile)
+                    or isinstance(connection, RawAPRSTextFile)
                 ]
 
                 api_key = self.__configuration['aprs_fi']['aprs_fi_key']
@@ -990,7 +990,7 @@ class PacketRavenGUI:
                             sticky='w',
                             row=self.__elements[f'{callsign}.source'].grid_info()['row'],
                             column=self.__elements[f'{callsign}.source'].grid_info()['column']
-                                   + 4,
+                            + 4,
                             columnspan=3,
                         )
                         self.__add_text_box(
@@ -1002,9 +1002,9 @@ class PacketRavenGUI:
                             sticky='w',
                             row=self.__elements[f'{callsign}.callsign'].grid_info()['row'],
                             column=self.__elements[f'{callsign}.callsign'].grid_info()[
-                                       'column'
-                                   ]
-                                   + 3,
+                                'column'
+                            ]
+                            + 3,
                         )
                         self.__add_text_box(
                             window,
@@ -1015,7 +1015,7 @@ class PacketRavenGUI:
                             sticky='w',
                             row=self.__elements[f'{callsign}.packets'].grid_info()['row'],
                             column=self.__elements[f'{callsign}.packets'].grid_info()['column']
-                                   + 3,
+                            + 3,
                         )
 
                         separator = teek.Separator(window, orient='horizontal')
@@ -1061,9 +1061,9 @@ class PacketRavenGUI:
                             sticky='w',
                             row=self.__elements[f'{callsign}.coordinates'].grid_info()['row'],
                             column=self.__elements[f'{callsign}.coordinates'].grid_info()[
-                                       'column'
-                                   ]
-                                   + 3,
+                                'column'
+                            ]
+                            + 3,
                         )
                         self.__add_text_box(
                             window,
@@ -1074,9 +1074,9 @@ class PacketRavenGUI:
                             sticky='w',
                             row=self.__elements[f'{callsign}.distance'].grid_info()['row'],
                             column=self.__elements[f'{callsign}.distance'].grid_info()[
-                                       'column'
-                                   ]
-                                   + 3,
+                                'column'
+                            ]
+                            + 3,
                         )
                         self.__add_text_box(
                             window,
@@ -1087,9 +1087,9 @@ class PacketRavenGUI:
                             sticky='w',
                             row=self.__elements[f'{callsign}.ground_speed'].grid_info()['row'],
                             column=self.__elements[f'{callsign}.ground_speed'].grid_info()[
-                                       'column'
-                                   ]
-                                   + 3,
+                                'column'
+                            ]
+                            + 3,
                         )
 
                         separator = teek.Separator(window, orient='horizontal')
@@ -1129,9 +1129,9 @@ class PacketRavenGUI:
                                 'row'
                             ],
                             column=self.__elements[
-                                       f'{callsign}.distance_downrange'
-                                   ].grid_info()['column']
-                                   + 3,
+                                f'{callsign}.distance_downrange'
+                            ].grid_info()['column']
+                            + 3,
                         )
                         self.__add_text_box(
                             window,
@@ -1144,9 +1144,9 @@ class PacketRavenGUI:
                                 'row'
                             ],
                             column=self.__elements[
-                                       f'{callsign}.distance_overground'
-                                   ].grid_info()['column']
-                                   + 3,
+                                f'{callsign}.distance_overground'
+                            ].grid_info()['column']
+                            + 3,
                         )
 
                         separator = teek.Separator(window, orient='vertical')
@@ -1255,8 +1255,7 @@ class PacketRavenGUI:
 
                 if self.running:
                     teek.after(
-                        ms=int(self.interval_seconds * 1000),
-                        callback=self.retrieve_packets
+                        ms=int(self.interval_seconds * 1000), callback=self.retrieve_packets
                     )
             except KeyboardInterrupt:
                 self.close()
