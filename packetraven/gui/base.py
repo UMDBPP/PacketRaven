@@ -4,12 +4,12 @@ from os import PathLike
 from pathlib import Path
 import re
 import sys
-from tkinter import messagebox, simpledialog
 from typing import Callable, Collection
 
 from dateutil.parser import parse
 import numpy
 import teek
+from teek.extras import more_dialogs
 
 from packetraven import APRSDatabaseTable, APRSfi, RawAPRSTextFile, SerialTNC
 from packetraven.__main__ import DEFAULT_INTERVAL_SECONDS, LOGGER, retrieve_packets
@@ -708,11 +708,10 @@ class PacketRavenGUI:
 
                 api_key = self.__configuration['aprs_fi']['aprs_fi_key']
                 if api_key is None:
-                    api_key = simpledialog.askstring(
+                    api_key = more_dialogs.ask_string(
                         'APRS.fi API Key',
                         'enter API key for https://aprs.fi',
                         parent=self.__windows['main'],
-                        show='*',
                     )
                 try:
                     aprs_api = APRSfi(self.callsigns, api_key=api_key)
@@ -741,7 +740,7 @@ class PacketRavenGUI:
                                     'ssh_username' not in ssh_tunnel_kwargs
                                     or ssh_tunnel_kwargs['ssh_username'] is None
                                 ):
-                                    ssh_username = simpledialog.askstring(
+                                    ssh_username = more_dialogs.ask_string(
                                         'SSH Tunnel Username',
                                         f'enter username for SSH host "{ssh_tunnel_kwargs["ssh_hostname"]}"',
                                         parent=self.__windows['main'],
@@ -754,12 +753,11 @@ class PacketRavenGUI:
                                     'ssh_password' not in ssh_tunnel_kwargs
                                     or ssh_tunnel_kwargs['ssh_password'] is None
                                 ):
-                                    password = simpledialog.askstring(
+                                    password = more_dialogs.ask_string(
                                         'SSH Tunnel Password',
                                         f'enter password for SSH user '
                                         f'"{ssh_tunnel_kwargs["ssh_username"]}"',
                                         parent=self.__windows['main'],
-                                        show='*',
                                     )
                                     if password is None or len(password) == 0:
                                         raise ConnectionError('missing SSH password')
@@ -773,7 +771,7 @@ class PacketRavenGUI:
                             'username' not in database_kwargs
                             or database_kwargs['username'] is None
                         ):
-                            database_username = simpledialog.askstring(
+                            database_username = more_dialogs.ask_string(
                                 'Database Username',
                                 f'enter username for database '
                                 f'"{database_kwargs["database_hostname"]}/'
@@ -788,18 +786,17 @@ class PacketRavenGUI:
                             'password' not in database_kwargs
                             or database_kwargs['password'] is None
                         ):
-                            database_password = simpledialog.askstring(
+                            database_password = more_dialogs.ask_string(
                                 'Database Password',
                                 f'enter password for database user '
                                 f'"{database_kwargs["database_username"]}"',
                                 parent=self.__windows['main'],
-                                show='*',
                             )
                             if database_password is None or len(database_password) == 0:
                                 raise ConnectionError('missing database password')
                             database_kwargs['password'] = database_password
                         if 'table' not in database_kwargs or database_kwargs['table'] is None:
-                            database_table = simpledialog.askstring(
+                            database_table = more_dialogs.ask_string(
                                 'Database Table',
                                 f'enter database table name',
                                 parent=self.__windows['main'],
@@ -858,7 +855,7 @@ class PacketRavenGUI:
                 self.__toggle_text.set('Stop')
                 self.__running = True
             except Exception as error:
-                messagebox.showerror(error.__class__.__name__, error)
+                teek.dialog.error(error.__class__.__name__, error)
                 if '\n' in str(error):
                     for connection_error in str(error).split('\n'):
                         LOGGER.error(connection_error)
