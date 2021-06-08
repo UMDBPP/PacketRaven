@@ -11,21 +11,13 @@ from dateutil.parser import parse as parse_date
 import humanize as humanize
 import numpy
 
-from packetraven.connections import (
-    APRSDatabaseTable,
-    APRSfi,
-    APRSis,
-    PacketDatabaseTable,
-    PacketGeoJSON,
-    RawAPRSTextFile,
-    SerialTNC,
-    TimeIntervalError,
-)
+from packetraven.connections import (APRSDatabaseTable, APRSfi, APRSis, PacketDatabaseTable, PacketGeoJSON, RawAPRSTextFile, SerialTNC,
+                                     TimeIntervalError)
 from packetraven.connections.base import PacketSource
 from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
 from packetraven.packets.writer import write_packet_tracks
-from packetraven.predicts import get_predictions, PredictionAPIURL, PredictionError
+from packetraven.predicts import PredictionAPIURL, PredictionError, get_predictions
 from packetraven.utilities import get_logger, read_configuration, repository_root
 
 LOGGER = get_logger('packetraven', log_format='%(asctime)s | %(message)s')

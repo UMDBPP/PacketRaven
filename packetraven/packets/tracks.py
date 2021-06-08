@@ -6,11 +6,7 @@ import numpy
 from pandas import DataFrame
 from pyproj import CRS
 
-from packetraven.model import (
-    FREEFALL_DESCENT_RATE,
-    FREEFALL_DESCENT_RATE_UNCERTAINTY,
-    FREEFALL_SECONDS_TO_GROUND,
-)
+from packetraven.model import FREEFALL_DESCENT_RATE, FREEFALL_DESCENT_RATE_UNCERTAINTY, FREEFALL_SECONDS_TO_GROUND
 from packetraven.packets import APRSPacket, DEFAULT_CRS, LocationPacket
 from packetraven.packets.structures import DoublyLinkedList
 
