@@ -2,7 +2,12 @@ from datetime import datetime
 
 from serial import Serial
 
-from packetraven.connections.base import (APRSPacketSource, LOGGER, TimeIntervalError, next_open_serial_port)
+from packetraven.connections.base import (
+    APRSPacketSource,
+    LOGGER,
+    next_open_serial_port,
+    TimeIntervalError,
+)
 from packetraven.packets import APRSPacket
 
 

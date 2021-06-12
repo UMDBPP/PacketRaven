@@ -7,9 +7,9 @@ from pathlib import Path
 import sys
 import time
 
-from dateutil.parser import parse as parse_date
 import humanize as humanize
 import numpy
+from tablecrow.utilities import convert_value, parse_hostname
 
 from packetraven.connections import (
     APRSDatabaseTable,
@@ -25,7 +25,7 @@ from packetraven.connections.base import PacketSource
 from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
 from packetraven.packets.writer import write_packet_tracks
-from packetraven.predicts import PredictionAPIURL, PredictionError, get_predictions
+from packetraven.predicts import get_predictions, PredictionAPIURL, PredictionError
 from packetraven.utilities import get_logger, read_configuration, repository_root
 
 LOGGER = get_logger('packetraven', log_format='%(asctime)s | %(message)s')
@@ -106,8 +106,17 @@ def main():
         kwargs['tnc'] = [tnc.strip() for tnc in args.tnc.split(',')]
 
     if args.database is not None:
-        database = args.database
-        if database.count('/') != 2:
+        database = parse_hostname(args.database)
+
+        hostname = database['hostname']
+        port = database['port']
+        username = database['username']
+        password = database['password']
+
+        if port is not None:
+            hostname = f'{hostname}:{port}'
+
+        if hostname.count('/') != 2:
             LOGGER.error(
                 f'unable to parse hostname, database name, and table name from input "{database}"'
             )
@@ -116,29 +125,29 @@ def main():
                 kwargs['database_hostname'],
                 kwargs['database_database'],
                 kwargs['database_table'],
-            ) = database.split('/')
-            if '@' in kwargs['database_hostname']:
-                kwargs['database_username'], kwargs['database_hostname'] = kwargs[
-                    'database_hostname'
-                ].split('@', 1)
-                if ':' in kwargs['database_username']:
-                    kwargs['database_username'], kwargs['database_password'] = kwargs[
-                        'database_username'
-                    ].split(':', 1)
+            ) = hostname.split('/')
+            kwargs['database_username'] = username
+            kwargs['database_password'] = password
 
     if args.tunnel is not None:
-        kwargs['ssh_hostname'] = args.tunnel
-        if '@' in kwargs['ssh_hostname']:
-            kwargs['ssh_username'], kwargs['ssh_hostname'] = kwargs['ssh_hostname'].split(
-                '@', 1
-            )
-            if ':' in kwargs['ssh_username']:
-                kwargs['ssh_username'], kwargs['ssh_password'] = kwargs['ssh_username'].split(
-                    ':', 1
-                )
+        tunnel = parse_hostname(args.tunnel)
 
-    start_date = parse_date(args.start.strip('"')) if args.start is not None else None
-    end_date = parse_date(args.end.strip('"')) if args.end is not None else None
+        hostname = tunnel['hostname']
+        port = tunnel['port']
+        username = tunnel['username']
+        password = tunnel['password']
+
+        if port is not None:
+            hostname = f'{hostname}:{port}'
+
+        kwargs['ssh_hostname'] = hostname
+        kwargs['ssh_username'] = username
+        kwargs['ssh_password'] = password
+
+    start_date = (
+        convert_value(args.start.strip('"'), datetime) if args.start is not None else None
+    )
+    end_date = convert_value(args.end.strip('"'), datetime) if args.end is not None else None
 
     if start_date is not None and end_date is not None:
         if start_date > end_date:
@@ -195,8 +204,8 @@ def main():
             kwargs['prediction_float_altitude'] = float(args.prediction_float_altitude)
 
         if args.prediction_float_duration is not None:
-            kwargs['prediction_float_duration'] = timedelta(
-                seconds=float(args.prediction_float_duration)
+            kwargs['prediction_float_duration'] = convert_value(
+                args.prediction_float_duration, timedelta
             )
 
         if args.prediction_api is not None:
@@ -204,7 +213,9 @@ def main():
     else:
         prediction_filename = None
 
-    interval_seconds = args.interval if args.interval >= 1 else 1
+    interval_seconds = convert_value(args.interval, timedelta) / timedelta(seconds=1)
+    if interval_seconds < 1:
+        interval_seconds = 1
 
     if CREDENTIALS_FILENAME.exists():
         credentials = kwargs.copy()
