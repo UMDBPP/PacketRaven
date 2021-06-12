@@ -11,8 +11,16 @@ from dateutil.parser import parse as parse_date
 import humanize as humanize
 import numpy
 
-from packetraven.connections import (APRSDatabaseTable, APRSfi, APRSis, PacketDatabaseTable, PacketGeoJSON, RawAPRSTextFile, SerialTNC,
-                                     TimeIntervalError)
+from packetraven.connections import (
+    APRSDatabaseTable,
+    APRSfi,
+    APRSis,
+    PacketDatabaseTable,
+    PacketGeoJSON,
+    RawAPRSTextFile,
+    SerialTNC,
+    TimeIntervalError,
+)
 from packetraven.connections.base import PacketSource
 from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import APRSTrack, LocationPacketTrack

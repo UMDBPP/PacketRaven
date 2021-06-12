@@ -7,7 +7,12 @@ from dateutil.parser import parse as parse_date
 import geojson
 import requests
 
-from packetraven.connections.base import APRSPacketSource, LOGGER, PacketSource, TimeIntervalError
+from packetraven.connections.base import (
+    APRSPacketSource,
+    LOGGER,
+    PacketSource,
+    TimeIntervalError,
+)
 from packetraven.packets import APRSPacket, LocationPacket
 
 
