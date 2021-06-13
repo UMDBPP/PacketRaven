@@ -1,22 +1,36 @@
 from argparse import ArgumentParser
 from datetime import datetime, timedelta
 from getpass import getpass
+from logging import Logger
 from pathlib import Path
 import sys
 import time
 
-from dateutil.parser import parse as parse_date
+import humanize as humanize
+import numpy
+from tablecrow.utilities import convert_value, parse_hostname
 
-from client import DEFAULT_INTERVAL_SECONDS
-from client.retrieve import retrieve_packets
-from packetraven.connections import APRSDatabaseTable, APRSfi, APRSis, PacketGeoJSON, RawAPRSTextFile, SerialTNC
-from packetraven.predicts import PredictionAPIURL, PredictionError, get_predictions
+from packetraven.connections import (
+    APRSDatabaseTable,
+    APRSfi,
+    APRSis,
+    PacketDatabaseTable,
+    PacketGeoJSON,
+    RawAPRSTextFile,
+    SerialTNC,
+    TimeIntervalError,
+)
+from packetraven.connections.base import PacketSource
+from packetraven.packets import APRSPacket
+from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
+from packetraven.packets.writer import write_packet_tracks
+from packetraven.predicts import get_predictions, PredictionAPIURL, PredictionError
 from packetraven.utilities import get_logger, read_configuration, repository_root
-from packetraven.writer import write_packet_tracks
 
-LOGGER = get_logger('packetraven')
+LOGGER = get_logger('packetraven', log_format='%(asctime)s | %(message)s')
 
 CREDENTIALS_FILENAME = repository_root() / 'credentials.config'
+DEFAULT_INTERVAL_SECONDS = 20
 
 
 def main():
@@ -28,7 +42,7 @@ def main():
     args_parser.add_argument(
         '--tnc',
         help='comma-separated list of serial ports / text files of a TNC parsing APRS packets from analog audio to ASCII'
-             ' (set to `auto` to use the first open serial port)',
+        ' (set to `auto` to use the first open serial port)',
     )
     args_parser.add_argument(
         '--database', help='PostGres database table `user@hostname:port/database/table`'
@@ -42,7 +56,8 @@ def main():
     args_parser.add_argument('--log', help='path to log file to save log messages')
     args_parser.add_argument('--output', help='path to output file to save packets')
     args_parser.add_argument(
-        '--prediction-output', help='path to output file to save most up-to-date predicted trajectory'
+        '--prediction-output',
+        help='path to output file to save most up-to-date predicted trajectory',
     )
     args_parser.add_argument(
         '--prediction-ascent-rate', help='ascent rate to use for prediction (m/s)'
@@ -56,9 +71,7 @@ def main():
     args_parser.add_argument(
         '--prediction-float-altitude', help='float altitude to use for prediction (m)'
     )
-    args_parser.add_argument(
-        '--prediction-float-duration', help='duration of float (s)'
-    )
+    args_parser.add_argument('--prediction-float-duration', help='duration of float (s)')
     args_parser.add_argument(
         '--prediction-api',
         help=f'API URL to use for prediction (one of {[entry.value for entry in PredictionAPIURL]})',
@@ -92,8 +105,17 @@ def main():
         kwargs['tnc'] = [tnc.strip() for tnc in args.tnc.split(',')]
 
     if args.database is not None:
-        database = args.database
-        if database.count('/') != 2:
+        database = parse_hostname(args.database)
+
+        hostname = database['hostname']
+        port = database['port']
+        username = database['username']
+        password = database['password']
+
+        if port is not None:
+            hostname = f'{hostname}:{port}'
+
+        if hostname.count('/') != 2:
             LOGGER.error(
                 f'unable to parse hostname, database name, and table name from input "{database}"'
             )
@@ -102,29 +124,29 @@ def main():
                 kwargs['database_hostname'],
                 kwargs['database_database'],
                 kwargs['database_table'],
-            ) = database.split('/')
-            if '@' in kwargs['database_hostname']:
-                kwargs['database_username'], kwargs['database_hostname'] = kwargs[
-                    'database_hostname'
-                ].split('@', 1)
-                if ':' in kwargs['database_username']:
-                    kwargs['database_username'], kwargs['database_password'] = kwargs[
-                        'database_username'
-                    ].split(':', 1)
+            ) = hostname.split('/')
+            kwargs['database_username'] = username
+            kwargs['database_password'] = password
 
     if args.tunnel is not None:
-        kwargs['ssh_hostname'] = args.tunnel
-        if '@' in kwargs['ssh_hostname']:
-            kwargs['ssh_username'], kwargs['ssh_hostname'] = kwargs['ssh_hostname'].split(
-                '@', 1
-            )
-            if ':' in kwargs['ssh_username']:
-                kwargs['ssh_username'], kwargs['ssh_password'] = kwargs['ssh_username'].split(
-                    ':', 1
-                )
+        tunnel = parse_hostname(args.tunnel)
 
-    start_date = parse_date(args.start.strip('"')) if args.start is not None else None
-    end_date = parse_date(args.end.strip('"')) if args.end is not None else None
+        hostname = tunnel['hostname']
+        port = tunnel['port']
+        username = tunnel['username']
+        password = tunnel['password']
+
+        if port is not None:
+            hostname = f'{hostname}:{port}'
+
+        kwargs['ssh_hostname'] = hostname
+        kwargs['ssh_username'] = username
+        kwargs['ssh_password'] = password
+
+    start_date = (
+        convert_value(args.start.strip('"'), datetime) if args.start is not None else None
+    )
+    end_date = convert_value(args.end.strip('"'), datetime) if args.end is not None else None
 
     if start_date is not None and end_date is not None:
         if start_date > end_date:
@@ -181,14 +203,18 @@ def main():
             kwargs['prediction_float_altitude'] = float(args.prediction_float_altitude)
 
         if args.prediction_float_duration is not None:
-            kwargs['prediction_float_duration'] = timedelta(seconds=float(args.prediction_float_duration))
+            kwargs['prediction_float_duration'] = convert_value(
+                args.prediction_float_duration, timedelta
+            )
 
         if args.prediction_api is not None:
             kwargs['prediction_api_url'] = args.prediction_api
     else:
         prediction_filename = None
 
-    interval_seconds = args.interval if args.interval >= 1 else 1
+    interval_seconds = convert_value(args.interval, timedelta) / timedelta(seconds=1)
+    if interval_seconds < 1:
+        interval_seconds = 1
 
     if CREDENTIALS_FILENAME.exists():
         credentials = kwargs.copy()
@@ -200,7 +226,7 @@ def main():
         }
 
     if using_gui:
-        from client.gui import PacketRavenGUI
+        from packetraven.gui import PacketRavenGUI
 
         PacketRavenGUI(
             callsigns,
@@ -305,9 +331,12 @@ def main():
                     database_kwargs['database_password'] = database_password
 
                 database = APRSDatabaseTable(
-                    **{key.replace('database_', ''): value
-                       for key, value in database_kwargs.items()},
-                    **ssh_tunnel_kwargs, callsigns=callsigns
+                    **{
+                        key.replace('database_', ''): value
+                        for key, value in database_kwargs.items()
+                    },
+                    **ssh_tunnel_kwargs,
+                    callsigns=callsigns,
                 )
                 LOGGER.info(f'connected to {database.location}')
                 connections.append(database)
@@ -355,11 +384,17 @@ def main():
                         connections,
                         packet_tracks,
                         database,
-                        output_filename,
                         start_date=start_date,
                         end_date=end_date,
                         logger=LOGGER,
                     )
+
+                    output_filename_index = None
+                    for index, connection in enumerate(connections):
+                        if isinstance(connection, PacketGeoJSON):
+                            output_filename_index = index
+                    if output_filename_index is not None:
+                        connections.pop(output_filename_index)
 
                     if prediction_filename is not None and len(new_packets) > 0:
                         try:
@@ -382,14 +417,141 @@ def main():
                 except Exception as error:
                     LOGGER.exception(f'{error.__class__.__name__} - {error}')
                     new_packets = {}
-                if aprs_is is not None:
-                    for packets in new_packets.values():
-                        aprs_is.send(packets)
+
+                if len(new_packets) > 0:
+                    if output_filename is not None:
+                        write_packet_tracks(
+                            [packet_tracks[callsign] for callsign in packet_tracks],
+                            output_filename,
+                        )
+                    if aprs_is is not None:
+                        for packets in new_packets.values():
+                            aprs_is.send(packets)
                 time.sleep(interval_seconds)
         except KeyboardInterrupt:
             for connection in connections:
                 connection.close()
             sys.exit(0)
+
+
+def retrieve_packets(
+    connections: [PacketSource],
+    packet_tracks: [LocationPacketTrack],
+    database: PacketDatabaseTable = None,
+    start_date: datetime = None,
+    end_date: datetime = None,
+    logger: Logger = None,
+) -> {str: APRSPacket}:
+    if logger is None:
+        logger = LOGGER
+
+    logger.debug(f'receiving packets from {len(connections)} source(s)')
+    current_time = datetime.now()
+
+    parsed_packets = []
+    for connection in connections:
+        try:
+            connection_packets = connection.packets
+            parsed_packets.extend(connection_packets)
+        except ConnectionError as error:
+            LOGGER.error(f'{connection.__class__.__name__} - {error}')
+        except TimeIntervalError:
+            pass
+
+    logger.debug(f'received {len(parsed_packets)} packets')
+
+    new_packets = {}
+    if len(parsed_packets) > 0:
+        updated_callsigns = set()
+        for parsed_packet in parsed_packets:
+            callsign = parsed_packet['callsign']
+
+            if start_date is not None and parsed_packet.time <= start_date:
+                continue
+            if end_date is not None and parsed_packet.time >= end_date:
+                continue
+
+            if callsign not in packet_tracks:
+                packet_tracks[callsign] = APRSTrack(callsign, [parsed_packet])
+                logger.debug(f'started tracking callsign {callsign:8}')
+            else:
+                packet_track = packet_tracks[callsign]
+                if parsed_packet not in packet_track:
+                    packet_track.append(parsed_packet)
+                else:
+                    if database is None or parsed_packet.source != database.location:
+                        logger.debug(f'skipping duplicate packet: {parsed_packet}')
+                    continue
+
+            if parsed_packet.source not in new_packets:
+                new_packets[parsed_packet.source] = []
+            new_packets[parsed_packet.source].append(parsed_packet)
+            if callsign not in updated_callsigns:
+                updated_callsigns.add(callsign)
+
+        for source in new_packets:
+            new_packets[source] = list(sorted(new_packets[source]))
+
+        for source, packets in new_packets.items():
+            logger.info(f'received {len(packets)} new packet(s) from {source}')
+
+        if database is not None:
+            for packets in new_packets.values():
+                database.send(
+                    packet for packet in packets if packet.source != database.location
+                )
+
+        updated_callsigns = sorted(updated_callsigns)
+        for callsign in updated_callsigns:
+            packet_track = packet_tracks[callsign]
+            packet_time = datetime.utcfromtimestamp(
+                (packet_track.times[-1] - numpy.datetime64('1970-01-01T00:00:00Z'))
+                / numpy.timedelta64(1, 's')
+            )
+            packet_track.sort()
+            try:
+                coordinate_string = ', '.join(
+                    f'{coordinate:.3f}°' for coordinate in packet_track.coordinates[-1, :2]
+                )
+                logger.info(
+                    f'{callsign:9} - packet #{len(packet_track):<3} - ({coordinate_string}, {packet_track.coordinates[-1, 2]:9.2f}m)'
+                    f'; packet time is {packet_time} ({humanize.naturaltime(current_time - packet_time)}, {packet_track.intervals[-1]:6.1f} s interval)'
+                    f'; traveled {packet_track.overground_distances[-1]:6.1f} m ({packet_track.ground_speeds[-1]:5.1f} m/s) over the ground'
+                    f', and {packet_track.ascents[-1]:6.1f} m ({packet_track.ascent_rates[-1]:5.1f} m/s) vertically, since the previous packet'
+                )
+            except Exception as error:
+                logger.exception(f'{error.__class__.__name__} - {error}')
+
+        for callsign in updated_callsigns:
+            packet_track = packet_tracks[callsign]
+            packet_time = datetime.utcfromtimestamp(
+                (packet_track.times[-1] - numpy.datetime64('1970-01-01T00:00:00Z'))
+                / numpy.timedelta64(1, 's')
+            )
+            try:
+                message = (
+                    f'{callsign:9} - '
+                    f'altitude: {packet_track.altitudes[-1]:6.1f} m'
+                    f'; avg. ascent rate: {numpy.mean(packet_track.ascent_rates[packet_track.ascent_rates > 0]):5.1f} m/s'
+                    f'; avg. descent rate: {numpy.mean(packet_track.ascent_rates[packet_track.ascent_rates < 0]):5.1f} m/s'
+                    f'; avg. ground speed: {numpy.mean(packet_track.ground_speeds):5.1f} m/s'
+                    f'; avg. packet interval: {numpy.mean(packet_track.intervals):6.1f} s'
+                )
+
+                if packet_track.time_to_ground >= timedelta(seconds=0):
+                    landing_time = packet_time + packet_track.time_to_ground
+                    time_to_ground = current_time - landing_time
+                    message += (
+                        f'; estimated landing: {landing_time:%Y-%m-%d %H:%M:%S} ({humanize.naturaltime(time_to_ground)})'
+                        f'; max altitude: {packet_track.coordinates[:, 2].max():.2f} m'
+                    )
+
+                logger.info(message)
+
+            except Exception as error:
+                logger.exception(f'{error.__class__.__name__} - {error}')
+
+    return new_packets
 
 
 if __name__ == '__main__':

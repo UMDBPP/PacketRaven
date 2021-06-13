@@ -5,11 +5,11 @@ import os
 import psycopg2
 import pytest
 from sshtunnel import SSHTunnelForwarder
-from tablecrow.table import random_open_tcp_port
-from tablecrow.tables.postgres import PostGresTable, SSH_DEFAULT_PORT, database_has_table
+from tablecrow.tables.base import random_open_tcp_port
+from tablecrow.tables.postgres import database_has_table, PostGresTable, SSH_DEFAULT_PORT
 from tablecrow.utilities import split_hostname_port
 
-from packetraven.connections import APRSDatabaseTable
+from packetraven import APRSDatabaseTable
 from packetraven.packets import APRSPacket
 from packetraven.utilities import read_configuration, repository_root
 

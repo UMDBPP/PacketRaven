@@ -229,7 +229,9 @@ class DoublyLinkedList:
         elif isinstance(index, Iterable):
             return self.__class__([self.__getitem__(value) for value in index])
         elif isinstance(index, slice):
-            slice_parameters = [value for value in (index.start, index.stop, index.step) if value is not None]
+            slice_parameters = [
+                value for value in (index.start, index.stop, index.step) if value is not None
+            ]
             if all(slice_parameter is None for slice_parameter in slice_parameters):
                 return self
             else:

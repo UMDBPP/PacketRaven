@@ -1,6 +1,6 @@
 import pytest
 
-from packetraven.parsing import InvalidPacketError, parse_raw_aprs
+from packetraven.packets.parsing import InvalidPacketError, parse_raw_aprs
 
 
 def test_parse_aprs_packet():

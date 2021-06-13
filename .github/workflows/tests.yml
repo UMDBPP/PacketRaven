@@ -37,6 +37,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install wheel
+          pip install flake8
           pip install -e .[testing]
       - name: Lint with flake8
         run: |
@@ -52,7 +53,7 @@ jobs:
           POSTGRES_DATABASE: test_database
           POSTGRES_USERNAME: postgres
           POSTGRES_PASSWORD: test_password
-        run: pytest --cov=packetraven
+        run: pytest --cov=packetraven --numprocesses auto
       - name: Upload coverage to Codecov
         if: matrix.python-version == 3.9
         uses: codecov/codecov-action@v1

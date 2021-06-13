@@ -8,7 +8,7 @@ import sys
 
 from setuptools import config, find_packages, setup
 
-BUILT_PACKAGES = {'numpy': [], 'pyproj': [], 'shapely': []}
+BUILT_PACKAGES = {'numpy': [], 'pyproj': [], 'shapely': ['gdal']}
 is_conda = (Path(sys.prefix) / 'conda-meta').exists()
 
 if is_conda:
@@ -23,30 +23,38 @@ if is_conda:
 
 if os.name == 'nt':
     for required_package, pipwin_dependencies in BUILT_PACKAGES.items():
-        try:
-            importlib.import_module(required_package)
-        except:
+        failed_pipwin_packages = []
+        iterations = len(pipwin_dependencies)
+
+        for _ in range(iterations):
             try:
-                import pipwin
+                importlib.import_module(required_package)
             except:
-                subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pipwin'])
-                subprocess.check_call([sys.executable, '-m', 'pipwin', 'refresh'])
-
-            failed_pipwin_packages = []
-            for pipwin_package in pipwin_dependencies + [required_package]:
                 try:
-                    subprocess.check_call(
-                        [sys.executable, '-m', 'pipwin', 'install', pipwin_package.lower()]
-                    )
-                except subprocess.CalledProcessError:
-                    failed_pipwin_packages.append(pipwin_package)
+                    import pipwin
+                except:
+                    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pipwin'])
+                    subprocess.check_call([sys.executable, '-m', 'pipwin', 'refresh'])
 
-            if len(failed_pipwin_packages) > 0:
-                raise RuntimeError(
-                    f'failed to download or install non-conda Windows build(s) of {" and ".join(failed_pipwin_packages)}; you can either\n'
-                    '1) install within an Anaconda environment, or\n'
-                    f'2) `pip install <file>.whl`, with `<file>.whl` downloaded from {" and ".join("https://www.lfd.uci.edu/~gohlke/pythonlibs/#" + value.lower() for value in failed_pipwin_packages)} for your Python version'
-                )
+                for pipwin_package in pipwin_dependencies + [required_package]:
+                    try:
+                        subprocess.check_call(
+                            [sys.executable, '-m', 'pipwin', 'install', pipwin_package.lower()]
+                        )
+                        if pipwin_package in failed_pipwin_packages:
+                            failed_pipwin_packages.remove(pipwin_package)
+                    except subprocess.CalledProcessError:
+                        failed_pipwin_packages.append(pipwin_package)
+
+                if len(failed_pipwin_packages) == 0:
+                    break
+
+        if len(failed_pipwin_packages) > 0:
+            raise RuntimeError(
+                f'failed to download or install non-conda Windows build(s) of {" and ".join(failed_pipwin_packages)}; you can either\n'
+                '1) install within an Anaconda environment, or\n'
+                f'2) `pip install <file>.whl`, with `<file>.whl` downloaded from {" and ".join("https://www.lfd.uci.edu/~gohlke/pythonlibs/#" + value.lower() for value in failed_pipwin_packages)} for your Python version'
+            )
 
 try:
     try:
@@ -76,10 +84,10 @@ setup(
     url=metadata['url'],
     packages=find_packages(),
     python_requires='>=3.8',
-    setup_requires=['dunamai', 'setuptools>=41.2'],
+    setup_requires=['dunamai', 'setuptools>=41.2', 'wheel'],
     install_requires=[
         'aprslib',
-        'haversine',
+        'humanize',
         'netcdf4',
         'numpy>=1.20.0',
         'pandas',
@@ -92,12 +100,13 @@ setup(
         'requests',
         'shapely',
         'sshtunnel',
-        'tablecrow>=1.3.3',
+        'tablecrow>=1.3.6',
+        'teek',
         'xarray',
     ],
     extras_require={
-        'testing': ['flake8', 'pytest', 'pytest-cov', 'pytz'],
-        'development': ['oitnb'],
+        'testing': ['pytest', 'pytest-cov', 'pytest-xdist', 'pytz'],
+        'development': ['flake8', 'isort', 'oitnb'],
     },
-    entry_points={'console_scripts': ['packetraven=client.cli:main']},
+    entry_points={'console_scripts': ['packetraven=packetraven.__main__:main']},
 )

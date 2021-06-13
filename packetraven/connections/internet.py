@@ -1,234 +1,26 @@
 from datetime import datetime, timedelta
-from os import PathLike
-from pathlib import Path
 from time import sleep
 from typing import Any, Sequence
-from urllib.parse import urlparse
 
 import aprslib
-from dateutil.parser import parse as parse_date
-import geojson
 import requests
-from serial import Serial
 from shapely.geometry import Point
 from tablecrow import PostGresTable
 from tablecrow.utilities import split_hostname_port
 
-from .base import (
+from packetraven.connections.base import (
     APRSPacketSink,
     APRSPacketSource,
+    CREDENTIALS_FILENAME,
+    LOGGER,
     NetworkConnection,
     PacketSink,
     PacketSource,
-    next_open_serial_port,
+    TimeIntervalError,
 )
-from .packets import APRSPacket, LocationPacket
-from .parsing import InvalidPacketError
-from .utilities import get_logger, read_configuration, repository_root
-
-LOGGER = get_logger('connection')
-
-CREDENTIALS_FILENAME = repository_root() / 'credentials.config'
-
-
-class TimeIntervalError(Exception):
-    pass
-
-
-class SerialTNC(APRSPacketSource):
-    def __init__(self, serial_port: str = None, callsigns: [str] = None):
-        """
-        Connect to TNC over given serial port.
-
-        :param serial_port: port name
-        :param callsigns: list of callsigns to return from source
-        """
-
-        if serial_port is None or serial_port == '' or serial_port == 'auto':
-            try:
-                serial_port = next_open_serial_port()
-            except ConnectionError:
-                raise ConnectionError('could not find TNC connected to serial')
-        else:
-            serial_port = serial_port.strip('"')
-
-        self.serial_connection = Serial(serial_port, baudrate=9600, timeout=1)
-        super().__init__(self.serial_connection.port, callsigns)
-        self.__last_access_time = None
-
-    @property
-    def packets(self) -> [APRSPacket]:
-        if self.__last_access_time is not None and self.interval is not None:
-            interval = datetime.now() - self.__last_access_time
-            if interval < self.interval:
-                raise TimeIntervalError(
-                    f'interval {interval} less than minimum interval {self.interval}'
-                )
-        packets = []
-        for line in self.serial_connection.readlines():
-            try:
-                packet = APRSPacket.from_frame(line, source=self.location)
-                packets.append(packet)
-            except Exception as error:
-                LOGGER.error(f'{error.__class__.__name__} - {error}')
-        if self.callsigns is not None:
-            packets = [packet for packet in packets if packet.from_callsign in self.callsigns]
-        self.__last_access_time = datetime.now()
-        return packets
-
-    def close(self):
-        self.serial_connection.close()
-
-    def __repr__(self):
-        return f'{self.__class__.__name__}({repr(self.location)}, {repr(self.callsigns)})'
-
-
-class RawAPRSTextFile(APRSPacketSource):
-    def __init__(self, filename: PathLike = None, callsigns: str = None):
-        """
-        read APRS packets from a given text file where each line consists of the time sent (`YYYY-MM-DDTHH:MM:SS`) followed by
-        a colon `:` and then the raw APRS string
-
-        :param filename: path to text file
-        :param callsigns: list of callsigns to return from source
-        """
-
-        if not urlparse(str(filename)).scheme in ['http', 'https', 'ftp', 'sftp']:
-            if not isinstance(filename, Path):
-                if isinstance(filename, str):
-                    filename = filename.strip('"')
-                filename = Path(filename)
-            filename = str(filename)
-
-        super().__init__(filename, callsigns)
-        self.__last_access_time = None
-        self.__parsed_lines = []
-
-    @property
-    def packets(self) -> [APRSPacket]:
-        if self.__last_access_time is not None and self.interval is not None:
-            interval = datetime.now() - self.__last_access_time
-            if interval < self.interval:
-                raise TimeIntervalError(
-                    f'interval {interval} less than minimum interval {self.interval}'
-                )
-
-        if Path(self.location).exists():
-            file_connection = open(Path(self.location).expanduser().resolve())
-            lines = file_connection.readlines()
-        else:
-            file_connection = requests.get(self.location, stream=True)
-            lines = file_connection.iter_lines()
-
-        packets = []
-        for line in lines:
-            if len(line) > 0:
-                if isinstance(line, bytes):
-                    line = line.decode()
-                if line not in self.__parsed_lines:
-                    self.__parsed_lines.append(line)
-                    try:
-                        packet_time, raw_aprs = line.split(': ', 1)
-                        packet_time = parse_date(packet_time)
-                    except:
-                        raw_aprs = line
-                        packet_time = datetime.now()
-                    raw_aprs = raw_aprs.strip()
-                    try:
-                        packets.append(
-                            APRSPacket.from_frame(raw_aprs, packet_time, source=self.location)
-                        )
-                    except Exception as error:
-                        LOGGER.error(f'{error.__class__.__name__} - {error}')
-
-        file_connection.close()
-
-        if self.callsigns is not None:
-            packets = [packet for packet in packets if packet.from_callsign in self.callsigns]
-        self.__last_access_time = datetime.now()
-
-        return packets
-
-    def close(self):
-        pass
-
-    def __repr__(self):
-        return f'{self.__class__.__name__}({repr(self.location)}, {repr(self.callsigns)})'
-
-
-class PacketGeoJSON(PacketSource):
-    def __init__(self, filename: PathLike = None):
-        """
-        read location packets from a given GeoJSON file
-
-        :param filename: path to GeoJSON file
-        """
-
-        if not urlparse(str(filename)).scheme in ['http', 'https', 'ftp', 'sftp']:
-            if not isinstance(filename, Path):
-                if isinstance(filename, str):
-                    filename = filename.strip('"')
-                filename = Path(filename)
-            filename = str(filename)
-
-        super().__init__(filename)
-        self.__last_access_time = None
-
-    @property
-    def packets(self) -> [LocationPacket]:
-        if self.__last_access_time is not None and self.interval is not None:
-            interval = datetime.now() - self.__last_access_time
-            if interval < self.interval:
-                raise TimeIntervalError(
-                    f'interval {interval} less than minimum interval {self.interval}'
-                )
-
-        if Path(self.location).exists():
-            with open(Path(self.location).expanduser().resolve()) as file_connection:
-                features = geojson.load(file_connection)
-        else:
-            response = requests.get(self.location, stream=True)
-            features = geojson.loads(response.text)
-
-        packets = []
-        for feature in features['features']:
-            if feature['geometry']['type'] == 'Point':
-                properties = feature['properties']
-                time = parse_date(properties['time'])
-                del properties['time']
-
-                if 'from' in properties:
-                    from_callsign = properties['from']
-                    to_callsign = properties['to']
-                    del properties['from'], properties['to']
-
-                    packet = APRSPacket(
-                        from_callsign,
-                        to_callsign,
-                        time,
-                        *feature['geometry']['coordinates'],
-                        source=self.location,
-                        **properties,
-                    )
-                else:
-                    packet = LocationPacket(
-                        time,
-                        *feature['geometry']['coordinates'],
-                        source=self.location,
-                        **properties,
-                    )
-
-                packets.append(packet)
-
-        self.__last_access_time = datetime.now()
-
-        return packets
-
-    def close(self):
-        pass
-
-    def __repr__(self):
-        return f'{self.__class__.__name__}({repr(self.location)})'
+from packetraven.packets import APRSPacket, LocationPacket
+from packetraven.packets.parsing import InvalidPacketError
+from packetraven.utilities import read_configuration
 
 
 class APRSfi(APRSPacketSource, NetworkConnection):
@@ -376,7 +168,7 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
         for packet in packets:
             if packet.crs != self.crs:
                 packet.transform_to(self.crs)
-        records = [self.__packet_record(packet) for packet in packets]
+        records = [self.__packet_record(packet) for packet in packets if packet not in self]
         PostGresTable.insert(self, records)
 
     def __contains__(self, packet: LocationPacket) -> bool:
@@ -390,9 +182,7 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
             new_packets.extend(self.__send_buffer)
             self.__send_buffer.clear()
         if len(new_packets) > 0:
-            LOGGER.info(
-                f'sending {len(new_packets)} packet(s) to {self.location}: {new_packets}'
-            )
+            LOGGER.info(f'sending {len(new_packets)} packet(s) to {self.location}')
             try:
                 self.insert(new_packets)
             except ConnectionError as error:
@@ -458,7 +248,9 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
         kwargs['fields'] = {
             f'packet_{field}': field_type for field, field_type in kwargs['fields'].items()
         }
-        PacketDatabaseTable.__init__(self, hostname=hostname, database=database, table=table, **kwargs)
+        PacketDatabaseTable.__init__(
+            self, hostname=hostname, database=database, table=table, **kwargs
+        )
         location = f'postgres://{self.hostname}:{self.port}/{self.database}/{self.name}'
         APRSPacketSource.__init__(self, location, callsigns)
         APRSPacketSink.__init__(self, location)
