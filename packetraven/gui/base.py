@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta
 import logging
 from os import PathLike
@@ -17,7 +18,7 @@ from packetraven.connections.base import available_serial_ports, next_open_seria
 from packetraven.connections.file import PacketGeoJSON
 from packetraven.connections.internet import APRSis
 from packetraven.gui.plotting import LivePlot
-from packetraven.packets import APRSPacket
+from packetraven.packets import APRSPacket, LocationPacket
 from packetraven.packets.tracks import LocationPacketTrack, PredictedTrajectory
 from packetraven.packets.writer import write_packet_tracks
 from packetraven.predicts import get_predictions, PredictionError
@@ -74,6 +75,7 @@ class PacketRavenGUI:
         self.aprs_is = None
         self.__connections = []
 
+        self.__timeout = None
         self.__running = False
         self.__toggles = {}
         self.__packet_tracks = {}
@@ -274,6 +276,7 @@ class PacketRavenGUI:
             control_frame, textvariable=self.__toggle_text, command=self.toggle
         )
         toggle_button.grid(row=len(control_frame.grid_rows), column=0, sticky='nsew')
+        self.__elements['toggle_button'] = toggle_button
 
         self.callsigns = callsigns
         self.tncs = self.__configuration['tnc']['tnc']
@@ -322,7 +325,7 @@ class PacketRavenGUI:
             callsigns = ', '.join([callsign.upper() for callsign in callsigns])
         else:
             callsigns = ''
-        self.replace_text(self.__elements['callsigns'], callsigns)
+        self.__replace_text(self.__elements['callsigns'], callsigns)
 
     @property
     def tncs(self) -> [str]:
@@ -350,7 +353,7 @@ class PacketRavenGUI:
         filenames = [str(filename) for filename in filenames]
 
         self.__configuration['tnc']['tnc'] = filenames
-        self.replace_text(self.__elements['tnc'], ', '.join(filenames))
+        self.__replace_text(self.__elements['tnc'], ', '.join(filenames))
 
     @property
     def start_date(self) -> datetime:
@@ -369,7 +372,7 @@ class PacketRavenGUI:
             start_date = f'{start_date:%Y-%m-%d %H:%M:%S}'
         else:
             start_date = ''
-        self.replace_text(self.__elements['start_date'], start_date)
+        self.__replace_text(self.__elements['start_date'], start_date)
 
     @property
     def end_date(self) -> datetime:
@@ -388,7 +391,7 @@ class PacketRavenGUI:
             end_date = f'{end_date:%Y-%m-%d %H:%M:%S}'
         else:
             end_date = ''
-        self.replace_text(self.__elements['end_date'], end_date)
+        self.__replace_text(self.__elements['end_date'], end_date)
 
     @property
     def log_filename(self) -> Path:
@@ -414,7 +417,7 @@ class PacketRavenGUI:
                 filename = filename / f'packetraven_log_{datetime.now():%Y%m%dT%H%M%S}.txt'
         else:
             filename = ''
-        self.replace_text(self.__elements['log_file'], filename)
+        self.__replace_text(self.__elements['log_file'], filename)
 
     @property
     def output_filename(self) -> Path:
@@ -442,7 +445,7 @@ class PacketRavenGUI:
                 )
         else:
             filename = ''
-        self.replace_text(self.__elements['output_file'], filename)
+        self.__replace_text(self.__elements['output_file'], filename)
 
     @property
     def prediction_filename(self) -> Path:
@@ -470,7 +473,7 @@ class PacketRavenGUI:
                 )
         else:
             filename = ''
-        self.replace_text(self.__elements['prediction_file'], filename)
+        self.__replace_text(self.__elements['prediction_file'], filename)
 
     @property
     def toggles(self) -> {str: bool}:
@@ -493,171 +496,11 @@ class PacketRavenGUI:
     def predictions(self) -> {str: PredictedTrajectory}:
         return self.__predictions if self.toggles['prediction_file'] else None
 
-    def __select_tnc(self):
-        if self.__elements['tnc'].text == self.__file_selection_option:
-            self.tncs = teek.dialog.open_multiple_files(
-                title='Select TNC text file(s)...',
-                defaultextension='.txt',
-                filetypes=[('Text', '*.txt')],
-            )
-
-    def __select_log_file(self):
-        self.log_filename = teek.dialog.save_file(
-            title='Create log file...',
-            initialdir=str(self.log_filename.parent),
-            initialfile=self.log_filename.stem,
-            defaultextension='.txt',
-            filetypes=[('Text', '*.txt')],
-        )
-
-    def __select_output_file(self):
-        self.output_filename = teek.dialog.save_file(
-            title='Create output file...',
-            initialdir=str(self.output_filename.parent),
-            initialfile=self.output_filename.stem,
-            defaultextension='.geojson',
-            filetypes=[
-                ('GeoJSON', '*.geojson'),
-                ('Text', '*.txt'),
-                ('Keyhole Markup Language', '*.kml'),
-            ],
-        )
-
-    def __select_prediction_file(self):
-        self.prediction_filename = teek.dialog.save_file(
-            title='Create predict file...',
-            initialdir=str(self.prediction_filename.parent),
-            initialfile=self.prediction_filename.stem,
-            defaultextension='.geojson',
-            filetypes=[
-                ('GeoJSON', '*.geojson'),
-                ('Text', '*.txt'),
-                ('Keyhole Markup Language', '*.kml'),
-            ],
-        )
-
-    def __toggle_log_file(self, value: bool = None):
-        if (value is not None and value) or self.toggles['log_file']:
-            set_child_states(self.__elements['log_file_box'], state='normal')
-            get_logger(LOGGER.name, log_filename=self.log_filename)
-        else:
-            set_child_states(self.__elements['log_file_box'], state='disabled')
-            for existing_file_handler in [
-                handler for handler in LOGGER.handlers if type(handler) is logging.FileHandler
-            ]:
-                LOGGER.removeHandler(existing_file_handler)
-
-    def __toggle_output_file(self, value: bool = None):
-        if (value is not None and value) or self.toggles['output_file']:
-            set_child_states(self.__elements['output_file_box'], state='normal')
-        else:
-            set_child_states(self.__elements['output_file_box'], state='disabled')
-
-    def __toggle_prediction_file(self, value: bool = None):
-        if (value is not None and value) or self.toggles['prediction_file']:
-            set_child_states(self.__elements['prediction_file_box'], state='normal')
-        else:
-            set_child_states(self.__elements['prediction_file_box'], state='disabled')
-
-    def __add_combo_box(
-        self,
-        frame: teek.Frame,
-        title: str,
-        options: [str],
-        option_select: Callable = None,
-        **kwargs,
-    ) -> teek.Combobox:
-        width = kwargs['width'] if 'width' in kwargs else None
-        combo_box = teek.Combobox(frame, width=width)
-        combo_box.config['values'] = options
-        if option_select is not None:
-            combo_box.bind('<<ComboboxSelected>>', option_select)
-        return self.__add_text_box(frame, title, text_box=combo_box, **kwargs)
-
-    def __add_file_box(
-        self, frame: teek.Frame, title: str, file_select: Callable, **kwargs
-    ) -> teek.Frame:
-        if 'row' not in kwargs:
-            kwargs['row'] = len(frame.grid_rows)
-        if 'column' not in kwargs:
-            kwargs['column'] = 0
-        file_box_kwargs = {
-            key: value
-            for key, value in kwargs.items()
-            if key in ['row', 'column', 'columnspan']
-        }
-        if 'columnspan' in file_box_kwargs:
-            file_box_kwargs['columnspan'] -= 1
-
-        if 'label' in kwargs:
-            text_label = teek.Label(frame, text=kwargs['label'])
-            text_label.grid(row=kwargs['row'], column=kwargs['column'], sticky='w')
-            file_box_kwargs['column'] += 1
-
-        file_box_frame = teek.Frame(frame)
-        file_box_frame.grid(**file_box_kwargs)
-
-        file_box = teek.Entry(
-            file_box_frame, width=kwargs['width'] if 'width' in kwargs else None
-        )
-        file_button = teek.Button(file_box_frame, text='...', command=file_select)
-
-        file_box.pack(side='left')
-        file_button.pack(side='left')
-
-        self.__elements[title] = file_box
-        return file_box_frame
-
-    def __add_entry_box(self, frame: teek.Frame, title: str, **kwargs) -> teek.Entry:
-        if 'text_box' not in kwargs:
-            kwargs['text_box'] = teek.Entry(
-                frame, width=kwargs['width'] if 'width' in kwargs else None
-            )
-        return self.__add_text_box(frame, title, **kwargs)
-
-    def __add_text_box(
-        self,
-        frame: teek.Frame,
-        title: str,
-        label: str,
-        units: str = None,
-        row: int = None,
-        column: int = None,
-        width: int = 10,
-        text_box: teek.Entry = None,
-        **kwargs,
-    ) -> teek.Text:
-        if row is None:
-            row = len(frame.grid_rows)
-        if column is None:
-            column = 0
-
-        if 'columnspan' in kwargs:
-            if label is not None:
-                kwargs['columnspan'] -= 1
-            if units is not None:
-                kwargs['columnspan'] -= 1
-
-        if label is not None:
-            text_label = teek.Label(frame, text=label)
-            text_label.grid(row=row, column=column, sticky='w')
-            column += 1
-
-        if text_box is None:
-            text_box = teek.Text(frame, width=width, height=1)
-        text_box.grid(row=row, column=column, **kwargs)
-        column += 1
-
-        if units is not None:
-            units_label = teek.Label(frame, text=units)
-            units_label.grid(row=row, column=column)
-            column += 1
-
-        self.__elements[title] = text_box
-        return text_box
-
     def toggle(self):
         if not self.running:
+            self.__elements['toggle_button'].busy_hold()
+            self.__toggle_text.set('Stop')
+
             if self.log_filename is not None:
                 get_logger(LOGGER.name, self.log_filename)
 
@@ -710,7 +553,8 @@ class PacketRavenGUI:
                 if api_key is None:
                     api_key = more_dialogs.ask_string(
                         'APRS.fi API Key',
-                        'enter API key for https://aprs.fi',
+                        'enter API key for https://aprs.fi \n'
+                        'leave blank (or Cancel) for none',
                         parent=self.__windows['main'],
                     )
                 try:
@@ -852,8 +696,8 @@ class PacketRavenGUI:
                 for callsign in self.packet_tracks:
                     set_child_states(self.__windows[callsign], 'disabled')
 
-                self.__toggle_text.set('Stop')
                 self.__running = True
+
             except Exception as error:
                 teek.dialog.error(error.__class__.__name__, error)
                 if '\n' in str(error):
@@ -864,8 +708,15 @@ class PacketRavenGUI:
                 self.__running = False
                 set_child_states(self.__frames['configuration'], 'normal')
 
-            self.retrieve_packets()
+            self.__elements['toggle_button'].busy_forget()
+            asyncio.run(self.retrieve_packets())
         else:
+            if self.__timeout is not None:
+                try:
+                    self.__timeout.cancel()
+                except RuntimeError:
+                    pass
+
             for connection in self.__connections:
                 connection.close()
 
@@ -891,384 +742,99 @@ class PacketRavenGUI:
 
             logging.shutdown()
 
-    def retrieve_packets(self):
+    async def retrieve_packets(self):
         if self.running:
             try:
                 current_time = datetime.now()
-
-                existing_callsigns = list(self.packet_tracks)
 
                 new_packets = retrieve_packets(
                     self.__connections,
                     self.__packet_tracks,
                     self.database,
-                    self.output_filename,
                     self.start_date,
                     self.end_date,
                     logger=LOGGER,
                 )
 
-                if self.toggles['prediction_file'] and len(new_packets) > 0:
-                    try:
-                        self.__predictions = get_predictions(
-                            self.packet_tracks,
-                            **{
-                                key.replace('prediction_', ''): value
-                                for key, value in self.__configuration['prediction'].items()
-                                if 'prediction_' in key
-                            },
-                        )
-                        if self.prediction_filename is not None:
-                            write_packet_tracks(
-                                self.__predictions.values(), self.prediction_filename
-                            )
-                    except PredictionError as error:
-                        LOGGER.warning(f'{error.__class__.__name__} - {error}')
-                    except Exception as error:
-                        LOGGER.warning(
-                            f'error retrieving prediction trajectory - {error.__class__.__name__} - {error}'
-                        )
+                output_filename_index = None
+                for index, connection in enumerate(self.__connections):
+                    if isinstance(connection, PacketGeoJSON):
+                        output_filename_index = index
+                if output_filename_index is not None:
+                    self.__connections.pop(output_filename_index)
 
                 if len(new_packets) > 0:
+                    if self.output_filename is not None:
+                        write_packet_tracks(
+                            [
+                                self.__packet_tracks[callsign]
+                                for callsign in self.__packet_tracks
+                            ],
+                            self.output_filename,
+                        )
+
+                    await self.__update_sources_window(new_packets)
+
+                    if self.toggles['prediction_file']:
+                        try:
+                            self.__predictions = get_predictions(
+                                self.packet_tracks,
+                                **{
+                                    key.replace('prediction_', ''): value
+                                    for key, value in self.__configuration[
+                                        'prediction'
+                                    ].items()
+                                    if 'prediction_' in key
+                                },
+                            )
+                            if self.prediction_filename is not None:
+                                write_packet_tracks(
+                                    self.__predictions.values(), self.prediction_filename
+                                )
+                        except PredictionError as error:
+                            LOGGER.warning(f'{error.__class__.__name__} - {error}')
+                        except Exception as error:
+                            LOGGER.warning(
+                                f'error retrieving prediction trajectory - {error.__class__.__name__} - {error}'
+                            )
+
                     for variable, plot in self.__plots.items():
                         plot.update(self.packet_tracks, self.predictions)
 
-                if self.aprs_is is not None:
-                    for packets in new_packets.values():
-                        self.aprs_is.send(packets)
+                    if self.aprs_is is not None:
+                        for packets in new_packets.values():
+                            self.aprs_is.send(packets)
 
-                updated_callsigns = {
-                    packet.from_callsign
-                    for packets in new_packets.values()
-                    for packet in packets
-                    if isinstance(packet, APRSPacket)
-                }
-                for callsign in updated_callsigns:
-                    packet_track = self.packet_tracks[callsign]
-                    packet_time = datetime.utcfromtimestamp(
-                        (packet_track.times[-1] - numpy.datetime64('1970-01-01T00:00:00Z'))
-                        / numpy.timedelta64(1, 's')
-                    )
+                    updated_callsigns = {
+                        packet.from_callsign
+                        for packets in new_packets.values()
+                        for packet in packets
+                        if isinstance(packet, APRSPacket)
+                    }
+                else:
+                    updated_callsigns = {}
 
-                    if callsign not in existing_callsigns:
-                        window = teek.Window(callsign)
-
-                        self.__add_text_box(
-                            window,
-                            title=f'{callsign}.source',
-                            label=None,
-                            width=27,
-                            sticky='w',
-                            columnspan=3,
+                await asyncio.wait(
+                    [
+                        self.__update_callsign_window(
+                            callsign,
+                            only_time=callsign not in updated_callsigns,
+                            current_time=current_time,
                         )
-                        self.__add_text_box(
-                            window,
-                            title=f'{callsign}.callsign',
-                            label='Callsign',
-                            width=17,
-                            sticky='w',
-                            columnspan=3,
-                        )
-                        self.replace_text(self.__elements[f'{callsign}.callsign'], callsign)
-                        self.__add_text_box(
-                            window,
-                            title=f'{callsign}.packets',
-                            label='Packet #',
-                            width=17,
-                            sticky='w',
-                            columnspan=3,
-                        )
-
-                        self.__add_text_box(
-                            window,
-                            title=f'{callsign}.time',
-                            label='Time',
-                            width=19,
-                            sticky='w',
-                            row=self.__elements[f'{callsign}.source'].grid_info()['row'],
-                            column=self.__elements[f'{callsign}.source'].grid_info()['column']
-                            + 4,
-                            columnspan=3,
-                        )
-                        self.__add_text_box(
-                            window,
-                            title=f'{callsign}.age',
-                            label='Packet Age',
-                            width=14,
-                            units='s',
-                            sticky='w',
-                            row=self.__elements[f'{callsign}.callsign'].grid_info()['row'],
-                            column=self.__elements[f'{callsign}.callsign'].grid_info()[
-                                'column'
-                            ]
-                            + 3,
-                        )
-                        self.__add_text_box(
-                            window,
-                            title=f'{callsign}.interval',
-                            label='Interval',
-                            width=14,
-                            units='s',
-                            sticky='w',
-                            row=self.__elements[f'{callsign}.packets'].grid_info()['row'],
-                            column=self.__elements[f'{callsign}.packets'].grid_info()['column']
-                            + 3,
-                        )
-
-                        separator = teek.Separator(window, orient='horizontal')
-                        separator.grid(
-                            row=len(window.grid_rows),
-                            column=0,
-                            columnspan=7,
-                            sticky='ew',
-                            pady=10,
-                        )
-
-                        self.__add_text_box(
-                            window,
-                            title=f'{callsign}.coordinates',
-                            label='Lat., Lon.',
-                            width=17,
-                            sticky='w',
-                            columnspan=3,
-                        )
-                        self.__add_text_box(
-                            window,
-                            title=f'{callsign}.distance',
-                            label='Distance',
-                            width=14,
-                            units='m',
-                            sticky='w',
-                        )
-                        self.__add_text_box(
-                            window,
-                            title=f'{callsign}.ground_speed',
-                            label='Ground Speed',
-                            width=14,
-                            units='m/s',
-                            sticky='w',
-                        )
-
-                        self.__add_text_box(
-                            window,
-                            title=f'{callsign}.altitude',
-                            label='Alt.',
-                            width=14,
-                            units='m',
-                            sticky='w',
-                            row=self.__elements[f'{callsign}.coordinates'].grid_info()['row'],
-                            column=self.__elements[f'{callsign}.coordinates'].grid_info()[
-                                'column'
-                            ]
-                            + 3,
-                        )
-                        self.__add_text_box(
-                            window,
-                            title=f'{callsign}.ascent',
-                            label='Ascent',
-                            width=14,
-                            units='m',
-                            sticky='w',
-                            row=self.__elements[f'{callsign}.distance'].grid_info()['row'],
-                            column=self.__elements[f'{callsign}.distance'].grid_info()[
-                                'column'
-                            ]
-                            + 3,
-                        )
-                        self.__add_text_box(
-                            window,
-                            title=f'{callsign}.ascent_rate',
-                            label='Ascent Rate',
-                            width=14,
-                            units='m/s',
-                            sticky='w',
-                            row=self.__elements[f'{callsign}.ground_speed'].grid_info()['row'],
-                            column=self.__elements[f'{callsign}.ground_speed'].grid_info()[
-                                'column'
-                            ]
-                            + 3,
-                        )
-
-                        separator = teek.Separator(window, orient='horizontal')
-                        separator.grid(
-                            row=len(window.grid_rows),
-                            column=0,
-                            columnspan=7,
-                            sticky='ew',
-                            pady=10,
-                        )
-
-                        self.__add_text_box(
-                            window,
-                            title=f'{callsign}.distance_downrange',
-                            label='Downrange',
-                            width=14,
-                            units='m',
-                            sticky='w',
-                        )
-                        self.__add_text_box(
-                            window,
-                            title=f'{callsign}.distance_overground',
-                            label='Overground',
-                            width=14,
-                            units='m',
-                            sticky='w',
-                        )
-
-                        self.__add_text_box(
-                            window,
-                            title=f'{callsign}.maximum_altitude',
-                            label='Max Alt.',
-                            width=14,
-                            units='m',
-                            sticky='w',
-                            row=self.__elements[f'{callsign}.distance_downrange'].grid_info()[
-                                'row'
-                            ],
-                            column=self.__elements[
-                                f'{callsign}.distance_downrange'
-                            ].grid_info()['column']
-                            + 3,
-                        )
-                        self.__add_text_box(
-                            window,
-                            title=f'{callsign}.time_to_ground',
-                            label='Est. Landing',
-                            width=14,
-                            units='s',
-                            sticky='w',
-                            row=self.__elements[f'{callsign}.distance_overground'].grid_info()[
-                                'row'
-                            ],
-                            column=self.__elements[
-                                f'{callsign}.distance_overground'
-                            ].grid_info()['column']
-                            + 3,
-                        )
-
-                        separator = teek.Separator(window, orient='vertical')
-                        separator.grid(
-                            row=0,
-                            column=3,
-                            rowspan=len(window.grid_rows) + 2,
-                            sticky='ns',
-                            padx=10,
-                        )
-
-                        window.on_delete_window.connect(window.iconify)
-
-                        self.__windows[callsign] = window
-
-                    window = self.__windows[callsign]
-
-                    window.deiconify()
-                    window.focus()
-
-                    set_child_states(window, 'normal')
-
-                    self.replace_text(
-                        self.__elements[f'{callsign}.packets'], len(packet_track)
-                    )
-                    self.replace_text(
-                        self.__elements[f'{callsign}.source'], packet_track[-1].source
-                    )
-                    self.replace_text(self.__elements[f'{callsign}.time'], f'{packet_time}')
-                    self.replace_text(
-                        self.__elements[f'{callsign}.altitude'],
-                        f'{packet_track.coordinates[-1, 2]:.3f}',
-                    )
-                    self.replace_text(
-                        self.__elements[f'{callsign}.coordinates'],
-                        ', '.join(
-                            f'{value:.3f}'
-                            for value in reversed(packet_track.coordinates[-1, :2])
-                        ),
-                    )
-                    self.replace_text(
-                        self.__elements[f'{callsign}.ascent'],
-                        f'{packet_track.ascents[-1]:.2f}',
-                    )
-                    self.replace_text(
-                        self.__elements[f'{callsign}.distance'],
-                        f'{packet_track.overground_distances[-1]:.2f}',
-                    )
-                    self.replace_text(
-                        self.__elements[f'{callsign}.interval'],
-                        f'{packet_track.intervals[-1]:.2f}',
-                    )
-                    self.replace_text(
-                        self.__elements[f'{callsign}.ascent_rate'],
-                        f'{packet_track.ascent_rates[-1]:.2f}',
-                    )
-                    self.replace_text(
-                        self.__elements[f'{callsign}.ground_speed'],
-                        f'{packet_track.ground_speeds[-1]:.2f}',
-                    )
-
-                    self.replace_text(
-                        self.__elements[f'{callsign}.distance_downrange'],
-                        f'{packet_track.distance_downrange:.2f}',
-                    )
-                    self.replace_text(
-                        self.__elements[f'{callsign}.distance_overground'],
-                        f'{packet_track.length:.2f}',
-                    )
-
-                    self.replace_text(
-                        self.__elements[f'{callsign}.maximum_altitude'],
-                        f'{packet_track.coordinates[:, 2].max():.2f}',
-                    )
-
-                for callsign, packet_track in self.__packet_tracks.items():
-                    window = self.__windows[callsign]
-                    packet_time = datetime.utcfromtimestamp(
-                        (packet_track.times[-1] - numpy.datetime64('1970-01-01T00:00:00Z'))
-                        / numpy.timedelta64(1, 's')
-                    )
-
-                    time_to_ground_box = self.__elements[f'{callsign}.time_to_ground']
-                    if packet_track.time_to_ground >= timedelta(seconds=0):
-                        time_to_ground_box.config['state'] = 'normal'
-                        current_time_to_ground = (
-                            packet_time + packet_track.time_to_ground - current_time
-                        )
-                        self.replace_text(
-                            time_to_ground_box,
-                            f'{current_time_to_ground / timedelta(seconds=1):.2f}',
-                        )
-                    else:
-                        self.replace_text(time_to_ground_box, '')
-                        time_to_ground_box.config['state'] = 'disabled'
-
-                    set_child_states(window, 'disabled', [teek.Text])
-
-                    packet_age_box = self.__elements[f'{callsign}.age']
-                    packet_age_box.config['state'] = 'normal'
-                    self.replace_text(
-                        packet_age_box,
-                        f'{(current_time - packet_time) / timedelta(seconds=1):.2f}',
-                    )
-                    packet_age_box.config['state'] = 'disabled'
+                        for callsign, packet_track in self.__packet_tracks.items()
+                    ]
+                )
 
                 if self.running:
-                    teek.after(
-                        ms=int(self.interval_seconds * 1000), callback=self.retrieve_packets
+                    self.__timeout = teek.after(
+                        ms=int(self.interval_seconds * 1000),
+                        callback=asyncio.run,
+                        kwargs={'main': self.retrieve_packets()},
                     )
             except KeyboardInterrupt:
                 self.close()
             except Exception as error:
                 LOGGER.exception(f'{error.__class__.__name__} - {error}')
-
-    @staticmethod
-    def replace_text(element: teek.Entry, value: str):
-        if value is None:
-            value = ''
-
-        if isinstance(element, teek.Text):
-            element.delete(element.start, element.end)
-            element.insert(element.start, str(value))
-        elif isinstance(element, teek.Entry):
-            element.text = str(value)
 
     def close(self):
         try:
@@ -1280,6 +846,521 @@ class PacketRavenGUI:
         except Exception as error:
             LOGGER.exception(f'{error.__class__.__name__} - {error}')
         sys.exit()
+
+    def __select_tnc(self):
+        if self.__elements['tnc'].text == self.__file_selection_option:
+            self.tncs = teek.dialog.open_multiple_files(
+                title='Select TNC text file(s)...',
+                defaultextension='.txt',
+                filetypes=[('Text', '*.txt')],
+            )
+
+    def __select_log_file(self):
+        self.log_filename = teek.dialog.save_file(
+            title='Create log file...',
+            initialdir=str(self.log_filename.parent),
+            initialfile=self.log_filename.stem,
+            defaultextension='.txt',
+            filetypes=[('Text', '*.txt')],
+        )
+
+    def __select_output_file(self):
+        self.output_filename = teek.dialog.save_file(
+            title='Create output file...',
+            initialdir=str(self.output_filename.parent),
+            initialfile=self.output_filename.stem,
+            defaultextension='.geojson',
+            filetypes=[
+                ('GeoJSON', '*.geojson'),
+                ('Text', '*.txt'),
+                ('Keyhole Markup Language', '*.kml'),
+            ],
+        )
+
+    def __select_prediction_file(self):
+        self.prediction_filename = teek.dialog.save_file(
+            title='Create predict file...',
+            initialdir=str(self.prediction_filename.parent),
+            initialfile=self.prediction_filename.stem,
+            defaultextension='.geojson',
+            filetypes=[
+                ('GeoJSON', '*.geojson'),
+                ('Text', '*.txt'),
+                ('Keyhole Markup Language', '*.kml'),
+            ],
+        )
+
+    def __toggle_log_file(self, value: bool = None):
+        if (value is not None and value) or self.toggles['log_file']:
+            set_child_states(self.__elements['log_file_box'], state='normal')
+            get_logger(LOGGER.name, log_filename=self.log_filename)
+        else:
+            set_child_states(self.__elements['log_file_box'], state='disabled')
+            for existing_file_handler in [
+                handler for handler in LOGGER.handlers if type(handler) is logging.FileHandler
+            ]:
+                LOGGER.removeHandler(existing_file_handler)
+
+    def __toggle_output_file(self, value: bool = None):
+        if (value is not None and value) or self.toggles['output_file']:
+            set_child_states(self.__elements['output_file_box'], state='normal')
+        else:
+            set_child_states(self.__elements['output_file_box'], state='disabled')
+
+    def __toggle_prediction_file(self, value: bool = None):
+        if (value is not None and value) or self.toggles['prediction_file']:
+            set_child_states(self.__elements['prediction_file_box'], state='normal')
+        else:
+            set_child_states(self.__elements['prediction_file_box'], state='disabled')
+
+    def __add_callsign_window(self, callsign: str) -> teek.Window:
+        window = teek.Window(callsign)
+
+        self.__add_text_box(
+            window, title=f'{callsign}.source', label=None, width=27, sticky='w', columnspan=3,
+        )
+        self.__add_text_box(
+            window,
+            title=f'{callsign}.callsign',
+            label='Callsign',
+            width=17,
+            sticky='w',
+            columnspan=3,
+        )
+        self.__replace_text(self.__elements[f'{callsign}.callsign'], callsign)
+        self.__add_text_box(
+            window,
+            title=f'{callsign}.packets',
+            label='Packet #',
+            width=17,
+            sticky='w',
+            columnspan=3,
+        )
+
+        self.__add_text_box(
+            window,
+            title=f'{callsign}.time',
+            label='Time',
+            width=19,
+            sticky='w',
+            row=self.__elements[f'{callsign}.source'].grid_info()['row'],
+            column=self.__elements[f'{callsign}.source'].grid_info()['column'] + 4,
+            columnspan=3,
+        )
+        self.__add_text_box(
+            window,
+            title=f'{callsign}.age',
+            label='Packet Age',
+            width=14,
+            units='s',
+            sticky='w',
+            row=self.__elements[f'{callsign}.callsign'].grid_info()['row'],
+            column=self.__elements[f'{callsign}.callsign'].grid_info()['column'] + 3,
+        )
+        self.__add_text_box(
+            window,
+            title=f'{callsign}.interval',
+            label='Interval',
+            width=14,
+            units='s',
+            sticky='w',
+            row=self.__elements[f'{callsign}.packets'].grid_info()['row'],
+            column=self.__elements[f'{callsign}.packets'].grid_info()['column'] + 3,
+        )
+
+        separator = teek.Separator(window, orient='horizontal')
+        separator.grid(
+            row=len(window.grid_rows), column=0, columnspan=7, sticky='ew', pady=10,
+        )
+
+        self.__add_text_box(
+            window,
+            title=f'{callsign}.coordinates',
+            label='Lat., Lon.',
+            width=17,
+            sticky='w',
+            columnspan=3,
+        )
+        self.__add_text_box(
+            window,
+            title=f'{callsign}.distance',
+            label='Distance',
+            width=14,
+            units='m',
+            sticky='w',
+        )
+        self.__add_text_box(
+            window,
+            title=f'{callsign}.ground_speed',
+            label='Ground Speed',
+            width=14,
+            units='m/s',
+            sticky='w',
+        )
+
+        self.__add_text_box(
+            window,
+            title=f'{callsign}.altitude',
+            label='Alt.',
+            width=14,
+            units='m',
+            sticky='w',
+            row=self.__elements[f'{callsign}.coordinates'].grid_info()['row'],
+            column=self.__elements[f'{callsign}.coordinates'].grid_info()['column'] + 3,
+        )
+        self.__add_text_box(
+            window,
+            title=f'{callsign}.ascent',
+            label='Ascent',
+            width=14,
+            units='m',
+            sticky='w',
+            row=self.__elements[f'{callsign}.distance'].grid_info()['row'],
+            column=self.__elements[f'{callsign}.distance'].grid_info()['column'] + 3,
+        )
+        self.__add_text_box(
+            window,
+            title=f'{callsign}.ascent_rate',
+            label='Ascent Rate',
+            width=14,
+            units='m/s',
+            sticky='w',
+            row=self.__elements[f'{callsign}.ground_speed'].grid_info()['row'],
+            column=self.__elements[f'{callsign}.ground_speed'].grid_info()['column'] + 3,
+        )
+
+        separator = teek.Separator(window, orient='horizontal')
+        separator.grid(
+            row=len(window.grid_rows), column=0, columnspan=7, sticky='ew', pady=10,
+        )
+
+        self.__add_text_box(
+            window,
+            title=f'{callsign}.distance_downrange',
+            label='Downrange',
+            width=14,
+            units='m',
+            sticky='w',
+        )
+        self.__add_text_box(
+            window,
+            title=f'{callsign}.distance_overground',
+            label='Overground',
+            width=14,
+            units='m',
+            sticky='w',
+        )
+
+        self.__add_text_box(
+            window,
+            title=f'{callsign}.maximum_altitude',
+            label='Max Alt.',
+            width=14,
+            units='m',
+            sticky='w',
+            row=self.__elements[f'{callsign}.distance_downrange'].grid_info()['row'],
+            column=self.__elements[f'{callsign}.distance_downrange'].grid_info()['column'] + 3,
+        )
+        self.__add_text_box(
+            window,
+            title=f'{callsign}.time_to_ground',
+            label='Est. Landing',
+            width=14,
+            units='s',
+            sticky='w',
+            row=self.__elements[f'{callsign}.distance_overground'].grid_info()['row'],
+            column=self.__elements[f'{callsign}.distance_overground'].grid_info()['column']
+            + 3,
+        )
+
+        separator = teek.Separator(window, orient='vertical')
+        separator.grid(
+            row=0, column=3, rowspan=len(window.grid_rows) + 2, sticky='ns', padx=10,
+        )
+
+        window.on_delete_window.connect(window.iconify)
+
+        self.__windows[callsign] = window
+
+        return window
+
+    async def __update_callsign_window(
+        self, callsign: str, only_time: bool = False, current_time: datetime = None
+    ):
+        if callsign not in self.__windows:
+            self.__add_callsign_window(callsign)
+
+        if current_time is None:
+            current_time = datetime.now()
+
+        window = self.__windows[callsign]
+
+        if not only_time:
+            window.deiconify()
+            window.focus()
+
+        set_child_states(window, 'normal')
+
+        packet_track = self.packet_tracks[callsign]
+
+        packet_time = datetime.utcfromtimestamp(
+            (packet_track.times[-1] - numpy.datetime64('1970-01-01T00:00:00Z'))
+            / numpy.timedelta64(1, 's')
+        )
+
+        if not only_time:
+            self.__replace_text(self.__elements[f'{callsign}.packets'], len(packet_track))
+            self.__replace_text(self.__elements[f'{callsign}.source'], packet_track[-1].source)
+            self.__replace_text(self.__elements[f'{callsign}.time'], f'{packet_time}')
+            self.__replace_text(
+                self.__elements[f'{callsign}.altitude'],
+                f'{packet_track.coordinates[-1, 2]:.3f}',
+            )
+            self.__replace_text(
+                self.__elements[f'{callsign}.coordinates'],
+                ', '.join(
+                    f'{value:.3f}' for value in reversed(packet_track.coordinates[-1, :2])
+                ),
+            )
+            self.__replace_text(
+                self.__elements[f'{callsign}.ascent'], f'{packet_track.ascents[-1]:.2f}',
+            )
+            self.__replace_text(
+                self.__elements[f'{callsign}.distance'],
+                f'{packet_track.overground_distances[-1]:.2f}',
+            )
+            self.__replace_text(
+                self.__elements[f'{callsign}.interval'], f'{packet_track.intervals[-1]:.2f}',
+            )
+            self.__replace_text(
+                self.__elements[f'{callsign}.ascent_rate'],
+                f'{packet_track.ascent_rates[-1]:.2f}',
+            )
+            self.__replace_text(
+                self.__elements[f'{callsign}.ground_speed'],
+                f'{packet_track.ground_speeds[-1]:.2f}',
+            )
+
+            self.__replace_text(
+                self.__elements[f'{callsign}.distance_downrange'],
+                f'{packet_track.distance_downrange:.2f}',
+            )
+            self.__replace_text(
+                self.__elements[f'{callsign}.distance_overground'],
+                f'{packet_track.length:.2f}',
+            )
+
+            self.__replace_text(
+                self.__elements[f'{callsign}.maximum_altitude'],
+                f'{packet_track.coordinates[:, 2].max():.2f}',
+            )
+
+        time_to_ground_box = self.__elements[f'{callsign}.time_to_ground']
+        if packet_track.time_to_ground >= timedelta(seconds=0):
+            time_to_ground_box.config['state'] = 'normal'
+            current_time_to_ground = packet_time + packet_track.time_to_ground - current_time
+            self.__replace_text(
+                time_to_ground_box, f'{current_time_to_ground / timedelta(seconds=1):.2f}',
+            )
+        else:
+            self.__replace_text(time_to_ground_box, '')
+            time_to_ground_box.config['state'] = 'disabled'
+
+        set_child_states(window, 'disabled', [teek.Text])
+
+        packet_age_box = self.__elements[f'{callsign}.age']
+        packet_age_box.config['state'] = 'normal'
+        self.__replace_text(
+            packet_age_box, f'{(current_time - packet_time) / timedelta(seconds=1):.2f}',
+        )
+        packet_age_box.config['state'] = 'disabled'
+
+    def __add_sources_window(self) -> teek.Window:
+        sources_window = teek.Window('sources')
+        for index, connection in enumerate(self.__connections):
+            self.__add_text_box(
+                sources_window,
+                title=f'sources.source_{index}_location',
+                label=None,
+                width=40,
+                sticky='w',
+            )
+            self.__add_text_box(
+                sources_window,
+                title=f'sources.source_{index}_packets',
+                label='packets',
+                width=5,
+                sticky='w',
+                row=self.__elements[f'sources.source_{index}_location'].grid_info()['row'],
+                column=self.__elements[f'sources.source_{index}_location'].grid_info()[
+                    'column'
+                ]
+                + 1,
+            )
+            self.__replace_text(
+                self.__elements[f'sources.source_{index}_location'], connection.location,
+            )
+        sources_window.on_delete_window.connect(sources_window.iconify)
+        self.__windows['sources'] = sources_window
+
+        for index, connection in enumerate(self.__connections):
+            self.__replace_text(
+                self.__elements[f'sources.source_{index}_packets'], 0,
+            )
+
+        return sources_window
+
+    async def __update_sources_window(self, sources: {str: [LocationPacket]}):
+        if 'sources' not in self.__windows:
+            window = self.__add_sources_window()
+        else:
+            window = self.__windows['sources']
+
+        for index, connection in enumerate(self.__connections):
+            for source, packets in sources.items():
+                if source == connection.location:
+                    if f'sources.source_{index}_packets' not in self.__elements:
+                        self.__add_text_box(
+                            window,
+                            title=f'sources.source_{index}_location',
+                            label=None,
+                            width=40,
+                            sticky='w',
+                        )
+                        self.__add_text_box(
+                            window,
+                            title=f'sources.source_{index}_packets',
+                            label='packets',
+                            width=5,
+                            sticky='w',
+                            row=self.__elements[
+                                f'sources.source_{index}_location'
+                            ].grid_info()['row'],
+                            column=self.__elements[
+                                f'sources.source_{index}_location'
+                            ].grid_info()['column']
+                            + 1,
+                        )
+                        self.__replace_text(
+                            self.__elements[f'sources.source_{index}_location'],
+                            connection.location,
+                        )
+                        self.__replace_text(
+                            self.__elements[f'sources.source_{index}_packets'], 0,
+                        )
+                    self.__replace_text(
+                        self.__elements[f'sources.source_{index}_packets'],
+                        int(self.__elements[f'sources.source_{index}_packets'].get())
+                        + len(packets),
+                    )
+
+    def __add_combo_box(
+        self,
+        frame: teek.Frame,
+        title: str,
+        options: [str],
+        option_select: Callable = None,
+        **kwargs,
+    ) -> teek.Combobox:
+        width = kwargs['width'] if 'width' in kwargs else None
+        combo_box = teek.Combobox(frame, width=width)
+        combo_box.config['values'] = options
+        if option_select is not None:
+            combo_box.bind('<<ComboboxSelected>>', option_select)
+        return self.__add_text_box(frame, title, text_box=combo_box, **kwargs)
+
+    def __add_file_box(
+        self, frame: teek.Frame, title: str, file_select: Callable, **kwargs
+    ) -> teek.Frame:
+        if 'row' not in kwargs:
+            kwargs['row'] = len(frame.grid_rows)
+        if 'column' not in kwargs:
+            kwargs['column'] = 0
+        file_box_kwargs = {
+            key: value
+            for key, value in kwargs.items()
+            if key in ['row', 'column', 'columnspan']
+        }
+        if 'columnspan' in file_box_kwargs:
+            file_box_kwargs['columnspan'] -= 1
+
+        if 'label' in kwargs:
+            text_label = teek.Label(frame, text=kwargs['label'])
+            text_label.grid(row=kwargs['row'], column=kwargs['column'], sticky='w')
+            file_box_kwargs['column'] += 1
+
+        file_box_frame = teek.Frame(frame)
+        file_box_frame.grid(**file_box_kwargs)
+
+        file_box = teek.Entry(
+            file_box_frame, width=kwargs['width'] if 'width' in kwargs else None
+        )
+        file_button = teek.Button(file_box_frame, text='...', command=file_select)
+
+        file_box.pack(side='left')
+        file_button.pack(side='left')
+
+        self.__elements[title] = file_box
+        return file_box_frame
+
+    def __add_entry_box(self, frame: teek.Frame, title: str, **kwargs) -> teek.Entry:
+        if 'text_box' not in kwargs:
+            kwargs['text_box'] = teek.Entry(
+                frame, width=kwargs['width'] if 'width' in kwargs else None
+            )
+        return self.__add_text_box(frame, title, **kwargs)
+
+    def __add_text_box(
+        self,
+        frame: teek.Frame,
+        title: str,
+        label: str,
+        units: str = None,
+        row: int = None,
+        column: int = None,
+        width: int = 10,
+        text_box: teek.Entry = None,
+        **kwargs,
+    ) -> teek.Text:
+        if row is None:
+            row = len(frame.grid_rows)
+        if column is None:
+            column = 0
+
+        if 'columnspan' in kwargs:
+            if label is not None:
+                kwargs['columnspan'] -= 1
+            if units is not None:
+                kwargs['columnspan'] -= 1
+
+        if label is not None:
+            text_label = teek.Label(frame, text=label)
+            text_label.grid(row=row, column=column, sticky='w')
+            column += 1
+
+        if text_box is None:
+            text_box = teek.Text(frame, width=width, height=1)
+        text_box.grid(row=row, column=column, **kwargs)
+        column += 1
+
+        if units is not None:
+            units_label = teek.Label(frame, text=units)
+            units_label.grid(row=row, column=column)
+            column += 1
+
+        self.__elements[title] = text_box
+        return text_box
+
+    @staticmethod
+    def __replace_text(element: teek.Entry, value: str):
+        if value is None:
+            value = ''
+
+        if isinstance(element, teek.Text):
+            element.delete(element.start, element.end)
+            element.insert(element.start, str(value))
+        elif isinstance(element, teek.Entry):
+            element.text = str(value)
 
 
 def set_child_states(frame: teek.Frame, state: str = None, types: [type] = None):

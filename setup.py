@@ -87,7 +87,6 @@ setup(
     setup_requires=['dunamai', 'setuptools>=41.2', 'wheel'],
     install_requires=[
         'aprslib',
-        'haversine',
         'humanize',
         'numpy>=1.20.0',
         'pandas',

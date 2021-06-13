@@ -2,14 +2,13 @@ from argparse import ArgumentParser
 from datetime import datetime, timedelta
 from getpass import getpass
 from logging import Logger
-from os import PathLike
 from pathlib import Path
 import sys
 import time
 
-from dateutil.parser import parse as parse_date
 import humanize as humanize
 import numpy
+from tablecrow.utilities import convert_value, parse_hostname
 
 from packetraven.connections import (
     APRSDatabaseTable,
@@ -106,8 +105,17 @@ def main():
         kwargs['tnc'] = [tnc.strip() for tnc in args.tnc.split(',')]
 
     if args.database is not None:
-        database = args.database
-        if database.count('/') != 2:
+        database = parse_hostname(args.database)
+
+        hostname = database['hostname']
+        port = database['port']
+        username = database['username']
+        password = database['password']
+
+        if port is not None:
+            hostname = f'{hostname}:{port}'
+
+        if hostname.count('/') != 2:
             LOGGER.error(
                 f'unable to parse hostname, database name, and table name from input "{database}"'
             )
@@ -116,29 +124,29 @@ def main():
                 kwargs['database_hostname'],
                 kwargs['database_database'],
                 kwargs['database_table'],
-            ) = database.split('/')
-            if '@' in kwargs['database_hostname']:
-                kwargs['database_username'], kwargs['database_hostname'] = kwargs[
-                    'database_hostname'
-                ].split('@', 1)
-                if ':' in kwargs['database_username']:
-                    kwargs['database_username'], kwargs['database_password'] = kwargs[
-                        'database_username'
-                    ].split(':', 1)
+            ) = hostname.split('/')
+            kwargs['database_username'] = username
+            kwargs['database_password'] = password
 
     if args.tunnel is not None:
-        kwargs['ssh_hostname'] = args.tunnel
-        if '@' in kwargs['ssh_hostname']:
-            kwargs['ssh_username'], kwargs['ssh_hostname'] = kwargs['ssh_hostname'].split(
-                '@', 1
-            )
-            if ':' in kwargs['ssh_username']:
-                kwargs['ssh_username'], kwargs['ssh_password'] = kwargs['ssh_username'].split(
-                    ':', 1
-                )
+        tunnel = parse_hostname(args.tunnel)
 
-    start_date = parse_date(args.start.strip('"')) if args.start is not None else None
-    end_date = parse_date(args.end.strip('"')) if args.end is not None else None
+        hostname = tunnel['hostname']
+        port = tunnel['port']
+        username = tunnel['username']
+        password = tunnel['password']
+
+        if port is not None:
+            hostname = f'{hostname}:{port}'
+
+        kwargs['ssh_hostname'] = hostname
+        kwargs['ssh_username'] = username
+        kwargs['ssh_password'] = password
+
+    start_date = (
+        convert_value(args.start.strip('"'), datetime) if args.start is not None else None
+    )
+    end_date = convert_value(args.end.strip('"'), datetime) if args.end is not None else None
 
     if start_date is not None and end_date is not None:
         if start_date > end_date:
@@ -195,8 +203,8 @@ def main():
             kwargs['prediction_float_altitude'] = float(args.prediction_float_altitude)
 
         if args.prediction_float_duration is not None:
-            kwargs['prediction_float_duration'] = timedelta(
-                seconds=float(args.prediction_float_duration)
+            kwargs['prediction_float_duration'] = convert_value(
+                args.prediction_float_duration, timedelta
             )
 
         if args.prediction_api is not None:
@@ -204,7 +212,9 @@ def main():
     else:
         prediction_filename = None
 
-    interval_seconds = args.interval if args.interval >= 1 else 1
+    interval_seconds = convert_value(args.interval, timedelta) / timedelta(seconds=1)
+    if interval_seconds < 1:
+        interval_seconds = 1
 
     if CREDENTIALS_FILENAME.exists():
         credentials = kwargs.copy()
@@ -374,11 +384,17 @@ def main():
                         connections,
                         packet_tracks,
                         database,
-                        output_filename,
                         start_date=start_date,
                         end_date=end_date,
                         logger=LOGGER,
                     )
+
+                    output_filename_index = None
+                    for index, connection in enumerate(connections):
+                        if isinstance(connection, PacketGeoJSON):
+                            output_filename_index = index
+                    if output_filename_index is not None:
+                        connections.pop(output_filename_index)
 
                     if prediction_filename is not None and len(new_packets) > 0:
                         try:
@@ -401,9 +417,16 @@ def main():
                 except Exception as error:
                     LOGGER.exception(f'{error.__class__.__name__} - {error}')
                     new_packets = {}
-                if aprs_is is not None:
-                    for packets in new_packets.values():
-                        aprs_is.send(packets)
+
+                if len(new_packets) > 0:
+                    if output_filename is not None:
+                        write_packet_tracks(
+                            [packet_tracks[callsign] for callsign in packet_tracks],
+                            output_filename,
+                        )
+                    if aprs_is is not None:
+                        for packets in new_packets.values():
+                            aprs_is.send(packets)
                 time.sleep(interval_seconds)
         except KeyboardInterrupt:
             for connection in connections:
@@ -415,15 +438,10 @@ def retrieve_packets(
     connections: [PacketSource],
     packet_tracks: [LocationPacketTrack],
     database: PacketDatabaseTable = None,
-    output_filename: PathLike = None,
     start_date: datetime = None,
     end_date: datetime = None,
     logger: Logger = None,
 ) -> {str: APRSPacket}:
-    if output_filename is not None:
-        if not isinstance(output_filename, Path):
-            output_filename = Path(output_filename)
-
     if logger is None:
         logger = LOGGER
 
@@ -532,18 +550,6 @@ def retrieve_packets(
 
             except Exception as error:
                 logger.exception(f'{error.__class__.__name__} - {error}')
-
-        if output_filename is not None:
-            write_packet_tracks(
-                [packet_tracks[callsign] for callsign in updated_callsigns], output_filename
-            )
-
-    output_filename_index = None
-    for index, connection in enumerate(connections):
-        if isinstance(connection, PacketGeoJSON):
-            output_filename_index = index
-    if output_filename_index is not None:
-        connections.pop(output_filename_index)
 
     return new_packets
 
