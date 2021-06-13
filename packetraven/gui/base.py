@@ -20,7 +20,7 @@ from packetraven.gui.plotting import LivePlot
 from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import LocationPacketTrack, PredictedTrajectory
 from packetraven.packets.writer import write_packet_tracks
-from packetraven.predicts import get_predictions, PredictionError
+from packetraven.predicts import PredictionError, get_predictions
 from packetraven.utilities import get_logger
 
 
@@ -856,38 +856,42 @@ class PacketRavenGUI:
                 self.__toggle_text.set('Stop')
                 self.__running = True
 
-                sources_window = teek.Window('sources')
+                if 'sources' not in self.__windows:
+                    sources_window = teek.Window('sources')
+                    for index, connection in enumerate(self.__connections):
+                        self.__add_text_box(
+                            sources_window,
+                            title=f'sources.source_{index}_location',
+                            label=None,
+                            width=40,
+                            sticky='w',
+                        )
+                        self.__add_text_box(
+                            sources_window,
+                            title=f'sources.source_{index}_packets',
+                            label='packets',
+                            width=5,
+                            sticky='w',
+                            row=self.__elements[
+                                f'sources.source_{index}_location'
+                            ].grid_info()['row'],
+                            column=self.__elements[
+                                f'sources.source_{index}_location'
+                            ].grid_info()['column']
+                            + 1,
+                        )
+                        self.replace_text(
+                            self.__elements[f'sources.source_{index}_location'],
+                            connection.location,
+                        )
+                    sources_window.on_delete_window.connect(sources_window.iconify)
+                    self.__windows[f'sources'] = sources_window
+
                 for index, connection in enumerate(self.__connections):
-                    self.__add_text_box(
-                        sources_window,
-                        title=f'sources.source_{index}_location',
-                        label=None,
-                        width=40,
-                        sticky='w',
-                    )
-                    self.__add_text_box(
-                        sources_window,
-                        title=f'sources.source_{index}_packets',
-                        label='packets',
-                        width=5,
-                        sticky='w',
-                        row=self.__elements[f'sources.source_{index}_location'].grid_info()[
-                            'row'
-                        ],
-                        column=self.__elements[f'sources.source_{index}_location'].grid_info()[
-                            'column'
-                        ]
-                        + 1,
-                    )
-                    self.replace_text(
-                        self.__elements[f'sources.source_{index}_location'],
-                        connection.location,
-                    )
                     self.replace_text(
                         self.__elements[f'sources.source_{index}_packets'], 0,
                     )
-                sources_window.on_delete_window.connect(sources_window.iconify)
-                self.__windows[f'sources'] = sources_window
+
             except Exception as error:
                 teek.dialog.error(error.__class__.__name__, error)
                 if '\n' in str(error):
@@ -936,13 +940,28 @@ class PacketRavenGUI:
                     self.__connections,
                     self.__packet_tracks,
                     self.database,
-                    self.output_filename,
                     self.start_date,
                     self.end_date,
                     logger=LOGGER,
                 )
 
+                output_filename_index = None
+                for index, connection in enumerate(self.__connections):
+                    if isinstance(connection, PacketGeoJSON):
+                        output_filename_index = index
+                if output_filename_index is not None:
+                    self.__connections.pop(output_filename_index)
+
                 if len(new_packets) > 0:
+                    if self.output_filename is not None:
+                        write_packet_tracks(
+                            [
+                                self.__packet_tracks[callsign]
+                                for callsign in self.__packet_tracks
+                            ],
+                            self.output_filename,
+                        )
+
                     for index, connection in enumerate(self.__connections):
                         for source, packets in new_packets.items():
                             if source == connection.location:

@@ -2,7 +2,6 @@ from argparse import ArgumentParser
 from datetime import datetime, timedelta
 from getpass import getpass
 from logging import Logger
-from os import PathLike
 from pathlib import Path
 import sys
 import time
@@ -25,7 +24,7 @@ from packetraven.connections.base import PacketSource
 from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
 from packetraven.packets.writer import write_packet_tracks
-from packetraven.predicts import get_predictions, PredictionAPIURL, PredictionError
+from packetraven.predicts import PredictionAPIURL, PredictionError, get_predictions
 from packetraven.utilities import get_logger, read_configuration, repository_root
 
 LOGGER = get_logger('packetraven', log_format='%(asctime)s | %(message)s')
@@ -385,11 +384,17 @@ def main():
                         connections,
                         packet_tracks,
                         database,
-                        output_filename,
                         start_date=start_date,
                         end_date=end_date,
                         logger=LOGGER,
                     )
+
+                    output_filename_index = None
+                    for index, connection in enumerate(connections):
+                        if isinstance(connection, PacketGeoJSON):
+                            output_filename_index = index
+                    if output_filename_index is not None:
+                        connections.pop(output_filename_index)
 
                     if prediction_filename is not None and len(new_packets) > 0:
                         try:
@@ -412,9 +417,16 @@ def main():
                 except Exception as error:
                     LOGGER.exception(f'{error.__class__.__name__} - {error}')
                     new_packets = {}
-                if aprs_is is not None:
-                    for packets in new_packets.values():
-                        aprs_is.send(packets)
+
+                if len(new_packets) > 0:
+                    if output_filename is not None:
+                        write_packet_tracks(
+                            [packet_tracks[callsign] for callsign in packet_tracks],
+                            output_filename,
+                        )
+                    if aprs_is is not None:
+                        for packets in new_packets.values():
+                            aprs_is.send(packets)
                 time.sleep(interval_seconds)
         except KeyboardInterrupt:
             for connection in connections:
@@ -426,15 +438,10 @@ def retrieve_packets(
     connections: [PacketSource],
     packet_tracks: [LocationPacketTrack],
     database: PacketDatabaseTable = None,
-    output_filename: PathLike = None,
     start_date: datetime = None,
     end_date: datetime = None,
     logger: Logger = None,
 ) -> {str: APRSPacket}:
-    if output_filename is not None:
-        if not isinstance(output_filename, Path):
-            output_filename = Path(output_filename)
-
     if logger is None:
         logger = LOGGER
 
@@ -543,18 +550,6 @@ def retrieve_packets(
 
             except Exception as error:
                 logger.exception(f'{error.__class__.__name__} - {error}')
-
-        if output_filename is not None:
-            write_packet_tracks(
-                [packet_tracks[callsign] for callsign in updated_callsigns], output_filename
-            )
-
-    output_filename_index = None
-    for index, connection in enumerate(connections):
-        if isinstance(connection, PacketGeoJSON):
-            output_filename_index = index
-    if output_filename_index is not None:
-        connections.pop(output_filename_index)
 
     return new_packets
 
