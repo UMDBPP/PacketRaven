@@ -21,7 +21,7 @@ from packetraven.gui.plotting import LivePlot
 from packetraven.packets import APRSPacket, LocationPacket
 from packetraven.packets.tracks import LocationPacketTrack, PredictedTrajectory
 from packetraven.packets.writer import write_packet_tracks
-from packetraven.predicts import PredictionError, get_predictions
+from packetraven.predicts import get_predictions, PredictionError
 from packetraven.utilities import get_logger
 
 
@@ -546,7 +546,7 @@ class PacketRavenGUI:
                     connection.location
                     for connection in self.__connections
                     if isinstance(connection, SerialTNC)
-                       or isinstance(connection, RawAPRSTextFile)
+                    or isinstance(connection, RawAPRSTextFile)
                 ]
 
                 api_key = self.__configuration['aprs_fi']['aprs_fi_key']
@@ -1070,7 +1070,7 @@ class PacketRavenGUI:
             sticky='w',
             row=self.__elements[f'{callsign}.distance_overground'].grid_info()['row'],
             column=self.__elements[f'{callsign}.distance_overground'].grid_info()['column']
-                   + 3,
+            + 3,
         )
 
         separator = teek.Separator(window, orient='vertical')
@@ -1193,9 +1193,9 @@ class PacketRavenGUI:
                 sticky='w',
                 row=self.__elements[f'sources.source_{index}_location'].grid_info()['row'],
                 column=self.__elements[f'sources.source_{index}_location'].grid_info()[
-                           'column'
-                       ]
-                       + 1,
+                    'column'
+                ]
+                + 1,
             )
             self.__replace_text(
                 self.__elements[f'sources.source_{index}_location'], connection.location,
@@ -1237,9 +1237,9 @@ class PacketRavenGUI:
                                 f'sources.source_{index}_location'
                             ].grid_info()['row'],
                             column=self.__elements[
-                                       f'sources.source_{index}_location'
-                                   ].grid_info()['column']
-                                   + 1,
+                                f'sources.source_{index}_location'
+                            ].grid_info()['column']
+                            + 1,
                         )
                         self.__replace_text(
                             self.__elements[f'sources.source_{index}_location'],
