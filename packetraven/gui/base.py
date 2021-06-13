@@ -20,7 +20,7 @@ from packetraven.gui.plotting import LivePlot
 from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import LocationPacketTrack, PredictedTrajectory
 from packetraven.packets.writer import write_packet_tracks
-from packetraven.predicts import PredictionError, get_predictions
+from packetraven.predicts import get_predictions, PredictionError
 from packetraven.utilities import get_logger
 
 
@@ -74,6 +74,7 @@ class PacketRavenGUI:
         self.aprs_is = None
         self.__connections = []
 
+        self.__timeout = None
         self.__running = False
         self.__toggles = {}
         self.__packet_tracks = {}
@@ -904,6 +905,9 @@ class PacketRavenGUI:
 
             self.retrieve_packets()
         else:
+            if self.__timeout is not None:
+                self.__timeout.cancel()
+
             for connection in self.__connections:
                 connection.close()
 
@@ -1361,7 +1365,7 @@ class PacketRavenGUI:
                         packet_age_box.config['state'] = 'disabled'
 
                     if self.running:
-                        teek.after(
+                        self.__timeout = teek.after(
                             ms=int(self.interval_seconds * 1000),
                             callback=self.retrieve_packets,
                         )

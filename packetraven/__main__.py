@@ -24,7 +24,7 @@ from packetraven.connections.base import PacketSource
 from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
 from packetraven.packets.writer import write_packet_tracks
-from packetraven.predicts import PredictionAPIURL, PredictionError, get_predictions
+from packetraven.predicts import get_predictions, PredictionAPIURL, PredictionError
 from packetraven.utilities import get_logger, read_configuration, repository_root
 
 LOGGER = get_logger('packetraven', log_format='%(asctime)s | %(message)s')
