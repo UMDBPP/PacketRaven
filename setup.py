@@ -88,6 +88,7 @@ setup(
     install_requires=[
         'aprslib',
         'humanize',
+        'netcdf4',
         'numpy>=1.20.0',
         'pandas',
         'pyserial',
@@ -101,6 +102,7 @@ setup(
         'sshtunnel',
         'tablecrow>=1.3.6',
         'teek',
+        'xarray',
     ],
     extras_require={
         'testing': ['pytest', 'pytest-cov', 'pytest-xdist', 'pytz'],
