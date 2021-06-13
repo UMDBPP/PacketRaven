@@ -182,9 +182,7 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
             new_packets.extend(self.__send_buffer)
             self.__send_buffer.clear()
         if len(new_packets) > 0:
-            LOGGER.info(
-                f'sending {len(new_packets)} packet(s) to {self.location}: {new_packets}'
-            )
+            LOGGER.info(f'sending {len(new_packets)} packet(s) to {self.location}')
             try:
                 self.insert(new_packets)
             except ConnectionError as error:
