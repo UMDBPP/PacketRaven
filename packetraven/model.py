@@ -34,7 +34,10 @@ class VectorField:
 
         if crs is None:
             crs = WGS84
-        if not isinstance(time_deltas, numpy.ndarray) or time_deltas.dtype != numpy.timedelta64:
+        if (
+            not isinstance(time_deltas, numpy.ndarray)
+            or time_deltas.dtype != numpy.timedelta64
+        ):
             time_deltas = numpy.array(time_deltas, dtype='timedelta64[s]')
         self.time_deltas = time_deltas
         self.crs = crs
@@ -184,9 +187,7 @@ class RankineVortex(VectorField):
             )
 
         vectors = [self[point, datetime.now()] for point in points]
-        points = list(
-            zip(*pyproj.transform(WEB_MERCATOR, WGS84, *zip(*points)))
-        )
+        points = list(zip(*pyproj.transform(WEB_MERCATOR, WGS84, *zip(*points))))
 
         quiver_plot = axis.quiver(*zip(*points), *zip(*vectors), units='width', **kwargs)
         axis.quiverkey(
@@ -257,7 +258,9 @@ class VectorDataset(VectorField):
 
         super().__init__(numpy.diff(self.dataset[self.t_name].values))
 
-    def _interpolate(self, variable: str, point: numpy.array, time: datetime) -> xarray.DataArray:
+    def _interpolate(
+        self, variable: str, point: numpy.array, time: datetime
+    ) -> xarray.DataArray:
         if not isinstance(point, numpy.ndarray):
             point = numpy.array(point)
         if isinstance(time, str):
@@ -266,16 +269,20 @@ class VectorDataset(VectorField):
             time += self.dataset[self.t_name][0]
 
         x_range = slice(
-            self.dataset[self.x_name].sel({self.x_name: numpy.min(point[0]) - 1}, method='bfill').values.item(),
-            self.dataset[self.x_name].sel({self.x_name: numpy.max(point[0]) + 1}, method='ffill').values.item(),
+            self.dataset[self.x_name]
+            .sel({self.x_name: numpy.min(point[0]) - 1}, method='bfill')
+            .values.item(),
+            self.dataset[self.x_name]
+            .sel({self.x_name: numpy.max(point[0]) + 1}, method='ffill')
+            .values.item(),
         )
         y_range = slice(
-            self.dataset[self.y_name].sel({
-                self.y_name: numpy.min(point[1]) - 1,
-            }, method='bfill').values.item(),
-            self.dataset[self.y_name].sel({
-                self.y_name: numpy.max(point[1]) + 1,
-            }, method='ffill').values.item(),
+            self.dataset[self.y_name]
+            .sel({self.y_name: numpy.min(point[1]) - 1,}, method='bfill')
+            .values.item(),
+            self.dataset[self.y_name]
+            .sel({self.y_name: numpy.max(point[1]) + 1,}, method='ffill')
+            .values.item(),
         )
         time_range = slice(
             self.dataset['time'].sel(time=time, method='bfill').values,
@@ -286,30 +293,20 @@ class VectorDataset(VectorField):
             time_range = time_range.start
 
         cell = self.dataset[variable].sel(
-            {
-                'time': time_range,
-                self.x_name: x_range,
-                self.y_name: y_range,
-            }
+            {'time': time_range, self.x_name: x_range, self.y_name: y_range,}
         )
 
         if len(point.shape) > 1:
             cell = cell.interp({'time': time}) if 'time' in cell.dims else cell
             return xarray.concat(
                 [
-                    cell.interp({
-                        self.x_name: location[0],
-                        self.y_name: location[1],
-                    })
+                    cell.interp({self.x_name: location[0], self.y_name: location[1],})
                     for location in point.T
                 ],
                 dim='point',
             )
         else:
-            cell = cell.interp({
-                self.x_name: point[0],
-                self.y_name: point[1],
-            })
+            cell = cell.interp({self.x_name: point[0], self.y_name: point[1],})
             return cell.interp({'time': time}) if 'time' in cell.dims else cell
 
     def u(self, point: numpy.array, time: datetime) -> float:
@@ -320,14 +317,13 @@ class VectorDataset(VectorField):
 
 
 class VectorGFS(VectorDataset):
-    opendap_url = 'http://nomads.ncep.noaa.gov:80/dods/gfs_0p25_1hr/gfs20210413/gfs_0p25_1hr_12z'
+    opendap_url = (
+        'http://nomads.ncep.noaa.gov:80/dods/gfs_0p25_1hr/gfs20210413/gfs_0p25_1hr_12z'
+    )
 
     def __init__(self):
         dataset = xarray.open_dataset(self.opendap_url)
 
         super().__init__(
-            dataset=dataset,
-            u_name='ugrdprs',
-            v_name='vgrdprs',
-            z_name='lev',
+            dataset=dataset, u_name='ugrdprs', v_name='vgrdprs', z_name='lev',
         )
