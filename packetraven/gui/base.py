@@ -21,7 +21,7 @@ from packetraven.gui.plotting import LivePlot
 from packetraven.packets import APRSPacket, LocationPacket
 from packetraven.packets.tracks import LocationPacketTrack, PredictedTrajectory
 from packetraven.packets.writer import write_packet_tracks
-from packetraven.predicts import get_predictions, PredictionError
+from packetraven.predicts import PredictionError, get_predictions
 from packetraven.utilities import get_logger
 
 
@@ -496,169 +496,6 @@ class PacketRavenGUI:
     def predictions(self) -> {str: PredictedTrajectory}:
         return self.__predictions if self.toggles['prediction_file'] else None
 
-    def __select_tnc(self):
-        if self.__elements['tnc'].text == self.__file_selection_option:
-            self.tncs = teek.dialog.open_multiple_files(
-                title='Select TNC text file(s)...',
-                defaultextension='.txt',
-                filetypes=[('Text', '*.txt')],
-            )
-
-    def __select_log_file(self):
-        self.log_filename = teek.dialog.save_file(
-            title='Create log file...',
-            initialdir=str(self.log_filename.parent),
-            initialfile=self.log_filename.stem,
-            defaultextension='.txt',
-            filetypes=[('Text', '*.txt')],
-        )
-
-    def __select_output_file(self):
-        self.output_filename = teek.dialog.save_file(
-            title='Create output file...',
-            initialdir=str(self.output_filename.parent),
-            initialfile=self.output_filename.stem,
-            defaultextension='.geojson',
-            filetypes=[
-                ('GeoJSON', '*.geojson'),
-                ('Text', '*.txt'),
-                ('Keyhole Markup Language', '*.kml'),
-            ],
-        )
-
-    def __select_prediction_file(self):
-        self.prediction_filename = teek.dialog.save_file(
-            title='Create predict file...',
-            initialdir=str(self.prediction_filename.parent),
-            initialfile=self.prediction_filename.stem,
-            defaultextension='.geojson',
-            filetypes=[
-                ('GeoJSON', '*.geojson'),
-                ('Text', '*.txt'),
-                ('Keyhole Markup Language', '*.kml'),
-            ],
-        )
-
-    def __toggle_log_file(self, value: bool = None):
-        if (value is not None and value) or self.toggles['log_file']:
-            set_child_states(self.__elements['log_file_box'], state='normal')
-            get_logger(LOGGER.name, log_filename=self.log_filename)
-        else:
-            set_child_states(self.__elements['log_file_box'], state='disabled')
-            for existing_file_handler in [
-                handler for handler in LOGGER.handlers if type(handler) is logging.FileHandler
-            ]:
-                LOGGER.removeHandler(existing_file_handler)
-
-    def __toggle_output_file(self, value: bool = None):
-        if (value is not None and value) or self.toggles['output_file']:
-            set_child_states(self.__elements['output_file_box'], state='normal')
-        else:
-            set_child_states(self.__elements['output_file_box'], state='disabled')
-
-    def __toggle_prediction_file(self, value: bool = None):
-        if (value is not None and value) or self.toggles['prediction_file']:
-            set_child_states(self.__elements['prediction_file_box'], state='normal')
-        else:
-            set_child_states(self.__elements['prediction_file_box'], state='disabled')
-
-    def __add_combo_box(
-        self,
-        frame: teek.Frame,
-        title: str,
-        options: [str],
-        option_select: Callable = None,
-        **kwargs,
-    ) -> teek.Combobox:
-        width = kwargs['width'] if 'width' in kwargs else None
-        combo_box = teek.Combobox(frame, width=width)
-        combo_box.config['values'] = options
-        if option_select is not None:
-            combo_box.bind('<<ComboboxSelected>>', option_select)
-        return self.__add_text_box(frame, title, text_box=combo_box, **kwargs)
-
-    def __add_file_box(
-        self, frame: teek.Frame, title: str, file_select: Callable, **kwargs
-    ) -> teek.Frame:
-        if 'row' not in kwargs:
-            kwargs['row'] = len(frame.grid_rows)
-        if 'column' not in kwargs:
-            kwargs['column'] = 0
-        file_box_kwargs = {
-            key: value
-            for key, value in kwargs.items()
-            if key in ['row', 'column', 'columnspan']
-        }
-        if 'columnspan' in file_box_kwargs:
-            file_box_kwargs['columnspan'] -= 1
-
-        if 'label' in kwargs:
-            text_label = teek.Label(frame, text=kwargs['label'])
-            text_label.grid(row=kwargs['row'], column=kwargs['column'], sticky='w')
-            file_box_kwargs['column'] += 1
-
-        file_box_frame = teek.Frame(frame)
-        file_box_frame.grid(**file_box_kwargs)
-
-        file_box = teek.Entry(
-            file_box_frame, width=kwargs['width'] if 'width' in kwargs else None
-        )
-        file_button = teek.Button(file_box_frame, text='...', command=file_select)
-
-        file_box.pack(side='left')
-        file_button.pack(side='left')
-
-        self.__elements[title] = file_box
-        return file_box_frame
-
-    def __add_entry_box(self, frame: teek.Frame, title: str, **kwargs) -> teek.Entry:
-        if 'text_box' not in kwargs:
-            kwargs['text_box'] = teek.Entry(
-                frame, width=kwargs['width'] if 'width' in kwargs else None
-            )
-        return self.__add_text_box(frame, title, **kwargs)
-
-    def __add_text_box(
-        self,
-        frame: teek.Frame,
-        title: str,
-        label: str,
-        units: str = None,
-        row: int = None,
-        column: int = None,
-        width: int = 10,
-        text_box: teek.Entry = None,
-        **kwargs,
-    ) -> teek.Text:
-        if row is None:
-            row = len(frame.grid_rows)
-        if column is None:
-            column = 0
-
-        if 'columnspan' in kwargs:
-            if label is not None:
-                kwargs['columnspan'] -= 1
-            if units is not None:
-                kwargs['columnspan'] -= 1
-
-        if label is not None:
-            text_label = teek.Label(frame, text=label)
-            text_label.grid(row=row, column=column, sticky='w')
-            column += 1
-
-        if text_box is None:
-            text_box = teek.Text(frame, width=width, height=1)
-        text_box.grid(row=row, column=column, **kwargs)
-        column += 1
-
-        if units is not None:
-            units_label = teek.Label(frame, text=units)
-            units_label.grid(row=row, column=column)
-            column += 1
-
-        self.__elements[title] = text_box
-        return text_box
-
     def toggle(self):
         if not self.running:
             self.__elements['toggle_button'].busy_hold()
@@ -709,7 +546,7 @@ class PacketRavenGUI:
                     connection.location
                     for connection in self.__connections
                     if isinstance(connection, SerialTNC)
-                    or isinstance(connection, RawAPRSTextFile)
+                       or isinstance(connection, RawAPRSTextFile)
                 ]
 
                 api_key = self.__configuration['aprs_fi']['aprs_fi_key']
@@ -999,6 +836,83 @@ class PacketRavenGUI:
             except Exception as error:
                 LOGGER.exception(f'{error.__class__.__name__} - {error}')
 
+    def close(self):
+        try:
+            if self.running:
+                self.toggle()
+            for plot in self.__plots.values():
+                plot.close()
+            teek.quit()
+        except Exception as error:
+            LOGGER.exception(f'{error.__class__.__name__} - {error}')
+        sys.exit()
+
+    def __select_tnc(self):
+        if self.__elements['tnc'].text == self.__file_selection_option:
+            self.tncs = teek.dialog.open_multiple_files(
+                title='Select TNC text file(s)...',
+                defaultextension='.txt',
+                filetypes=[('Text', '*.txt')],
+            )
+
+    def __select_log_file(self):
+        self.log_filename = teek.dialog.save_file(
+            title='Create log file...',
+            initialdir=str(self.log_filename.parent),
+            initialfile=self.log_filename.stem,
+            defaultextension='.txt',
+            filetypes=[('Text', '*.txt')],
+        )
+
+    def __select_output_file(self):
+        self.output_filename = teek.dialog.save_file(
+            title='Create output file...',
+            initialdir=str(self.output_filename.parent),
+            initialfile=self.output_filename.stem,
+            defaultextension='.geojson',
+            filetypes=[
+                ('GeoJSON', '*.geojson'),
+                ('Text', '*.txt'),
+                ('Keyhole Markup Language', '*.kml'),
+            ],
+        )
+
+    def __select_prediction_file(self):
+        self.prediction_filename = teek.dialog.save_file(
+            title='Create predict file...',
+            initialdir=str(self.prediction_filename.parent),
+            initialfile=self.prediction_filename.stem,
+            defaultextension='.geojson',
+            filetypes=[
+                ('GeoJSON', '*.geojson'),
+                ('Text', '*.txt'),
+                ('Keyhole Markup Language', '*.kml'),
+            ],
+        )
+
+    def __toggle_log_file(self, value: bool = None):
+        if (value is not None and value) or self.toggles['log_file']:
+            set_child_states(self.__elements['log_file_box'], state='normal')
+            get_logger(LOGGER.name, log_filename=self.log_filename)
+        else:
+            set_child_states(self.__elements['log_file_box'], state='disabled')
+            for existing_file_handler in [
+                handler for handler in LOGGER.handlers if type(handler) is logging.FileHandler
+            ]:
+                LOGGER.removeHandler(existing_file_handler)
+
+    def __toggle_output_file(self, value: bool = None):
+        if (value is not None and value) or self.toggles['output_file']:
+            set_child_states(self.__elements['output_file_box'], state='normal')
+        else:
+            set_child_states(self.__elements['output_file_box'], state='disabled')
+
+    def __toggle_prediction_file(self, value: bool = None):
+        if (value is not None and value) or self.toggles['prediction_file']:
+            set_child_states(self.__elements['prediction_file_box'], state='normal')
+        else:
+            set_child_states(self.__elements['prediction_file_box'], state='disabled')
+
     def __add_callsign_window(self, callsign: str) -> teek.Window:
         window = teek.Window(callsign)
 
@@ -1156,7 +1070,7 @@ class PacketRavenGUI:
             sticky='w',
             row=self.__elements[f'{callsign}.distance_overground'].grid_info()['row'],
             column=self.__elements[f'{callsign}.distance_overground'].grid_info()['column']
-            + 3,
+                   + 3,
         )
 
         separator = teek.Separator(window, orient='vertical')
@@ -1279,9 +1193,9 @@ class PacketRavenGUI:
                 sticky='w',
                 row=self.__elements[f'sources.source_{index}_location'].grid_info()['row'],
                 column=self.__elements[f'sources.source_{index}_location'].grid_info()[
-                    'column'
-                ]
-                + 1,
+                           'column'
+                       ]
+                       + 1,
             )
             self.__replace_text(
                 self.__elements[f'sources.source_{index}_location'], connection.location,
@@ -1323,9 +1237,9 @@ class PacketRavenGUI:
                                 f'sources.source_{index}_location'
                             ].grid_info()['row'],
                             column=self.__elements[
-                                f'sources.source_{index}_location'
-                            ].grid_info()['column']
-                            + 1,
+                                       f'sources.source_{index}_location'
+                                   ].grid_info()['column']
+                                   + 1,
                         )
                         self.__replace_text(
                             self.__elements[f'sources.source_{index}_location'],
@@ -1340,6 +1254,103 @@ class PacketRavenGUI:
                         + len(packets),
                     )
 
+    def __add_combo_box(
+        self,
+        frame: teek.Frame,
+        title: str,
+        options: [str],
+        option_select: Callable = None,
+        **kwargs,
+    ) -> teek.Combobox:
+        width = kwargs['width'] if 'width' in kwargs else None
+        combo_box = teek.Combobox(frame, width=width)
+        combo_box.config['values'] = options
+        if option_select is not None:
+            combo_box.bind('<<ComboboxSelected>>', option_select)
+        return self.__add_text_box(frame, title, text_box=combo_box, **kwargs)
+
+    def __add_file_box(
+        self, frame: teek.Frame, title: str, file_select: Callable, **kwargs
+    ) -> teek.Frame:
+        if 'row' not in kwargs:
+            kwargs['row'] = len(frame.grid_rows)
+        if 'column' not in kwargs:
+            kwargs['column'] = 0
+        file_box_kwargs = {
+            key: value
+            for key, value in kwargs.items()
+            if key in ['row', 'column', 'columnspan']
+        }
+        if 'columnspan' in file_box_kwargs:
+            file_box_kwargs['columnspan'] -= 1
+
+        if 'label' in kwargs:
+            text_label = teek.Label(frame, text=kwargs['label'])
+            text_label.grid(row=kwargs['row'], column=kwargs['column'], sticky='w')
+            file_box_kwargs['column'] += 1
+
+        file_box_frame = teek.Frame(frame)
+        file_box_frame.grid(**file_box_kwargs)
+
+        file_box = teek.Entry(
+            file_box_frame, width=kwargs['width'] if 'width' in kwargs else None
+        )
+        file_button = teek.Button(file_box_frame, text='...', command=file_select)
+
+        file_box.pack(side='left')
+        file_button.pack(side='left')
+
+        self.__elements[title] = file_box
+        return file_box_frame
+
+    def __add_entry_box(self, frame: teek.Frame, title: str, **kwargs) -> teek.Entry:
+        if 'text_box' not in kwargs:
+            kwargs['text_box'] = teek.Entry(
+                frame, width=kwargs['width'] if 'width' in kwargs else None
+            )
+        return self.__add_text_box(frame, title, **kwargs)
+
+    def __add_text_box(
+        self,
+        frame: teek.Frame,
+        title: str,
+        label: str,
+        units: str = None,
+        row: int = None,
+        column: int = None,
+        width: int = 10,
+        text_box: teek.Entry = None,
+        **kwargs,
+    ) -> teek.Text:
+        if row is None:
+            row = len(frame.grid_rows)
+        if column is None:
+            column = 0
+
+        if 'columnspan' in kwargs:
+            if label is not None:
+                kwargs['columnspan'] -= 1
+            if units is not None:
+                kwargs['columnspan'] -= 1
+
+        if label is not None:
+            text_label = teek.Label(frame, text=label)
+            text_label.grid(row=row, column=column, sticky='w')
+            column += 1
+
+        if text_box is None:
+            text_box = teek.Text(frame, width=width, height=1)
+        text_box.grid(row=row, column=column, **kwargs)
+        column += 1
+
+        if units is not None:
+            units_label = teek.Label(frame, text=units)
+            units_label.grid(row=row, column=column)
+            column += 1
+
+        self.__elements[title] = text_box
+        return text_box
+
     @staticmethod
     def __replace_text(element: teek.Entry, value: str):
         if value is None:
@@ -1350,17 +1361,6 @@ class PacketRavenGUI:
             element.insert(element.start, str(value))
         elif isinstance(element, teek.Entry):
             element.text = str(value)
-
-    def close(self):
-        try:
-            if self.running:
-                self.toggle()
-            for plot in self.__plots.values():
-                plot.close()
-            teek.quit()
-        except Exception as error:
-            LOGGER.exception(f'{error.__class__.__name__} - {error}')
-        sys.exit()
 
 
 def set_child_states(frame: teek.Frame, state: str = None, types: [type] = None):
