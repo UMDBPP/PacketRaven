@@ -8,7 +8,7 @@ import sys
 
 from setuptools import config, find_packages, setup
 
-BUILT_PACKAGES = {'numpy': [], 'pyproj': [], 'shapely': ['gdal']}
+BUILT_PACKAGES = {'numpy': [], 'pandas': ['numpy'], 'pyproj': [], 'shapely': ['gdal']}
 is_conda = (Path(sys.prefix) / 'conda-meta').exists()
 
 if is_conda:
@@ -22,21 +22,26 @@ if is_conda:
         subprocess.check_call(['conda', 'install', '-y', *conda_packages])
 
 if os.name == 'nt':
+    packages_to_install = {}
     for required_package, pipwin_dependencies in BUILT_PACKAGES.items():
+        try:
+            importlib.import_module(required_package)
+        except:
+            packages_to_install[required_package] = pipwin_dependencies
+    if len(packages_to_install) > 0:
+        try:
+            import pipwin
+        except:
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pipwin'])
+            subprocess.check_call([sys.executable, '-m', 'pipwin', 'refresh'])
+
+    for required_package, pipwin_dependencies in packages_to_install.items():
         failed_pipwin_packages = []
-        iterations = len(pipwin_dependencies)
-
-        for _ in range(iterations):
-            try:
-                importlib.import_module(required_package)
-            except:
+        for _ in range(1 + len(pipwin_dependencies)):
+            for pipwin_package in [required_package] + pipwin_dependencies:
                 try:
-                    import pipwin
+                    importlib.import_module(pipwin_package)
                 except:
-                    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pipwin'])
-                    subprocess.check_call([sys.executable, '-m', 'pipwin', 'refresh'])
-
-                for pipwin_package in pipwin_dependencies + [required_package]:
                     try:
                         subprocess.check_call(
                             [sys.executable, '-m', 'pipwin', 'install', pipwin_package.lower()]
@@ -46,14 +51,17 @@ if os.name == 'nt':
                     except subprocess.CalledProcessError:
                         failed_pipwin_packages.append(pipwin_package)
 
-                if len(failed_pipwin_packages) == 0:
-                    break
+            # since we don't know the dependencies here, repeat this process n number of times (worst case is O(n), when the first package is dependant on all the others)
+            if len(failed_pipwin_packages) == 0:
+                break
 
-        if len(failed_pipwin_packages) > 0:
+        try:
+            importlib.import_module(required_package)
+        except:
             raise RuntimeError(
-                f'failed to download or install non-conda Windows build(s) of {" and ".join(failed_pipwin_packages)}; you can either\n'
+                f'failed to download or install non-conda Windows build(s) of ({", ".join(failed_pipwin_packages)}); you can either\n'
                 '1) install within an Anaconda environment, or\n'
-                f'2) `pip install <file>.whl`, with `<file>.whl` downloaded from {" and ".join("https://www.lfd.uci.edu/~gohlke/pythonlibs/#" + value.lower() for value in failed_pipwin_packages)} for your Python version'
+                f'2) `pip install <file>.whl`, with `<file>.whl` downloaded from ({", ".join("https://www.lfd.uci.edu/~gohlke/pythonlibs/#" + value.lower() for value in failed_pipwin_packages)}) for your Python version'
             )
 
 try:
@@ -84,11 +92,11 @@ setup(
     url=metadata['url'],
     packages=find_packages(),
     python_requires='>=3.8',
-    setup_requires=['dunamai', 'setuptools>=41.2', 'wheel'],
+    setup_requires=['dunamai', 'setuptools>=41.2'],
     install_requires=[
         'aprslib',
         'humanize',
-        'numpy>=1.20.0',
+        'numpy',
         'pandas',
         'pyserial',
         'geojson',
@@ -104,7 +112,7 @@ setup(
     ],
     extras_require={
         'testing': ['pytest', 'pytest-cov', 'pytest-xdist', 'pytz'],
-        'development': ['flake8', 'isort', 'oitnb'],
+        'development': ['flake8', 'isort', 'oitnb', 'wheel'],
     },
     entry_points={'console_scripts': ['packetraven=packetraven.__main__:main']},
 )
