@@ -13,53 +13,36 @@ PacketRaven is a dashboard built to track high-altitude balloon flights from the
 pip install packetraven
 ```
 
-## Examples:
+# Installation
 
-#### listen to a TNC sending raw APRS strings over USB port COM4:
+0. install Python
+   https://www.python.org/downloads/
+1. create a virtual environment so you don't pollute your system Python installation (or skip to step 3 if you don't care)
+   ```bash
+   pip install virtualenv
+   virtualenv packetraven_env
+   ```
+2. activate your new virtual environment
+   - On Linux:
+   ```bash
+   source packetraven_env/bin/activate
+   ```
+   - On Windows native command prompt (`cmd`):
+   ```cmd
+   .\packetraven_env\Scripts\activate.bat
+   ```
+   - On Windows PowerShell:
+   ```cmd
+   .\packetraven_env\Scripts\activate.ps1
+   ```
+3. install `packetraven`
+   ```bash
+   pip install packetraven
+   ```
+   
+# Usage
 
-```bash
-packetraven --tnc COM4
-```
-
-### listen to APRS.fi, watching specific callsigns:
-
-you need an API key to connect to APRS.fi; you can get one from https://aprs.fi/page/api
-
-```bash
-packetraven --apikey <api_key> --callsigns W3EAX-8,W3EAX-14
-```
-
-#### listen to a PostGIS database table:
-
-```bash
-packetraven --database <username>@<hostname>:5432/<database_name>/<table_name>
-```
-
-#### watch a text file for new lines containing raw APRS strings:
-
-```bash
-packetraven --tnc http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-11/W3EAX-11_raw_NS95.txt
-```
-
-#### listen to a TNC on COM3, watching specific callsigns, and synchronize new packets with a database table via SSH tunnel:
-
-```bash
-packetraven --tnc COM3 --callsigns W3EAX-8,W3EAX-14 --database <username>@<hostname>:5432/<database_name>/<table_name> --tunnel <ssh_username>@<hostname>:22
-```
-
-## Graphical User Interface
-
-to start the GUI, add `--gui` to any `packetraven` command
-
-```bash
-packetraven --gui
-```
-
-```bash
-packetraven --callsigns W3EAX-8,W3EAX-14 --apikey <api_key> --gui
-```
-
-## Usage:
+## Command-line Options
 
 ```text
 usage: packetraven [-h] [--callsigns CALLSIGNS] [--aprsfi-key APRSFI_KEY] [--tnc TNC] [--database DATABASE] [--tunnel TUNNEL]
@@ -103,7 +86,53 @@ optional arguments:
   --gui                 start the graphical interface
 ```
 
-## Python API:
+## Command-line Examples
+
+#### listen to a TNC sending raw APRS strings over USB port COM4:
+
+```bash
+packetraven --tnc COM4
+```
+
+### listen to APRS.fi, watching specific callsigns:
+
+you need an API key to connect to APRS.fi; you can get one from https://aprs.fi/page/api
+
+```bash
+packetraven --apikey <api_key> --callsigns W3EAX-8,W3EAX-14
+```
+
+#### listen to a PostGIS database table:
+
+```bash
+packetraven --database <username>@<hostname>:5432/<database_name>/<table_name>
+```
+
+#### watch a text file for new lines containing raw APRS strings:
+
+```bash
+packetraven --tnc http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-11/W3EAX-11_raw_NS95.txt
+```
+
+#### listen to a TNC on COM3, watching specific callsigns, and synchronize new packets with a database table via SSH tunnel:
+
+```bash
+packetraven --tnc COM3 --callsigns W3EAX-8,W3EAX-14 --database <username>@<hostname>:5432/<database_name>/<table_name> --tunnel <ssh_username>@<hostname>:22
+```
+
+## GUI Examples
+
+to start the GUI, add `--gui` to any `packetraven` command
+
+```bash
+packetraven --gui
+```
+
+```bash
+packetraven --callsigns W3EAX-8,W3EAX-14 --apikey <api_key> --gui
+```
+
+## Python API Examples
 
 to retrieve packets directly from https://aprs.fi:
 
