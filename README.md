@@ -94,7 +94,7 @@ optional arguments:
 packetraven --tnc COM4
 ```
 
-### listen to APRS.fi, watching specific callsigns:
+#### listen to APRS.fi, watching specific callsigns:
 
 you need an API key to connect to APRS.fi; you can get one from https://aprs.fi/page/api
 
