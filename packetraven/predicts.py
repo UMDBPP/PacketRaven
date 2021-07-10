@@ -61,7 +61,7 @@ class BalloonPredictionQuery(ABC):
         """
 
         if not isinstance(launch_site, Point):
-            launch_site = Point(launch_site)
+            launch_site = Point(*launch_site)
 
         if name is None:
             name = 'prediction'
@@ -432,8 +432,12 @@ def get_predictions(
         if prediction_start_location is None:
             try:
                 prediction_start_location = packet_track[prediction_start_time].coordinates
+                if len(prediction_start_location.shape) > 1:
+                    prediction_start_location = prediction_start_location[0, :]
             except KeyError:
                 prediction_start_location = packet_track[-1].coordinates
+        if len(prediction_start_location) == 2:
+            prediction_start_location = (*prediction_start_location, 0)
 
         if float_altitude is not None and not packet_track.falling:
             packets_at_float_altitude = packet_track[numpy.abs(float_altitude - packet_track.altitudes) < float_altitude_uncertainty]
