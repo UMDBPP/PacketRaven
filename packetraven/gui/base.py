@@ -814,16 +814,17 @@ class PacketRavenGUI:
                 else:
                     updated_callsigns = {}
 
-                await asyncio.wait(
-                    [
-                        self.__update_callsign_window(
-                            callsign,
-                            only_time=callsign not in updated_callsigns,
-                            current_time=current_time,
-                        )
-                        for callsign, packet_track in self.__packet_tracks.items()
-                    ]
-                )
+                if len(self.__packet_tracks) > 0:
+                    await asyncio.wait(
+                        [
+                            self.__update_callsign_window(
+                                callsign,
+                                only_time=callsign not in updated_callsigns,
+                                current_time=current_time,
+                            )
+                            for callsign, packet_track in self.__packet_tracks.items()
+                        ]
+                    )
 
                 if self.running:
                     self.__timeout = teek.after(

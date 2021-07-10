@@ -152,6 +152,11 @@ class LocationPacketTrack:
     def __getitem__(
         self, index: Union[int, Iterable[int], slice]
     ) -> Union[LocationPacket, 'LocationPacketTrack']:
+        if isinstance(index, str):
+            try:
+                index = parse_date(index)
+            except:
+                index = int(index)
         if isinstance(index, int):
             return self.packets[index]
         elif isinstance(index, Iterable) or isinstance(index, slice):
@@ -162,6 +167,31 @@ class LocationPacketTrack:
             else:
                 packets = None
             return self.__class__(self.name, packets, self.crs)
+        elif isinstance(index, datetime):
+            matching_packets = []
+            for packet in self.packets:
+                if packet.time == index:
+                    matching_packets.append(packet)
+            if len(matching_packets) == 0:
+                maximum_interval = numpy.timedelta64(int(max(self.intervals)), 's')
+                if (
+                    index > min(self.times) - maximum_interval
+                    and index < max(self.times) + maximum_interval
+                ):
+                    smallest_difference = None
+                    closest_time = None
+                    for packet in self.packets:
+                        difference = abs(packet.time - index)
+                        if smallest_difference is None or difference < smallest_difference:
+                            smallest_difference = difference
+                            closest_time = packet.time
+                    return self[closest_time]
+                else:
+                    raise IndexError(f'time index out of range: {index}')
+            elif len(matching_packets) == 1:
+                return matching_packets[0]
+            else:
+                return self.__class__(self.name, matching_packets, self.crs)
         else:
             raise ValueError(f'unrecognized index: {index}')
 

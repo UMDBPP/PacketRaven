@@ -60,6 +60,12 @@ def main():
         help='path to output file to save most up-to-date predicted trajectory',
     )
     args_parser.add_argument(
+        '--prediction-start-location', help='start location to use for prediction (x,y,z)'
+    )
+    args_parser.add_argument(
+        '--prediction-start-time', help='start time to use for prediction'
+    )
+    args_parser.add_argument(
         '--prediction-ascent-rate', help='ascent rate to use for prediction (m/s)'
     )
     args_parser.add_argument(
@@ -189,6 +195,16 @@ def main():
             )
         if not prediction_filename.parent.exists():
             prediction_filename.parent.mkdir(parents=True, exist_ok=True)
+
+        if args.prediction_start_location is not None:
+            kwargs['prediction_start_location'] = (
+                float(value) for value in args.prediction_start_location.split(',')
+            )
+
+        if args.prediction_start_time is not None:
+            kwargs['prediction_start_time'] = convert_value(
+                args.prediction_start_time, datetime
+            )
 
         if args.prediction_ascent_rate is not None:
             kwargs['prediction_ascent_rate'] = float(args.prediction_ascent_rate)
