@@ -23,7 +23,7 @@ DEPENDENCIES = {
     'requests': [],
     'shapely': [],
     'sshtunnel': [],
-    'tablecrow>=1.3.6': [],
+    'tablecrow>=1.3.8': [],
     'teek': [],
 }
 
