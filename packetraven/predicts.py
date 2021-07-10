@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Generator, Optional, Tuple, Union
 
 from dateutil.parser import parse as parse_date
 import numpy
@@ -13,9 +13,7 @@ from packetraven.packets import LocationPacket
 from packetraven.packets.tracks import LocationPacketTrack, PredictedTrajectory
 from packetraven.utilities import get_logger
 
-DEFAULT_ASCENT_RATE = 5.5
-DEFAULT_BURST_ALTITUDE = 28000
-DEFAULT_SEA_LEVEL_DESCENT_RATE = 9
+DEFAULT_FLOAT_ALTITUDE_UNCERTAINTY = 500
 UTC_TIMEZONE = pytz.utc
 
 LOGGER = get_logger('predicts')
@@ -375,7 +373,7 @@ def get_predictions(
     burst_altitude: float = None,
     sea_level_descent_rate: float = None,
     float_altitude: float = None,
-    float_altitude_uncertainty: float = 500,
+    float_altitude_uncertainty: float = None,
     float_duration: timedelta = None,
     api_url: str = None,
 ) -> [PredictedTrajectory]:
@@ -395,6 +393,8 @@ def get_predictions(
     """
 
     if start_location is not None:
+        if isinstance(start_location, Generator):
+            start_location = list(start_location)
         if len(start_location) == 2:
             start_location = (*start_location, 0)
 
@@ -403,6 +403,9 @@ def get_predictions(
 
     if float_duration is not None and float_altitude is None:
         float_altitude = burst_altitude
+
+    if float_altitude_uncertainty is None:
+        float_altitude_uncertainty = DEFAULT_FLOAT_ALTITUDE_UNCERTAINTY
 
     if api_url is None:
         api_url = PredictionAPIURL.cusf

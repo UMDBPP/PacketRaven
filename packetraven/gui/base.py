@@ -57,6 +57,8 @@ class PacketRavenGUI:
             },
             'ssh_tunnel': {'ssh_hostname': None, 'ssh_username': None, 'ssh_password': None},
             'prediction': {
+                'prediction_start_time': None,
+                'prediction_start_location': None,
                 'prediction_ascent_rate': None,
                 'prediction_burst_altitude': None,
                 'prediction_sea_level_descent_rate': None,
