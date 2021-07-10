@@ -82,7 +82,7 @@ class BalloonPredictionQuery(ABC):
         self.launch_time = launch_time
         self.ascent_rate = ascent_rate
         self.burst_altitude = burst_altitude
-        self.sea_level_descent_rate = sea_level_descent_rate
+        self.sea_level_descent_rate = abs(sea_level_descent_rate)
         self.float_altitude = float_altitude
         self.float_end_time = float_end_time
         self.name = name
@@ -436,9 +436,7 @@ def get_predictions(
                 prediction_start_location = packet_track[-1].coordinates
 
         if float_altitude is not None and not packet_track.falling:
-            packets_at_float_altitude = packet_track[
-                numpy.abs(float_altitude - packet_track.altitudes) < float_altitude_uncertainty
-            ]
+            packets_at_float_altitude = packet_track[numpy.abs(float_altitude - packet_track.altitudes) < float_altitude_uncertainty]
             if (
                 len(packets_at_float_altitude) > 0
                 and packets_at_float_altitude[-1].time == packet_track.times[-1]
@@ -447,13 +445,13 @@ def get_predictions(
                 descent_only = False
             elif packet_track.ascent_rates[-1] >= 0:
                 prediction_float_start_time = prediction_start_time + timedelta(
-                    seconds=(prediction_float_altitude - prediction_start_location[2])
-                    / prediction_ascent_rate
+                    seconds=(prediction_float_altitude - prediction_start_location[2]) / prediction_ascent_rate
                 )
                 descent_only = False
             else:
                 prediction_float_start_time = None
                 descent_only = True
+                prediction_sea_level_descent_rate = packet_track.ascent_rates[-1]
             if prediction_float_start_time is not None:
                 prediction_float_end_time = prediction_float_start_time + float_duration
             else:
@@ -479,7 +477,7 @@ def get_predictions(
 
         if packet_track.time_to_ground >= timedelta(seconds=0):
             LOGGER.info(
-                f'"{packet_track.name}" predicted landing location: {prediction.coordinates[-1]}'
+                f'{packet_track.name:<9} - predicted landing location: {prediction.coordinates[-1]} - https://www.google.com/maps/place/{prediction.coordinates[-1][1]},{prediction.coordinates[-1][0]}'
             )
 
         prediction_tracks[name] = prediction
