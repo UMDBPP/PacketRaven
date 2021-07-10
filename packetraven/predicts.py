@@ -431,9 +431,9 @@ def get_predictions(
 
         if prediction_start_location is None:
             try:
-                prediction_start_location = packet_track[prediction_start_time]
+                prediction_start_location = packet_track[prediction_start_time].coordinates
             except KeyError:
-                prediction_start_location = packet_track[0].coordinates
+                prediction_start_location = packet_track[-1].coordinates
 
         if float_altitude is not None and not packet_track.falling:
             packets_at_float_altitude = packet_track[
