@@ -699,7 +699,6 @@ class PacketRavenGUI:
                     set_child_states(self.__windows[callsign], 'disabled')
 
                 self.__running = True
-
             except Exception as error:
                 teek.dialog.error(error.__class__.__name__, error)
                 if '\n' in str(error):
@@ -765,6 +764,30 @@ class PacketRavenGUI:
                 if output_filename_index is not None:
                     self.__connections.pop(output_filename_index)
 
+                if self.toggles['prediction_file']:
+                    try:
+                        self.__predictions = get_predictions(
+                            self.packet_tracks,
+                            **{
+                                key.replace('prediction_', ''): value
+                                for key, value in self.__configuration['prediction'].items()
+                                if 'prediction_' in key
+                            },
+                        )
+                        if self.prediction_filename is not None:
+                            write_packet_tracks(
+                                self.__predictions.values(), self.prediction_filename
+                            )
+                    except PredictionError as error:
+                        LOGGER.warning(f'{error.__class__.__name__} - {error}')
+                    except Exception as error:
+                        LOGGER.exception(
+                            f'error retrieving prediction trajectory - {error.__class__.__name__} - {error}'
+                        )
+
+                for variable, plot in self.__plots.items():
+                    plot.update(self.packet_tracks, self.predictions)
+
                 if len(new_packets) > 0:
                     if self.output_filename is not None:
                         write_packet_tracks(
@@ -776,32 +799,6 @@ class PacketRavenGUI:
                         )
 
                     await self.__update_sources_window(new_packets)
-
-                    if self.toggles['prediction_file']:
-                        try:
-                            self.__predictions = get_predictions(
-                                self.packet_tracks,
-                                **{
-                                    key.replace('prediction_', ''): value
-                                    for key, value in self.__configuration[
-                                        'prediction'
-                                    ].items()
-                                    if 'prediction_' in key
-                                },
-                            )
-                            if self.prediction_filename is not None:
-                                write_packet_tracks(
-                                    self.__predictions.values(), self.prediction_filename
-                                )
-                        except PredictionError as error:
-                            LOGGER.warning(f'{error.__class__.__name__} - {error}')
-                        except Exception as error:
-                            LOGGER.warning(
-                                f'error retrieving prediction trajectory - {error.__class__.__name__} - {error}'
-                            )
-
-                    for variable, plot in self.__plots.items():
-                        plot.update(self.packet_tracks, self.predictions)
 
                     if self.aprs_is is not None:
                         for packets in new_packets.values():

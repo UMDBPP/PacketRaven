@@ -51,7 +51,7 @@ class LivePlot:
         if predictions is not None:
             self.predictions.update(predictions)
 
-        if len(self.packet_tracks) > 0:
+        if len(self.packet_tracks) > 0 or len(self.predictions) > 0:
             if self.window.state() == 'iconic':
                 self.window.deiconify()
             if self.window.focus_get() is None:

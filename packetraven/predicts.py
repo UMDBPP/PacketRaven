@@ -9,6 +9,7 @@ import pytz
 import requests
 from shapely.geometry import Point
 
+from packetraven.model import FREEFALL_DESCENT_RATE
 from packetraven.packets import LocationPacket
 from packetraven.packets.tracks import LocationPacketTrack, PredictedTrajectory
 from packetraven.utilities import get_logger
@@ -395,7 +396,9 @@ def get_predictions(
     if start_location is not None:
         if isinstance(start_location, Generator):
             start_location = list(start_location)
-        if len(start_location) == 2:
+        if len(start_location) == 0:
+            start_location = None
+        elif len(start_location) == 2:
             start_location = (*start_location, 0)
 
     if float_altitude is not None and float_duration is None:
@@ -412,38 +415,45 @@ def get_predictions(
 
     prediction_tracks = {}
     for name, packet_track in packet_tracks.items():
-        prediction_start_location = start_location
-        prediction_start_time = start_time
-        prediction_ascent_rate = ascent_rate
-        prediction_burst_altitude = burst_altitude
-        prediction_sea_level_descent_rate = sea_level_descent_rate
-        prediction_float_altitude = float_altitude
+        prediction_ascent_rate = None
+        prediction_burst_altitude = None
 
-        ascent_rates = packet_track.ascent_rates
-        if prediction_ascent_rate is None:
-            average_ascent_rate = ascent_rates[ascent_rates > 0]
+        ascent_rates = packet_track.ascent_rates[packet_track.ascent_rates > 0]
+        if len(ascent_rates) > 0:
+            average_ascent_rate = numpy.mean(ascent_rates)
             if average_ascent_rate > 0:
                 prediction_ascent_rate = average_ascent_rate
 
-        # if packet track is descending, override given burst altitude
-        if len(ascent_rates) > 2 and all(ascent_rates[-2:] < 0):
-            prediction_burst_altitude = packet_track.altitudes[-1] + 1
+            # if packet track is descending, override given burst altitude
+            if len(ascent_rates) > 2 and all(ascent_rates[-2:] < 0):
+                prediction_burst_altitude = packet_track.altitudes[-1] + 1
 
-        if prediction_start_time is None:
-            prediction_start_time = packet_track[-1].time
+        if prediction_ascent_rate is None:
+            prediction_ascent_rate = ascent_rate
 
-        if prediction_start_location is None:
-            try:
-                prediction_start_location = packet_track[prediction_start_time].coordinates
-                if len(prediction_start_location.shape) > 1:
-                    prediction_start_location = prediction_start_location[0, :]
-            except KeyError:
-                prediction_start_location = packet_track[-1].coordinates
+        if prediction_burst_altitude is None:
+            prediction_burst_altitude = burst_altitude
+
+        if sea_level_descent_rate is not None:
+            prediction_sea_level_descent_rate = sea_level_descent_rate
+        else:
+            prediction_sea_level_descent_rate = FREEFALL_DESCENT_RATE(0)
+
+        prediction_start_time = packet_track[-1].time
+
+        try:
+            prediction_start_location = packet_track[prediction_start_time].coordinates
+            if len(prediction_start_location.shape) > 1:
+                prediction_start_location = prediction_start_location[0, :]
+        except KeyError:
+            prediction_start_location = packet_track[-1].coordinates
         if len(prediction_start_location) == 2:
             prediction_start_location = (*prediction_start_location, 0)
 
         if float_altitude is not None and not packet_track.falling:
-            packets_at_float_altitude = packet_track[numpy.abs(float_altitude - packet_track.altitudes) < float_altitude_uncertainty]
+            packets_at_float_altitude = packet_track[
+                numpy.abs(float_altitude - packet_track.altitudes) < float_altitude_uncertainty
+            ]
             if (
                 len(packets_at_float_altitude) > 0
                 and packets_at_float_altitude[-1].time == packet_track.times[-1]
@@ -452,7 +462,8 @@ def get_predictions(
                 descent_only = False
             elif packet_track.ascent_rates[-1] >= 0:
                 prediction_float_start_time = prediction_start_time + timedelta(
-                    seconds=(prediction_float_altitude - prediction_start_location[2]) / prediction_ascent_rate
+                    seconds=(float_altitude - prediction_start_location[2])
+                    / prediction_ascent_rate
                 )
                 descent_only = False
             else:
@@ -473,7 +484,7 @@ def get_predictions(
             ascent_rate=prediction_ascent_rate,
             burst_altitude=prediction_burst_altitude,
             sea_level_descent_rate=prediction_sea_level_descent_rate,
-            float_altitude=prediction_float_altitude,
+            float_altitude=float_altitude,
             float_end_time=prediction_float_end_time,
             api_url=api_url,
             name=name,
@@ -487,6 +498,43 @@ def get_predictions(
                 f'{packet_track.name:<9} - predicted landing location: {prediction.coordinates[-1]} - https://www.google.com/maps/place/{prediction.coordinates[-1][1]},{prediction.coordinates[-1][0]}'
             )
 
+        prediction_tracks[name] = prediction
+
+    if all(
+        value is not None
+        for value in [
+            start_location,
+            start_time,
+            ascent_rate,
+            burst_altitude,
+            sea_level_descent_rate,
+        ]
+    ):
+        name = 'flight'
+
+        if all(value is not None for value in [float_altitude, float_duration]):
+            float_end_time = (
+                start_time
+                + timedelta(seconds=(float_altitude - start_location[2]) / ascent_rate)
+                + float_duration
+            )
+        else:
+            float_end_time = None
+
+        prediction_query = CUSFBalloonPredictionQuery(
+            launch_site=start_location,
+            launch_time=start_time,
+            ascent_rate=ascent_rate,
+            burst_altitude=burst_altitude,
+            sea_level_descent_rate=sea_level_descent_rate,
+            float_altitude=float_altitude,
+            float_end_time=float_end_time,
+            api_url=api_url,
+            name=name,
+            descent_only=False,
+        )
+
+        prediction = prediction_query.predict
         prediction_tracks[name] = prediction
 
     return prediction_tracks

@@ -197,9 +197,9 @@ def main():
             prediction_filename.parent.mkdir(parents=True, exist_ok=True)
 
         if args.prediction_start_location is not None:
-            kwargs['prediction_start_location'] = (
+            kwargs['prediction_start_location'] = [
                 float(value) for value in args.prediction_start_location.split(',')
-            )
+            ]
 
         if args.prediction_start_time is not None:
             kwargs['prediction_start_time'] = convert_value(
