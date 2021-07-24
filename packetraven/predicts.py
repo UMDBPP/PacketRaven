@@ -478,27 +478,32 @@ def get_predictions(
             prediction_float_end_time = None
             descent_only = packet_track.falling or packet_track.ascent_rates[-1] < 0
 
-        prediction_query = CUSFBalloonPredictionQuery(
-            launch_site=prediction_start_location,
-            launch_time=prediction_start_time,
-            ascent_rate=prediction_ascent_rate,
-            burst_altitude=prediction_burst_altitude,
-            sea_level_descent_rate=prediction_sea_level_descent_rate,
-            float_altitude=float_altitude,
-            float_end_time=prediction_float_end_time,
-            api_url=api_url,
-            name=name,
-            descent_only=descent_only,
-        )
-
-        prediction = prediction_query.predict
-
-        if packet_track.time_to_ground >= timedelta(seconds=0):
-            LOGGER.info(
-                f'{packet_track.name:<9} - predicted landing location: {prediction.coordinates[-1]} - https://www.google.com/maps/place/{prediction.coordinates[-1][1]},{prediction.coordinates[-1][0]}'
+        try:
+            prediction_query = CUSFBalloonPredictionQuery(
+                launch_site=prediction_start_location,
+                launch_time=prediction_start_time,
+                ascent_rate=prediction_ascent_rate,
+                burst_altitude=prediction_burst_altitude,
+                sea_level_descent_rate=prediction_sea_level_descent_rate,
+                float_altitude=float_altitude,
+                float_end_time=prediction_float_end_time,
+                api_url=api_url,
+                name=name,
+                descent_only=descent_only,
             )
 
-        prediction_tracks[name] = prediction
+            prediction = prediction_query.predict
+
+            if packet_track.time_to_ground >= timedelta(seconds=0):
+                LOGGER.info(
+                    f'{packet_track.name:<9} - predicted landing location: {prediction.coordinates[-1]} - https://www.google.com/maps/place/{prediction.coordinates[-1][1]},{prediction.coordinates[-1][0]}'
+                )
+
+            prediction_tracks[name] = prediction
+        except Exception as error:
+            LOGGER.warning(
+                f'error retrieving prediction trajectory - {error.__class__.__name__} - {error}'
+            )
 
     if all(
         value is not None
@@ -521,20 +526,25 @@ def get_predictions(
         else:
             float_end_time = None
 
-        prediction_query = CUSFBalloonPredictionQuery(
-            launch_site=start_location,
-            launch_time=start_time,
-            ascent_rate=ascent_rate,
-            burst_altitude=burst_altitude,
-            sea_level_descent_rate=sea_level_descent_rate,
-            float_altitude=float_altitude,
-            float_end_time=float_end_time,
-            api_url=api_url,
-            name=name,
-            descent_only=False,
-        )
+        try:
+            prediction_query = CUSFBalloonPredictionQuery(
+                launch_site=start_location,
+                launch_time=start_time,
+                ascent_rate=ascent_rate,
+                burst_altitude=burst_altitude,
+                sea_level_descent_rate=sea_level_descent_rate,
+                float_altitude=float_altitude,
+                float_end_time=float_end_time,
+                api_url=api_url,
+                name=name,
+                descent_only=False,
+            )
 
-        prediction = prediction_query.predict
-        prediction_tracks[name] = prediction
+            prediction = prediction_query.predict
+            prediction_tracks[name] = prediction
+        except Exception as error:
+            LOGGER.warning(
+                f'error retrieving prediction trajectory - {error.__class__.__name__} - {error}'
+            )
 
     return prediction_tracks
