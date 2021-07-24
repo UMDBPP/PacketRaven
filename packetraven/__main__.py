@@ -412,7 +412,7 @@ def main():
                     if output_filename_index is not None:
                         connections.pop(output_filename_index)
 
-                    if prediction_filename is not None and len(new_packets) > 0:
+                    if prediction_filename is not None:
                         try:
                             predictions = get_predictions(
                                 packet_tracks,
