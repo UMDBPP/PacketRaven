@@ -766,13 +766,17 @@ class PacketRavenGUI:
 
                 if self.toggles['prediction_file']:
                     try:
-                        self.__predictions = get_predictions(
-                            self.packet_tracks,
-                            **{
-                                key.replace('prediction_', ''): value
-                                for key, value in self.__configuration['prediction'].items()
-                                if 'prediction_' in key
-                            },
+                        self.__predictions.update(
+                            get_predictions(
+                                self.packet_tracks,
+                                **{
+                                    key.replace('prediction_', ''): value
+                                    for key, value in self.__configuration[
+                                        'prediction'
+                                    ].items()
+                                    if 'prediction_' in key
+                                },
+                            )
                         )
                         if self.prediction_filename is not None:
                             write_packet_tracks(

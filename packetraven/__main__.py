@@ -393,6 +393,7 @@ def main():
         )
 
         packet_tracks = {}
+        predictions = {}
         try:
             while len(connections) > 0:
                 try:
@@ -414,13 +415,15 @@ def main():
 
                     if prediction_filename is not None:
                         try:
-                            predictions = get_predictions(
-                                packet_tracks,
-                                **{
-                                    key.replace('prediction_', ''): value
-                                    for key, value in kwargs.items()
-                                    if 'prediction_' in key
-                                },
+                            predictions.update(
+                                get_predictions(
+                                    packet_tracks,
+                                    **{
+                                        key.replace('prediction_', ''): value
+                                        for key, value in kwargs.items()
+                                        if 'prediction_' in key
+                                    },
+                                )
                             )
                             write_packet_tracks(predictions.values(), prediction_filename)
                         except PredictionError as error:
