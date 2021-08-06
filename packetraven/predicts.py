@@ -127,7 +127,7 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
         descent_only: bool = False,
     ):
         if profile is None:
-            if float_altitude is not None or float_end_time is not None:
+            if float_altitude is not None or float_end_time is not None and not descent_only:
                 profile = FlightProfile.float
             else:
                 profile = FlightProfile.standard
@@ -240,6 +240,7 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
                             float_end_time=None,
                             api_url=self.api_url,
                             name=self.name,
+                            descent_only=True,
                         )
 
                         for stage in standard_profile_query.get()['prediction']:
