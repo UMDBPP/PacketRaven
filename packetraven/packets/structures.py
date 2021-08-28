@@ -40,13 +40,13 @@ class DoublyLinkedList(Sequence[T]):
             self.previous_node = previous_node
             self.next_node = next_node
 
-        def __eq__(self, other: 'Node') -> bool:
+        def __eq__(self, other) -> bool:
             return self.value is other.value or self.value == other.value
 
-        def __gt__(self, other: 'Node') -> bool:
+        def __gt__(self, other) -> bool:
             return self.value > other.value
 
-        def __lt__(self, other: 'Node') -> bool:
+        def __lt__(self, other) -> bool:
             return self.value < other.value
 
         def __str__(self) -> str:
