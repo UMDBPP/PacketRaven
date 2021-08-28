@@ -12,6 +12,7 @@ from packetraven.model import (
     FREEFALL_SECONDS_TO_GROUND,
 )
 from packetraven.packets import APRSPacket, DEFAULT_CRS, LocationPacket
+from packetraven.packets.base import Distance
 from packetraven.packets.structures import DoublyLinkedList
 
 
@@ -32,8 +33,10 @@ class LocationPacketTrack:
         self.crs = crs if crs is not None else DEFAULT_CRS
 
         if packets is not None:
-            for packet in packets:
-                self.append(packet)
+            self.extend(packets)
+
+        self.__length = len(self)
+        self.__data = None
 
     def append(self, packet: LocationPacket):
         if packet not in self.packets:
@@ -45,79 +48,73 @@ class LocationPacketTrack:
         for packet in packets:
             self.append(packet)
 
-    def sort(self):
-        self.packets.sort()
+    def sort(self, inplace: bool = False):
+        self.packets.sort(inplace=inplace)
+
+    @property
+    def data(self) -> DataFrame:
+        if self.__data is None or len(self) != self.__length:
+            records = [
+                {
+                    'time': packet.time,
+                    'x': packet.coordinates[0],
+                    'y': packet.coordinates[1],
+                    'altitude': packet.coordinates[2],
+                }
+                for packet in self.packets
+            ]
+            for index, packet_delta in enumerate(
+                numpy.insert(numpy.diff(self.packets), 0, Distance(0, 0, 0, self.crs))
+            ):
+                records[index].update(
+                    {
+                        'interval': packet_delta.interval,
+                        'overground_distance': packet_delta.overground,
+                        'ascent': packet_delta.ascent,
+                        'ground_speed': packet_delta.ground_speed,
+                        'ascent_rate': packet_delta.ascent_rate,
+                    }
+                )
+
+            self.__data = DataFrame.from_records(records)
+
+        return self.__data
 
     @property
     def times(self) -> numpy.ndarray:
-        return numpy.array([packet.time for packet in self.packets], dtype=numpy.datetime64)
+        return self.data['time'].values
 
     @property
     def coordinates(self) -> numpy.ndarray:
-        return numpy.stack([packet.coordinates for packet in self.packets], axis=0)
+        return self.data[['x', 'y', 'altitude']].values
 
     @property
     def altitudes(self) -> numpy.ndarray:
-        return self.coordinates[:, 2]
+        return self.coordinates[:, -1]
 
     @property
     def intervals(self) -> numpy.ndarray:
-        return numpy.concatenate(
-            [
-                [0],
-                numpy.array(
-                    [packet_delta.seconds for packet_delta in numpy.diff(self.packets)]
-                ),
-            ]
-        )
+        return self.data['interval'].values
 
     @property
     def overground_distances(self) -> numpy.ndarray:
         """ overground distances between packets """
-        return numpy.concatenate(
-            [
-                [0],
-                numpy.array(
-                    [packet_delta.overground for packet_delta in self.packets.difference]
-                ),
-            ]
-        )
+        return self.data['overground_distance'].values
 
     @property
     def ascents(self) -> numpy.ndarray:
         """ differences in altitude between packets """
-        return numpy.concatenate(
-            [
-                [0],
-                numpy.array(
-                    [packet_delta.ascent for packet_delta in numpy.diff(self.packets)]
-                ),
-            ]
-        )
+        return self.data['ascent'].values
 
     @property
     def ascent_rates(self) -> numpy.ndarray:
         """ instantaneous ascent rates between packets """
-        return numpy.concatenate(
-            [
-                [0],
-                numpy.array(
-                    [packet_delta.ascent_rate for packet_delta in numpy.diff(self.packets)]
-                ),
-            ]
-        )
+        return self.data['ascent_rate'].values
 
     @property
     def ground_speeds(self) -> numpy.ndarray:
         """ instantaneous overground speeds between packets """
-        return numpy.concatenate(
-            [
-                [0],
-                numpy.array(
-                    [packet_delta.ground_speed for packet_delta in numpy.diff(self.packets)]
-                ),
-            ]
-        )
+        return self.data['ground_speed'].values
 
     @property
     def cumulative_overground_distances(self) -> numpy.ndarray:
@@ -167,13 +164,15 @@ class LocationPacketTrack:
             else:
                 packets = None
             return self.__class__(self.name, packets, self.crs)
-        elif isinstance(index, datetime):
+        elif isinstance(index, (datetime, numpy.datetime64)):
+            if not isinstance(index, numpy.datetime64):
+                index = numpy.datetime64(index)
             matching_packets = []
             for packet in self.packets:
                 if packet.time == index:
                     matching_packets.append(packet)
             if len(matching_packets) == 0:
-                maximum_interval = numpy.timedelta64(int(max(self.intervals)), 's')
+                maximum_interval = max(self.intervals)
                 if (
                     index > min(self.times) - maximum_interval
                     and index < max(self.times) + maximum_interval
@@ -181,13 +180,16 @@ class LocationPacketTrack:
                     smallest_difference = None
                     closest_time = None
                     for packet in self.packets:
-                        difference = abs(packet.time - index)
+                        packet_time = numpy.datetime64(packet.time)
+                        difference = abs(packet_time - index)
                         if smallest_difference is None or difference < smallest_difference:
                             smallest_difference = difference
-                            closest_time = packet.time
+                            closest_time = packet_time
                     return self[closest_time]
                 else:
-                    raise IndexError(f'time index out of range: {index}')
+                    raise IndexError(
+                        f'time index out of range: {min(self.times) - maximum_interval} <\= {index} <\= {max(self.times) + maximum_interval}'
+                    )
             elif len(matching_packets) == 1:
                 return matching_packets[0]
             else:

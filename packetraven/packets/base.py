@@ -96,6 +96,11 @@ class LocationPacket:
 
 class Distance:
     def __init__(self, interval: timedelta, horizontal: float, vertical: float, crs: CRS):
+        if not isinstance(interval, timedelta):
+            interval = timedelta(seconds=interval)
+        if not isinstance(crs, CRS):
+            crs = CRS.from_user_input(crs)
+
         self.__interval = interval
         self.__horizontal = horizontal
         self.__vertical = vertical

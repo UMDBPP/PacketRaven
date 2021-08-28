@@ -527,7 +527,7 @@ def retrieve_packets(
                 (packet_track.times[-1] - numpy.datetime64('1970-01-01T00:00:00Z'))
                 / numpy.timedelta64(1, 's')
             )
-            packet_track.sort()
+            packet_track.sort(inplace=True)
             try:
                 coordinate_string = ', '.join(
                     f'{coordinate:.3f}°' for coordinate in packet_track.coordinates[-1, :2]
