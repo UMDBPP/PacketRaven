@@ -35,18 +35,18 @@ class DoublyLinkedList(Sequence[T]):
         entry within doubly-linked list with three attributes: value, previous node, and next node
         """
 
-        def __init__(self, value: T, previous_node: 'Node', next_node: 'Node'):
+        def __init__(self, value: T, previous_node, next_node):
             self.value = value
             self.previous_node = previous_node
             self.next_node = next_node
 
-        def __eq__(self, other: 'Node') -> bool:
+        def __eq__(self, other) -> bool:
             return self.value is other.value or self.value == other.value
 
-        def __gt__(self, other: 'Node') -> bool:
+        def __gt__(self, other) -> bool:
             return self.value > other.value
 
-        def __lt__(self, other: 'Node') -> bool:
+        def __lt__(self, other) -> bool:
             return self.value < other.value
 
         def __str__(self) -> str:
