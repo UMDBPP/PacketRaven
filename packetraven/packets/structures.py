@@ -1,9 +1,10 @@
-from typing import Any, Iterable, List, Union
+from copy import copy
+from typing import Any, Generic, Iterable, List, Sequence, T, Union
 
 from numpy import int32, int64
 
 
-class DoublyLinkedList:
+class DoublyLinkedList(Sequence[T]):
     """
     A linked list is a series of node objects, each with a link (object reference) to the next node in the series.
     The majority of the list is only accessible by starting at the first node ("head") and following the links forward.
@@ -16,7 +17,7 @@ class DoublyLinkedList:
     node_1 (head) <-> node_2 <-> node_3 (tail)
     """
 
-    def __init__(self, sequence=None):
+    def __init__(self, sequence: Sequence = None):
         """
         instantiate new doubly-linked list
 
@@ -29,12 +30,12 @@ class DoublyLinkedList:
         if sequence is not None:
             self.extend(sequence)
 
-    class Node:
+    class Node(Generic[T]):
         """
         entry within doubly-linked list with three attributes: value, previous node, and next node
         """
 
-        def __init__(self, value, previous_node, next_node):
+        def __init__(self, value: T, previous_node, next_node):
             self.value = value
             self.previous_node = previous_node
             self.next_node = next_node
@@ -42,13 +43,19 @@ class DoublyLinkedList:
         def __eq__(self, other) -> bool:
             return self.value is other.value or self.value == other.value
 
+        def __gt__(self, other) -> bool:
+            return self.value > other.value
+
+        def __lt__(self, other) -> bool:
+            return self.value < other.value
+
         def __str__(self) -> str:
             return str(self.value)
 
         def __repr__(self) -> str:
             return f'{self.previous_node} -> [{self.value}] -> {self.next_node}'
 
-    def append(self, value):
+    def append(self, value: T):
         """
         append given value as new tail
 
@@ -65,7 +72,7 @@ class DoublyLinkedList:
         if self.head is None:
             self.head = self.tail
 
-    def extend(self, sequence):
+    def extend(self, sequence: Sequence[T]):
         """
         append all values in given iterable to end of list
 
@@ -78,7 +85,7 @@ class DoublyLinkedList:
 
             self.append(entry)
 
-    def insert(self, value, index: int):
+    def insert(self, value: T, index: int):
         """
         insert value at given index
 
@@ -106,7 +113,7 @@ class DoublyLinkedList:
             else:
                 self.head = self.Node(value, None, self.head)
 
-    def remove(self, value):
+    def remove(self, value: T):
         """
         remove all instances of given value
 
@@ -121,7 +128,7 @@ class DoublyLinkedList:
 
             current_node = current_node.next_node
 
-    def index(self, value) -> int:
+    def index(self, value: T) -> int:
         """
         first index of given value
 
@@ -141,7 +148,7 @@ class DoublyLinkedList:
         else:
             raise ValueError(f'{value} is not in list')
 
-    def count(self, value) -> int:
+    def count(self, value: T) -> int:
         """
         number of instances of given value
 
@@ -151,11 +158,16 @@ class DoublyLinkedList:
 
         return sum([1 for node_value in self if node_value == value])
 
-    def sort(self):
-        sorted_values = sorted(self)
-        self.head = None
-        self.tail = None
-        self.extend(sorted_values)
+    def sort(self, inplace: bool = False):
+        if inplace:
+            instance = self
+        else:
+            instance = copy(self)
+        sorted_values = sorted(instance)
+        instance.head = None
+        instance.tail = None
+        instance.extend(sorted_values)
+        return instance
 
     @property
     def difference(self) -> [Any]:
@@ -239,7 +251,7 @@ class DoublyLinkedList:
         else:
             raise ValueError(f'unrecognized index: {index}')
 
-    def __setitem__(self, index: int, value):
+    def __setitem__(self, index: int, value: T):
         self._node_at_index(index).value = value
 
     def __delitem__(self, index: int):
@@ -259,7 +271,7 @@ class DoublyLinkedList:
             yield current_node.value
             current_node = current_node.previous_node
 
-    def __contains__(self, item) -> bool:
+    def __contains__(self, item: T) -> bool:
         for value in self:
             if item == value:
                 return True
@@ -276,13 +288,16 @@ class DoublyLinkedList:
 
         return length
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: 'DoublyLinkedList') -> bool:
         if len(self) == len(other):
             for index in range(len(self)):
                 if self[index] != other[index]:
                     return False
             else:
                 return True
+
+    def __copy__(self) -> 'DoublyLinkedList':
+        return self.__class__(self)
 
     def __str__(self) -> str:
         return str(list(self))
