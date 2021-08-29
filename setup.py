@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-from typing import Mapping
 import logging
 import os
 from pathlib import Path
 import re
 import subprocess
 import sys
+from typing import Mapping
 
 from setuptools import config, find_packages, setup
 
