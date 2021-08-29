@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from typing import Mapping
 import logging
 import os
 from pathlib import Path
