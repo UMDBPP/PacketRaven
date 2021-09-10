@@ -40,9 +40,9 @@ def write_packet_tracks(packet_tracks: [LocationPacketTrack], output_filename: P
             for packet_index, packet in enumerate(packet_track):
                 properties = {
                     'time': f'{packet.time:%Y%m%d%H%M%S}',
-                    'altitude': packet.coordinates[2],
-                    'ascent_rate': ascent_rates[packet_index],
-                    'ground_speed': ground_speeds[packet_index],
+                    'altitude': float(packet.coordinates[2]),
+                    'ascent_rate': float(ascent_rates[packet_index]),
+                    'ground_speed': float(ground_speeds[packet_index]),
                 }
 
                 properties.update(packet.attributes)
@@ -56,9 +56,9 @@ def write_packet_tracks(packet_tracks: [LocationPacketTrack], output_filename: P
 
             properties = {
                 'time': f'{packet_track.packets[-1].time:%Y%m%d%H%M%S}',
-                'altitude': packet_track.coordinates[-1, -1],
-                'ascent_rate': ascent_rates[-1],
-                'ground_speed': ground_speeds[-1],
+                'altitude': float(packet_track.coordinates[-1, -1]),
+                'ascent_rate': float(ascent_rates[-1]),
+                'ground_speed': float(ground_speeds[-1]),
                 'seconds_to_ground': packet_track.time_to_ground / timedelta(seconds=1),
             }
 

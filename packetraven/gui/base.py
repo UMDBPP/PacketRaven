@@ -1134,7 +1134,8 @@ class PacketRavenGUI:
                 f'{packet_track.overground_distances[-1]:.2f}',
             )
             self.__replace_text(
-                self.__elements[f'{callsign}.interval'], f'{packet_track.intervals[-1]:.2f}',
+                self.__elements[f'{callsign}.interval'],
+                f'{packet_track.intervals[-1] / numpy.timedelta64(1, "s"):.2f}',
             )
             self.__replace_text(
                 self.__elements[f'{callsign}.ascent_rate'],

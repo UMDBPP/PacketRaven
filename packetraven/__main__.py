@@ -534,7 +534,7 @@ def retrieve_packets(
                 )
                 logger.info(
                     f'{callsign:9} - packet #{len(packet_track):<3} - ({coordinate_string}, {packet_track.coordinates[-1, 2]:9.2f}m)'
-                    f'; packet time is {packet_time} ({humanize.naturaltime(current_time - packet_time)}, {packet_track.intervals[-1]:6.1f} s interval)'
+                    f'; packet time is {packet_time} ({humanize.naturaltime(current_time - packet_time)}, {packet_track.intervals[-1] / numpy.timedelta64(1, "s"):6.1f} s interval)'
                     f'; traveled {packet_track.overground_distances[-1]:6.1f} m ({packet_track.ground_speeds[-1]:5.1f} m/s) over the ground'
                     f', and {packet_track.ascents[-1]:6.1f} m ({packet_track.ascent_rates[-1]:5.1f} m/s) vertically, since the previous packet'
                 )
@@ -548,13 +548,37 @@ def retrieve_packets(
                 / numpy.timedelta64(1, 's')
             )
             try:
+                ascent_rates = packet_track.ascent_rates[packet_track.ascent_rates >= 0]
+                if len(ascent_rates) > 0:
+                    mean_ascent_rate = numpy.nanmean(ascent_rates)
+                else:
+                    mean_ascent_rate = 0
+
+                descent_rates = packet_track.ascent_rates[packet_track.ascent_rates < 0]
+                if len(descent_rates) > 0:
+                    mean_descent_rate = numpy.nanmean(descent_rates)
+                else:
+                    mean_descent_rate = 0
+
+                if len(packet_track.ground_speeds) > 0:
+                    mean_ground_speed = numpy.nanmean(packet_track.ground_speeds)
+                else:
+                    mean_ground_speed = 0
+
+                if len(packet_track.intervals) > 0:
+                    mean_interval = numpy.nanmean(
+                        packet_track.intervals / numpy.timedelta64(1, 's')
+                    )
+                else:
+                    mean_interval = 0
+
                 message = (
                     f'{callsign:9} - '
                     f'altitude: {packet_track.altitudes[-1]:6.1f} m'
-                    f'; avg. ascent rate: {numpy.mean(packet_track.ascent_rates[packet_track.ascent_rates > 0]):5.1f} m/s'
-                    f'; avg. descent rate: {numpy.mean(packet_track.ascent_rates[packet_track.ascent_rates < 0]):5.1f} m/s'
-                    f'; avg. ground speed: {numpy.mean(packet_track.ground_speeds):5.1f} m/s'
-                    f'; avg. packet interval: {numpy.mean(packet_track.intervals):6.1f} s'
+                    f'; avg. ascent rate: {mean_ascent_rate:5.1f} m/s'
+                    f'; avg. descent rate: {mean_descent_rate:5.1f} m/s'
+                    f'; avg. ground speed: {mean_ground_speed:5.1f} m/s'
+                    f'; avg. packet interval: {mean_interval:6.1f} s'
                 )
 
                 if packet_track.time_to_ground >= timedelta(seconds=0):
