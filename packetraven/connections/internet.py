@@ -341,10 +341,18 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
 
 class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
     def __init__(self, callsigns: [str] = None, hostname: str = None):
+        """
+        # Pick appropriate servers for your geographical region.
+        noam.aprs2.net - for North America
+        soam.aprs2.net - for South America
+        euro.aprs2.net - for Europe and Africa
+        asia.aprs2.net - for Asia
+        aunz.aprs2.net - for Oceania
+        """
         if hostname is not None:
             self.__hostname, self.__port = split_hostname_port(hostname)
         else:
-            self.__hostname, self.__port = ('rotate.aprs.net', 10152)
+            self.__hostname, self.__port = ('noam.aprs2.net', 10152)
 
         NetworkConnection.__init__(self, f'{self.hostname}:{self.port}')
         APRSPacketSource.__init__(self, f'{self.hostname}:{self.port}', callsigns)
