@@ -90,6 +90,8 @@ optional arguments:
 
 #### listen to a TNC sending raw APRS strings over USB port COM4:
 
+you can set this to `auto` to try the first open USB port
+
 ```bash
 packetraven --tnc COM4
 ```
@@ -99,7 +101,7 @@ packetraven --tnc COM4
 you need an API key to connect to APRS.fi; you can get one from https://aprs.fi/page/api
 
 ```bash
-packetraven --apikey <api_key> --callsigns W3EAX-8,W3EAX-14
+packetraven --aprsfi-key <api_key> --callsigns W3EAX-8,W3EAX-14
 ```
 
 #### listen to a PostGIS database table:
@@ -129,7 +131,7 @@ packetraven --gui
 ```
 
 ```bash
-packetraven --callsigns W3EAX-8,W3EAX-14 --apikey <api_key> --gui
+packetraven --callsigns W3EAX-8,W3EAX-14 --aprsfi-key <api_key> --gui
 ```
 
 ## Python API Examples
