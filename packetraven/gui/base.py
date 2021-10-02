@@ -700,7 +700,7 @@ class PacketRavenGUI:
 
                 self.__running = True
             except Exception as error:
-                teek.dialog.error(error.__class__.__name__, error)
+                teek.dialog.error(error.__class__.__name__, str(error))
                 if '\n' in str(error):
                     for connection_error in str(error).split('\n'):
                         LOGGER.error(connection_error)
