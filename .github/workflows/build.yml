@@ -1,4 +1,4 @@
-name: build
+name: Build and upload to PyPI
 
 on:
   release:
@@ -7,51 +7,43 @@ on:
 
 jobs:
   build_wheels:
-    name: Python ${{ matrix.python-version }} wheel on ${{ matrix.os }}
+    name: Build Python ${{ matrix.python-version }} wheel on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-latest ]
-        python-version: [ 3.9 ]
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+        python-version: [ 3.8, 3.9, 3.10 ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
       - name: Install Python
         uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Restore cached dependencies
-        uses: actions/cache@v2
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('setup.py') }}
-          restore-keys: ${{ runner.os }}-pip-${{ matrix.python-version }}-
-      - name: Install dependencies
-        run: pip install --upgrade pip setuptools wheel
-      - name: Build wheel
-        run: python setup.py bdist_wheel
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.2.0b1
       - name: Save wheel
         uses: actions/upload-artifact@v2
         with:
-          path: ./dist/*.whl
+          path: ./wheelhouse/*.whl
   build_sdist:
-    name: package source
+    name: Build source distribution
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-      - name: Install Python
-        uses: actions/setup-python@v2
-      - name: Package source
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: '3.8'
+      - name: Build sdist
         run: python setup.py sdist
       - name: Save source package
         uses: actions/upload-artifact@v2
         with:
-          path: ./dist/*.tar.gz
+          path: dist/*.tar.gz
   upload_pypi:
-    name: publish to PyPI
     needs: [ build_wheels, build_sdist ]
     runs-on: ubuntu-latest
+    if: github.event_name == 'release' && github.event.action == 'published'
     steps:
       - name: Retrieve wheel(s) and source
         uses: actions/download-artifact@v2
@@ -59,7 +51,7 @@ jobs:
           name: artifact
           path: dist
       - name: Upload wheel(s) and source
-        uses: pypa/gh-action-pypi-publish@master
+        uses: pypa/gh-action-pypi-publish@v1.4.2
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
