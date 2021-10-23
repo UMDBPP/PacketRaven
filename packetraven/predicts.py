@@ -480,7 +480,7 @@ def get_predictions(
         else:
             prediction_float_end_time = None
             descent_only = (
-                packet_track.falling or numpy.sum(packet_track.ascent_rates[-2:]) < 0
+                packet_track.falling or numpy.any(packet_track.ascent_rates[-2:] < 0)
             )
 
         try:
