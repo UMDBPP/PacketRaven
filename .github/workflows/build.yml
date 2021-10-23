@@ -29,7 +29,7 @@ jobs:
       - name: Install dependencies
         run: pip install --upgrade pip setuptools wheel
       - name: Build wheel
-        run: python setup.py bdist_wheel
+        run: pip wheel -w dist .
       - name: Save wheel
         uses: actions/upload-artifact@v2
         with:
