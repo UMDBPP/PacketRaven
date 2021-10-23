@@ -30,6 +30,9 @@ class LivePlot:
         variable: str,
         predictions: {str: PredictedTrajectory} = None,
     ):
+        pyplot.ion()
+        pyplot.show()
+
         if variable not in VARIABLES:
             raise NotImplementedError(f'unsupported plotting variable "{variable}"')
 
@@ -37,7 +40,10 @@ class LivePlot:
         self.predictions = predictions if predictions is not None else {}
         self.variable = variable
 
-        self.window.protocol('WM_DELETE_WINDOW', self.window.iconify)
+        try:
+            self.window.protocol('WM_DELETE_WINDOW', self.window.iconify)
+        except AttributeError:
+            pass
 
         self.update()
 
@@ -52,10 +58,13 @@ class LivePlot:
             self.predictions.update(predictions)
 
         if len(self.packet_tracks) > 0 or len(self.predictions) > 0:
-            if self.window.state() == 'iconic':
-                self.window.deiconify()
-            if self.window.focus_get() is None:
-                self.window.focus_force()
+            try:
+                if self.window.state() == 'iconic':
+                    self.window.deiconify()
+                if self.window.focus_get() is None:
+                    self.window.focus_force()
+            except AttributeError:
+                pass
 
             while len(self.axis.lines) > 0:
                 self.axis.lines.pop(-1)
@@ -90,6 +99,7 @@ class LivePlot:
 
             self.axis.legend()
             pyplot.draw()
+            pyplot.pause(0.001)
 
     @property
     def window(self) -> Toplevel:
@@ -104,7 +114,7 @@ class LivePlot:
         except (AttributeError, RuntimeError):
             figure = self.__new_figure()
         self.__figure = figure
-        pyplot.show(block=False)
+        pyplot.show()
         return figure
 
     @property
