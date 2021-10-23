@@ -479,7 +479,9 @@ def get_predictions(
                 prediction_float_end_time = None
         else:
             prediction_float_end_time = None
-            descent_only = packet_track.falling or packet_track.ascent_rates[-1] < 0
+            descent_only = (
+                packet_track.falling or numpy.sum(packet_track.ascent_rates[-2:]) < 0
+            )
 
         try:
             prediction_query = CUSFBalloonPredictionQuery(
