@@ -179,7 +179,9 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
             'launch_latitude': self.launch_site.y,
             'launch_datetime': self.launch_time.isoformat(),
             'ascent_rate': self.ascent_rate,
-            'burst_altitude': self.burst_altitude,
+            'burst_altitude': self.burst_altitude
+            if not self.descent_only
+            else self.launch_site.z + 1,
             'descent_rate': self.sea_level_descent_rate,
         }
 
@@ -192,7 +194,7 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
         if self.dataset_time is not None:
             query['dataset'] = self.dataset_time.isoformat()
 
-        if self.profile == FlightProfile.float:
+        if self.profile == FlightProfile.float and not self.descent_only:
             if self.float_altitude is None:
                 self.float_altitude = self.burst_altitude
             if self.float_end_time is None:
