@@ -110,7 +110,7 @@ class APRSfi(APRSPacketSource, NetworkConnection):
         return f'{self.__class__.__name__}({repr(self.callsigns)}, {repr("****")})'
 
 
-class RockBLOCK(PacketSource, NetworkConnection):
+class RockBLOCK(PacketSource, PacketSink, NetworkConnection):
     interval = timedelta(seconds=10)
 
     def __init__(self, imei: str, username: str = None, password: str = None):
@@ -149,6 +149,12 @@ class RockBLOCK(PacketSource, NetworkConnection):
 
         self.__last_access_time = None
 
+    def query(self, **query) -> str:
+        query['username'] = self.username
+        query['password'] = self.password
+        query = '&'.join(f'{key}={value}' for key, value in query.items())
+        return f'{self.location}?{query}'
+
     @property
     def packets(self) -> [LocationPacket]:
         if self.__last_access_time is not None and self.interval is not None:
@@ -158,15 +164,7 @@ class RockBLOCK(PacketSource, NetworkConnection):
                     f'interval {interval} less than minimum interval {self.interval}'
                 )
 
-        query = {
-            'imei': self.imei,
-            'username': self.username,
-            'password': self.password,
-        }
-
-        query = '&'.join(f'{key}={value}' for key, value in query.items())
-
-        response = requests.get(f'{self.location}?{query}')
+        response = requests.get(self.query())
 
         status, code, data = response.text.split(',')
         if status == 'OK':
@@ -201,6 +199,10 @@ class RockBLOCK(PacketSource, NetworkConnection):
 
     def close(self):
         pass
+
+    def send(self, packets: [LocationPacket]):
+        # TODO convert list of packets into hex-encoded byte array of data
+        requests.post(self.query(imei=self.imei), headers={'Accept': 'text/plain'})
 
 
 class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
