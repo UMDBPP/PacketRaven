@@ -241,6 +241,20 @@ def main():
             for key, value in credentials.items()
         }
 
+    filter_message = 'retrieving packets'
+    if start_date is not None and end_date is None:
+        filter_message += f' sent after {start_date:%Y-%m-%d %H:%M:%S}'
+    elif start_date is None and end_date is not None:
+        filter_message += f' sent before {end_date:%Y-%m-%d %H:%M:%S}'
+    elif start_date is not None and end_date is not None:
+        filter_message += f' sent between {start_date:%Y-%m-%d %H:%M:%S} and {end_date:%Y-%m-%d %H:%M:%S}'
+    if callsigns is not None:
+        filter_message += f' from {len(callsigns)} callsigns: {callsigns}'
+    LOGGER.info(filter_message)
+
+    aprsfi_url = f'https://aprs.fi/#!ts={start_date:%s}&te={end_date:%s}&call=a%2F{"%2Ca%2F".join(callsigns)}'
+    LOGGER.info(f'tracking URL: {aprsfi_url}')
+
     if using_gui:
         from packetraven.gui import PacketRavenGUI
 
@@ -375,17 +389,6 @@ def main():
                 aprs_is = None
         else:
             aprs_is = None
-
-        filter_message = 'retrieving packets'
-        if start_date is not None and end_date is None:
-            filter_message += f' sent after {start_date:%Y-%m-%d %H:%M:%S}'
-        elif start_date is None and end_date is not None:
-            filter_message += f' sent before {end_date:%Y-%m-%d %H:%M:%S}'
-        elif start_date is not None and end_date is not None:
-            filter_message += f' sent between {start_date:%Y-%m-%d %H:%M:%S} and {end_date:%Y-%m-%d %H:%M:%S}'
-        if callsigns is not None:
-            filter_message += f' from {len(callsigns)} callsigns: {callsigns}'
-        LOGGER.info(filter_message)
 
         LOGGER.info(
             f'listening for packets every {interval_seconds}s from {len(connections)} connection(s): '
