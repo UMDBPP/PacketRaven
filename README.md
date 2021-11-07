@@ -23,15 +23,15 @@ pip install packetraven
    virtualenv packetraven_env
    ```
 2. activate your new virtual environment
-   - On Linux:
+    - On Linux:
    ```bash
    source packetraven_env/bin/activate
    ```
-   - On Windows native command prompt (`cmd`):
+    - On Windows native command prompt (`cmd`):
    ```cmd
    .\packetraven_env\Scripts\activate.bat
    ```
-   - On Windows PowerShell:
+    - On Windows PowerShell:
    ```cmd
    .\packetraven_env\Scripts\activate.ps1
    ```
@@ -39,7 +39,7 @@ pip install packetraven
    ```bash
    pip install packetraven
    ```
-   
+
 # Usage
 
 ## Command-line Options

@@ -247,7 +247,9 @@ def main():
     elif start_date is None and end_date is not None:
         filter_message += f' sent before {end_date:%Y-%m-%d %H:%M:%S}'
     elif start_date is not None and end_date is not None:
-        filter_message += f' sent between {start_date:%Y-%m-%d %H:%M:%S} and {end_date:%Y-%m-%d %H:%M:%S}'
+        filter_message += (
+            f' sent between {start_date:%Y-%m-%d %H:%M:%S} and {end_date:%Y-%m-%d %H:%M:%S}'
+        )
     if callsigns is not None:
         filter_message += f' from {len(callsigns)} callsigns: {callsigns}'
     LOGGER.info(filter_message)
