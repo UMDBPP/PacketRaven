@@ -252,6 +252,9 @@ def main():
         filter_message += f' from {len(callsigns)} callsigns: {callsigns}'
     LOGGER.info(filter_message)
 
+    aprsfi_url = f'https://aprs.fi/#!ts={start_date:%s}&te={end_date:%s}&call=a%2F{"%2Ca%2F".join(callsigns)}'
+    LOGGER.info(f'tracking URL: {aprsfi_url}')
+
     if using_gui:
         from packetraven.gui import PacketRavenGUI
 
