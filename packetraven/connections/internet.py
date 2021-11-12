@@ -110,99 +110,99 @@ class APRSfi(APRSPacketSource, NetworkConnection):
         return f'{self.__class__.__name__}({repr(self.callsigns)}, {repr("****")})'
 
 
-class RockBLOCK(PacketSource, PacketSink, NetworkConnection):
-    interval = timedelta(seconds=10)
-
-    def __init__(self, imei: str, username: str = None, password: str = None):
-        """
-        connect to RockBLOCK API
-
-        :param imei: IMEI of RockBLOCK
-        :param username: RockBLOCK username
-        :param password: RockBLOCK password
-        """
-
-        url = 'https://rockblock.rock7.com/rockblock/MT'
-        super().__init__(url)
-
-        if username is None or username == '':
-            configuration = read_configuration(CREDENTIALS_FILENAME)
-
-            if 'RockBLOCK' in configuration:
-                username = configuration['RockBLOCK']['username']
-            else:
-                raise ConnectionError(f'no RockBLOCK username specified')
-        if password is None or password == '':
-            configuration = read_configuration(CREDENTIALS_FILENAME)
-
-            if 'RockBLOCK' in configuration:
-                password = configuration['RockBLOCK']['password']
-            else:
-                raise ConnectionError(f'no RockBLOCK password specified')
-
-        if not self.connected:
-            raise ConnectionError(f'no network connection')
-
-        self.imei = imei
-        self.username = username
-        self.password = password
-
-        self.__last_access_time = None
-
-    def query(self, **query) -> str:
-        query['username'] = self.username
-        query['password'] = self.password
-        query = '&'.join(f'{key}={value}' for key, value in query.items())
-        return f'{self.location}?{query}'
-
-    @property
-    def packets(self) -> [LocationPacket]:
-        if self.__last_access_time is not None and self.interval is not None:
-            interval = datetime.now() - self.__last_access_time
-            if interval < self.interval:
-                raise TimeIntervalError(
-                    f'interval {interval} less than minimum interval {self.interval}'
-                )
-
-        response = requests.get(self.query())
-
-        status, code, data = response.text.split(',')
-        if status == 'OK':
-            # TODO test this with RockBLOCK data
-            packets = data.split(',')
-
-            if len(packets) > 0:
-                # respond promptly with normal response code if received data
-                post_query = {
-                    'username': self.username,
-                    'password': self.password,
-                }
-                requests.post(
-                    f'{self.location}?{post_query}', headers={'Accept': 'text/plain'}
-                )
-
-            # TODO write packet parsing code here
-        else:
-            if code == '10':
-                raise ConnectionError(data)
-            elif code in ['11', '12', '13']:
-                raise PermissionError(data)
-            elif code in ['14', '15']:
-                raise ValueError(data)
-            elif code == '16':
-                packets = []
-            else:
-                raise SystemError(data)
-
-        self.__last_access_time = datetime.now()
-        return packets
-
-    def close(self):
-        pass
-
-    def send(self, packets: [LocationPacket]):
-        # TODO convert list of packets into hex-encoded byte array of data
-        requests.post(self.query(imei=self.imei), headers={'Accept': 'text/plain'})
+# class RockBLOCK(PacketSource, PacketSink, NetworkConnection):
+#     interval = timedelta(seconds=10)
+#
+#     def __init__(self, imei: str, username: str = None, password: str = None):
+#         """
+#         connect to RockBLOCK API
+#
+#         :param imei: IMEI of RockBLOCK
+#         :param username: RockBLOCK username
+#         :param password: RockBLOCK password
+#         """
+#
+#         url = 'https://rockblock.rock7.com/rockblock/MT'
+#         super().__init__(url)
+#
+#         if username is None or username == '':
+#             configuration = read_configuration(CREDENTIALS_FILENAME)
+#
+#             if 'RockBLOCK' in configuration:
+#                 username = configuration['RockBLOCK']['username']
+#             else:
+#                 raise ConnectionError(f'no RockBLOCK username specified')
+#         if password is None or password == '':
+#             configuration = read_configuration(CREDENTIALS_FILENAME)
+#
+#             if 'RockBLOCK' in configuration:
+#                 password = configuration['RockBLOCK']['password']
+#             else:
+#                 raise ConnectionError(f'no RockBLOCK password specified')
+#
+#         if not self.connected:
+#             raise ConnectionError(f'no network connection')
+#
+#         self.imei = imei
+#         self.username = username
+#         self.password = password
+#
+#         self.__last_access_time = None
+#
+#     def query(self, **query) -> str:
+#         query['username'] = self.username
+#         query['password'] = self.password
+#         query = '&'.join(f'{key}={value}' for key, value in query.items())
+#         return f'{self.location}?{query}'
+#
+#     @property
+#     def packets(self) -> [LocationPacket]:
+#         if self.__last_access_time is not None and self.interval is not None:
+#             interval = datetime.now() - self.__last_access_time
+#             if interval < self.interval:
+#                 raise TimeIntervalError(
+#                     f'interval {interval} less than minimum interval {self.interval}'
+#                 )
+#
+#         response = requests.get(self.query())
+#
+#         status, code, data = response.text.split(',')
+#         if status == 'OK':
+#             # TODO test this with RockBLOCK data
+#             packets = data.split(',')
+#
+#             if len(packets) > 0:
+#                 # respond promptly with normal response code if received data
+#                 post_query = {
+#                     'username': self.username,
+#                     'password': self.password,
+#                 }
+#                 requests.post(
+#                     f'{self.location}?{post_query}', headers={'Accept': 'text/plain'}
+#                 )
+#
+#             # TODO write packet parsing code here
+#         else:
+#             if code == '10':
+#                 raise ConnectionError(data)
+#             elif code in ['11', '12', '13']:
+#                 raise PermissionError(data)
+#             elif code in ['14', '15']:
+#                 raise ValueError(data)
+#             elif code == '16':
+#                 packets = []
+#             else:
+#                 raise SystemError(data)
+#
+#         self.__last_access_time = datetime.now()
+#         return packets
+#
+#     def close(self):
+#         pass
+#
+#     def send(self, packets: [LocationPacket]):
+#         # TODO convert list of packets into hex-encoded byte array of data
+#         requests.post(self.query(imei=self.imei), headers={'Accept': 'text/plain'})
 
 
 class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):

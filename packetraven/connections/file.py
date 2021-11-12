@@ -1,10 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from os import PathLike
 from pathlib import Path
 from urllib.parse import urlparse
 
 from dateutil.parser import parse as parse_date
 import geojson
+import pandas
 import requests
 
 from packetraven.connections.base import (
@@ -87,6 +88,45 @@ class RawAPRSTextFile(APRSPacketSource):
 
     def __repr__(self):
         return f'{self.__class__.__name__}({repr(self.location)}, {repr(self.callsigns)})'
+
+
+class RockBLOCKtoolsCSV(PacketSource):
+    interval = timedelta(seconds=10)
+
+    def __init__(self, csv_filename: PathLike = None):
+        """
+        watch a CSV file being written to by a listening instance of `rockblock-tools`
+        ```
+        rockblock listen csv localhost 80
+        ```
+
+        :param csv_filename: path to CSV file
+        """
+
+        if not isinstance(csv_filename, Path):
+            csv_filename = Path(csv_filename)
+
+        super().__init__(csv_filename)
+        self.__last_access_time = None
+
+    @property
+    def packets(self) -> [LocationPacket]:
+        records = pandas.read_csv(self.location)
+
+        return [
+            LocationPacket(
+                time=record['Transmit Time'],
+                x=record['Iridium Longitude'],
+                y=record['Iridium Latitude'],
+                device=record['Device Type'],
+                momsn=record['MOMSN'],
+                imei=record['IMEI'],
+                serial=record['Serial'],
+                data=record['Data'],
+                cep=record['Iridum CEP'],
+            )
+            for record in records.iterrows()
+        ]
 
 
 class PacketGeoJSON(PacketSource):
