@@ -15,8 +15,8 @@ from teek.extras import more_dialogs
 from packetraven import APRSDatabaseTable, APRSfi, RawAPRSTextFile, SerialTNC
 from packetraven.__main__ import DEFAULT_INTERVAL_SECONDS, LOGGER, retrieve_packets
 from packetraven.connections.base import available_serial_ports, next_open_serial_port
-from packetraven.connections.file import PacketGeoJSON
-from packetraven.connections.internet import APRSis
+from packetraven.connections.file import PacketGeoJSON, RockBLOCKtoolsCSV
+from packetraven.connections.internet import APRSis, RockBLOCK
 from packetraven.gui.plotting import LivePlot
 from packetraven.packets import APRSPacket, LocationPacket
 from packetraven.packets.tracks import LocationPacketTrack, PredictedTrajectory
@@ -48,6 +48,13 @@ class PacketRavenGUI:
         self.__configuration = {
             'aprs_fi': {'aprs_fi_key': None},
             'tnc': {'tnc': None},
+            'rockblock': {
+                'rockblock_csv': None,
+                'rockblock_hostname': None,
+                'rockblock_imei': None,
+                'rockblock_username': None,
+                'rockblock_password': None,
+            },
             'database': {
                 'database_hostname': None,
                 'database_database': None,
@@ -566,6 +573,37 @@ class PacketRavenGUI:
                     self.__configuration['aprs_fi']['aprs_fi_key'] = api_key
                 except Exception as error:
                     connection_errors.append(f'aprs.fi - {error}')
+
+                if (
+                    'rockblock' in self.__configuration
+                    and self.__configuration['rockblock']['rockblock_csv'] is not None
+                ):
+                    try:
+                        rockblock = RockBLOCKtoolsCSV(
+                            self.__configuration['rockblock']['rockblock_csv']
+                        )
+                        LOGGER.info(f'connected to {rockblock.location}')
+                        self.__connections.append(rockblock)
+                    except ConnectionError as error:
+                        connection_errors.append(f'rockblock - {error}')
+
+                if (
+                    'rockblock' in self.__configuration
+                    and self.__configuration['rockblock']['rockblock_hostname'] is not None
+                ):
+                    try:
+                        rockblock = RockBLOCK(
+                            imei=None,
+                            username=self.__configuration['rockblock']['rockblock_username'],
+                            password=self.__configuration['rockblock']['rockblock_password'],
+                        )
+                        rockblock.start_listening(
+                            self.__configuration['rockblock']['rockblock_hostname']
+                        )
+                        LOGGER.info(f'connected to {rockblock.location}')
+                        self.__connections.append(rockblock)
+                    except ConnectionError as error:
+                        connection_errors.append(f'rockblock - {error}')
 
                 if (
                     'database' in self.__configuration

@@ -21,6 +21,7 @@ DEPENDENCIES = {
     'psycopg2-binary': [],
     'pyproj': [],
     'requests': [],
+    'rockblock-tools': [],
     'shapely': [],
     'sshtunnel': [],
     'tablecrow>=1.3.9': [],

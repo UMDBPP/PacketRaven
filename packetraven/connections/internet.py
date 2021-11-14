@@ -1,12 +1,19 @@
+from argparse import Namespace
 from datetime import datetime, timedelta
+from io import StringIO
+from tempfile import NamedTemporaryFile, TemporaryFile
 from time import sleep
 from typing import Any, Sequence
 
 import aprslib
+from flask import request
 import requests
+import rockblock_tools
+from rockblock_tools import listen
+from rockblock_tools.formatter import CSVFormatter
 from shapely.geometry import Point
 from tablecrow import PostGresTable
-from tablecrow.utilities import split_hostname_port
+from tablecrow.utilities import parse_hostname, split_hostname_port
 
 from packetraven.connections.base import (
     APRSPacketSink,
@@ -18,6 +25,7 @@ from packetraven.connections.base import (
     PacketSource,
     TimeIntervalError,
 )
+from packetraven.connections.file import RockBLOCKtoolsCSV
 from packetraven.packets import APRSPacket, LocationPacket
 from packetraven.packets.parsing import InvalidPacketError
 from packetraven.utilities import read_configuration
@@ -108,6 +116,93 @@ class APRSfi(APRSPacketSource, NetworkConnection):
 
     def __repr__(self):
         return f'{self.__class__.__name__}({repr(self.callsigns)}, {repr("****")})'
+
+
+class RockBLOCK(PacketSource, NetworkConnection):
+    def __init__(self, imei: str = None, username: str = None, password: str = None):
+        """
+        connect to RockBLOCK API
+
+        :param imei: IMEI of RockBLOCK
+        :param username: RockBLOCK username
+        :param password: RockBLOCK password
+        """
+
+        url = 'https://rockblock.rock7.com'
+        NetworkConnection.__init__(self, url)
+
+        configuration = read_configuration(CREDENTIALS_FILENAME)
+        if imei is None or imei == '':
+            if 'RockBLOCK' in configuration:
+                imei = configuration['RockBLOCK']['imei']
+        if username is None or username == '':
+            if 'RockBLOCK' in configuration:
+                username = configuration['RockBLOCK']['username']
+        if password is None or password == '':
+            if 'RockBLOCK' in configuration:
+                password = configuration['RockBLOCK']['password']
+
+        if not self.connected:
+            raise ConnectionError(f'no network connection')
+
+        self.imei = imei
+        self.username = username
+        self.password = password
+
+        self.__last_access_time = None
+        self.__parsed_lines = []
+
+        self.__csv_stream = NamedTemporaryFile()
+        formatter_options = Namespace()
+        setattr(formatter_options, 'data_format', 'raw')
+        setattr(formatter_options, 'csv_file', self.__csv_stream.name)
+        self.__csv_formatter = CSVFormatter(formatter_options)
+        self.__csv_parser = RockBLOCKtoolsCSV(self.__csv_stream.name)
+
+    def start_listening(self, hostname: str = None, port: int = None):
+        """
+        :param hostname: hostname on which to listen to POST requests from RockBLOCK
+        :param port: port on which to listen (must be available)
+        """
+
+        if hostname is None:
+            hostname = 'localhost'
+        else:
+            connection_info = parse_hostname(hostname)
+            hostname = connection_info['hostname']
+            if port is None:
+                port = connection_info['port']
+        if port is None:
+            port = 80
+
+        listen(hostname, port, self.__csv_formatter)
+
+    @property
+    def packets(self) -> [LocationPacket]:
+        return self.__csv_parser.packets
+
+    def close(self):
+        shutdown_function = request.environ.get('werkzeug.server.shutdown')
+        if shutdown_function is None:
+            raise RuntimeError('Not running with the Werkzeug Server')
+        shutdown_function()
+
+        self.__csv_formatter.close()
+        self.__csv_stream.close()
+
+    def send_message(self, message: str):
+        """
+        :param message: message data
+        """
+
+        if self.imei is None:
+            raise ValueError('RockBLOCK IMEI not provided')
+        if self.username is None:
+            raise ValueError('RockBLOCK username not provided')
+        if self.password is None:
+            raise ValueError('RockBLOCK password not provided')
+
+        rockblock_tools.send(self.imei, self.username, self.password, message)
 
 
 class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
