@@ -21,10 +21,11 @@ from packetraven.connections import (
     TimeIntervalError,
 )
 from packetraven.connections.base import PacketSource
+from packetraven.connections.internet import RockBLOCK
 from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
 from packetraven.packets.writer import write_packet_tracks
-from packetraven.predicts import get_predictions, PredictionAPIURL, PredictionError
+from packetraven.predicts import PredictionAPIURL, PredictionError, get_predictions
 from packetraven.utilities import get_logger, read_configuration, repository_root
 
 LOGGER = get_logger('packetraven', log_format='%(asctime)s | %(levelname)-8s | %(message)s')
@@ -42,7 +43,16 @@ def main():
     args_parser.add_argument(
         '--tnc',
         help='comma-separated list of serial ports / text files of a TNC parsing APRS packets from analog audio to ASCII'
-        ' (set to `auto` to use the first open serial port)',
+             ' (set to `auto` to use the first open serial port)',
+    )
+    args_parser.add_argument(
+        '--rockblock',
+        default='localhost:80',
+        help='listen to incoming POST requests (defaults to `localhost:80`)'
+    )
+    args_parser.add_argument(
+        '--imei',
+        help='IMEI of RockBLOCK modem'
     )
     args_parser.add_argument(
         '--database', help='PostGres database table `user@hostname:port/database/table`'
@@ -109,6 +119,22 @@ def main():
 
     if args.tnc is not None:
         kwargs['tnc'] = [tnc.strip() for tnc in args.tnc.split(',')]
+
+    if args.rockblock is not None:
+        listen_hostname = parse_hostname(args.rockblock)
+
+        hostname = listen_hostname['hostname']
+        port = listen_hostname['port']
+        username = listen_hostname['username']
+        password = listen_hostname['password']
+
+        if port is not None:
+            hostname = f'{hostname}:{port}'
+
+        kwargs['rockblock_hostname'] = hostname
+        kwargs['rockblock_imei'] = args.imei
+        kwargs['rockblock_username'] = username
+        kwargs['rockblock_password'] = password
 
     if args.database is not None:
         database = parse_hostname(args.database)
@@ -296,6 +322,30 @@ def main():
                 connections.append(aprs_api)
             except ConnectionError as error:
                 LOGGER.warning(f'{error.__class__.__name__} - {error}')
+
+        if 'rockblock_hostname' in kwargs:
+            rockblock_kwargs = {
+                key: kwargs[key]
+                for key in [
+                    'rockblock_hostname',
+                    'rockblock_imei',
+                    'rockblock_username',
+                    'rockblock_password',
+                ]
+                if key in kwargs
+            }
+
+            try:
+                rockblock = RockBLOCK(
+                    imei=None,
+                    username=rockblock_kwargs['rockblock_username'],
+                    password=rockblock_kwargs['rockblock_password'],
+                )
+                rockblock.start_listening(rockblock_kwargs['rockblock_hostname'])
+                LOGGER.info(f'connected to {rockblock.location}')
+                connections.append(rockblock)
+            except ConnectionError:
+                pass
 
         if 'database_hostname' in kwargs:
             database_kwargs = {

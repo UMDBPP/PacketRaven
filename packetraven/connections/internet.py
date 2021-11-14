@@ -12,7 +12,7 @@ from rockblock_tools import listen
 from rockblock_tools.formatter import CSVFormatter
 from shapely.geometry import Point
 from tablecrow import PostGresTable
-from tablecrow.utilities import split_hostname_port
+from tablecrow.utilities import parse_hostname, split_hostname_port
 
 from packetraven.connections.base import (
     APRSPacketSink,
@@ -166,6 +166,11 @@ class RockBLOCK(PacketSource, NetworkConnection):
 
         if hostname is None:
             hostname = 'localhost'
+        else:
+            connection_info = parse_hostname(hostname)
+            hostname = connection_info['hostname']
+            if port is None:
+                port = connection_info['port']
         if port is None:
             port = 80
 

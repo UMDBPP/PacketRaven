@@ -16,12 +16,12 @@ from packetraven import APRSDatabaseTable, APRSfi, RawAPRSTextFile, SerialTNC
 from packetraven.__main__ import DEFAULT_INTERVAL_SECONDS, LOGGER, retrieve_packets
 from packetraven.connections.base import available_serial_ports, next_open_serial_port
 from packetraven.connections.file import PacketGeoJSON
-from packetraven.connections.internet import APRSis
+from packetraven.connections.internet import APRSis, RockBLOCK
 from packetraven.gui.plotting import LivePlot
 from packetraven.packets import APRSPacket, LocationPacket
 from packetraven.packets.tracks import LocationPacketTrack, PredictedTrajectory
 from packetraven.packets.writer import write_packet_tracks
-from packetraven.predicts import get_predictions, PredictionError
+from packetraven.predicts import PredictionError, get_predictions
 from packetraven.utilities import get_logger
 
 
@@ -48,6 +48,12 @@ class PacketRavenGUI:
         self.__configuration = {
             'aprs_fi': {'aprs_fi_key': None},
             'tnc': {'tnc': None},
+            'rockblock': {
+                'rockblock_hostname': None,
+                'rockblock_imei': None,
+                'rockblock_username': None,
+                'rockblock_password': None,
+            },
             'database': {
                 'database_hostname': None,
                 'database_database': None,
@@ -548,7 +554,7 @@ class PacketRavenGUI:
                     connection.location
                     for connection in self.__connections
                     if isinstance(connection, SerialTNC)
-                    or isinstance(connection, RawAPRSTextFile)
+                       or isinstance(connection, RawAPRSTextFile)
                 ]
 
                 api_key = self.__configuration['aprs_fi']['aprs_fi_key']
@@ -566,6 +572,22 @@ class PacketRavenGUI:
                     self.__configuration['aprs_fi']['aprs_fi_key'] = api_key
                 except Exception as error:
                     connection_errors.append(f'aprs.fi - {error}')
+
+                if (
+                    'rockblock' in self.__configuration
+                    and self.__configuration['rockblock']['rockblock_hostname'] is not None
+                ):
+                    try:
+                        rockblock = RockBLOCK(
+                            imei=None,
+                            username=self.__configuration['rockblock']['rockblock_username'],
+                            password=self.__configuration['rockblock']['rockblock_password'],
+                        )
+                        rockblock.start_listening(self.__configuration['rockblock']['rockblock_hostname'])
+                        LOGGER.info(f'connected to {rockblock.location}')
+                        self.__connections.append(rockblock)
+                    except ConnectionError as error:
+                        connection_errors.append(f'rockblock - {error}')
 
                 if (
                     'database' in self.__configuration
@@ -1074,7 +1096,7 @@ class PacketRavenGUI:
             sticky='w',
             row=self.__elements[f'{callsign}.distance_overground'].grid_info()['row'],
             column=self.__elements[f'{callsign}.distance_overground'].grid_info()['column']
-            + 3,
+                   + 3,
         )
 
         separator = teek.Separator(window, orient='vertical')
@@ -1198,9 +1220,9 @@ class PacketRavenGUI:
                 sticky='w',
                 row=self.__elements[f'sources.source_{index}_location'].grid_info()['row'],
                 column=self.__elements[f'sources.source_{index}_location'].grid_info()[
-                    'column'
-                ]
-                + 1,
+                           'column'
+                       ]
+                       + 1,
             )
             self.__replace_text(
                 self.__elements[f'sources.source_{index}_location'], connection.location,
@@ -1242,9 +1264,9 @@ class PacketRavenGUI:
                                 f'sources.source_{index}_location'
                             ].grid_info()['row'],
                             column=self.__elements[
-                                f'sources.source_{index}_location'
-                            ].grid_info()['column']
-                            + 1,
+                                       f'sources.source_{index}_location'
+                                   ].grid_info()['column']
+                                   + 1,
                         )
                         self.__replace_text(
                             self.__elements[f'sources.source_{index}_location'],
