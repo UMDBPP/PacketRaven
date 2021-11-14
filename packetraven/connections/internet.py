@@ -1,6 +1,7 @@
 from argparse import Namespace
 from datetime import datetime, timedelta
 from io import StringIO
+from tempfile import NamedTemporaryFile, TemporaryFile
 from time import sleep
 from typing import Any, Sequence
 
@@ -151,12 +152,12 @@ class RockBLOCK(PacketSource, NetworkConnection):
         self.__last_access_time = None
         self.__parsed_lines = []
 
-        self.__csv_stream = StringIO()
+        self.__csv_stream = NamedTemporaryFile()
         formatter_options = Namespace()
         setattr(formatter_options, 'data_format', 'raw')
-        setattr(formatter_options, 'csv_file', self.__csv_stream)
+        setattr(formatter_options, 'csv_file', self.__csv_stream.name)
         self.__csv_formatter = CSVFormatter(formatter_options)
-        self.__csv_parser = RockBLOCKtoolsCSV(self.__csv_stream)
+        self.__csv_parser = RockBLOCKtoolsCSV(self.__csv_stream.name)
 
     def start_listening(self, hostname: str = None, port: int = None):
         """

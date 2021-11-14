@@ -25,7 +25,7 @@ from packetraven.connections.internet import RockBLOCK
 from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
 from packetraven.packets.writer import write_packet_tracks
-from packetraven.predicts import PredictionAPIURL, PredictionError, get_predictions
+from packetraven.predicts import get_predictions, PredictionAPIURL, PredictionError
 from packetraven.utilities import get_logger, read_configuration, repository_root
 
 LOGGER = get_logger('packetraven', log_format='%(asctime)s | %(levelname)-8s | %(message)s')
@@ -43,17 +43,14 @@ def main():
     args_parser.add_argument(
         '--tnc',
         help='comma-separated list of serial ports / text files of a TNC parsing APRS packets from analog audio to ASCII'
-             ' (set to `auto` to use the first open serial port)',
+        ' (set to `auto` to use the first open serial port)',
     )
     args_parser.add_argument(
         '--rockblock',
         default='localhost:80',
-        help='listen to incoming POST requests (defaults to `localhost:80`)'
+        help='listen to incoming POST requests (defaults to `localhost:80`)',
     )
-    args_parser.add_argument(
-        '--imei',
-        help='IMEI of RockBLOCK modem'
-    )
+    args_parser.add_argument('--imei', help='IMEI of RockBLOCK modem')
     args_parser.add_argument(
         '--database', help='PostGres database table `user@hostname:port/database/table`'
     )
@@ -121,20 +118,26 @@ def main():
         kwargs['tnc'] = [tnc.strip() for tnc in args.tnc.split(',')]
 
     if args.rockblock is not None:
-        listen_hostname = parse_hostname(args.rockblock)
+        try:
+            if Path(args.rockblock).exists():
+                kwargs['rockblock_csv'] = args.rockblock
+            else:
+                raise FileNotFoundError
+        except FileNotFoundError:
+            listen_hostname = parse_hostname(args.rockblock)
 
-        hostname = listen_hostname['hostname']
-        port = listen_hostname['port']
-        username = listen_hostname['username']
-        password = listen_hostname['password']
+            hostname = listen_hostname['hostname']
+            port = listen_hostname['port']
+            username = listen_hostname['username']
+            password = listen_hostname['password']
 
-        if port is not None:
-            hostname = f'{hostname}:{port}'
+            if port is not None:
+                hostname = f'{hostname}:{port}'
 
-        kwargs['rockblock_hostname'] = hostname
-        kwargs['rockblock_imei'] = args.imei
-        kwargs['rockblock_username'] = username
-        kwargs['rockblock_password'] = password
+            kwargs['rockblock_hostname'] = hostname
+            kwargs['rockblock_imei'] = args.imei
+            kwargs['rockblock_username'] = username
+            kwargs['rockblock_password'] = password
 
     if args.database is not None:
         database = parse_hostname(args.database)
