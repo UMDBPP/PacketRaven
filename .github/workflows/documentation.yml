@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@2
+        uses: actions/checkout@v2.4.0
       - name: Build documentation site with Sphinx
         uses: ammaraskar/sphinx-action@master
         with:
