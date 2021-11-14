@@ -46,11 +46,9 @@ def main():
         ' (set to `auto` to use the first open serial port)',
     )
     args_parser.add_argument(
-        '--rockblock',
-        default='localhost:80',
-        help='listen to incoming POST requests (defaults to `localhost:80`)',
+        '--rockblock', help='listen to incoming POST requests (defaults to `localhost:80`)',
     )
-    args_parser.add_argument('--imei', help='IMEI of RockBLOCK modem')
+    args_parser.add_argument('--rockblock-imei', help='IMEI of RockBLOCK modem')
     args_parser.add_argument(
         '--database', help='PostGres database table `user@hostname:port/database/table`'
     )
@@ -135,7 +133,7 @@ def main():
                 hostname = f'{hostname}:{port}'
 
             kwargs['rockblock_hostname'] = hostname
-            kwargs['rockblock_imei'] = args.imei
+            kwargs['rockblock_imei'] = args.rockblock_imei
             kwargs['rockblock_username'] = username
             kwargs['rockblock_password'] = password
 
