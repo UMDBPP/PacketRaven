@@ -51,7 +51,7 @@ def missing_packages(required_packages: Dict[str, List[str]]) -> Dict[str, List[
             required_package
             for required_package in required_packages
             if re.split('<|<=|==|>=|>', required_package)[0].lower()
-            not in installed_packages()
+               not in installed_packages()
         ]
 
 
@@ -170,6 +170,7 @@ setup(
     extras_require={
         'testing': ['pytest', 'pytest-cov', 'pytest-xdist', 'pytz'],
         'development': ['flake8', 'isort', 'oitnb', 'wheel'],
+        'documentation': ['m2r2', 'sphinx-rtd-theme'],
     },
     entry_points={'console_scripts': ['packetraven=packetraven.__main__:main']},
 )

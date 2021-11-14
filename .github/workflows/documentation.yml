@@ -12,6 +12,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2.4.0
+      - name: Install dependencies
+        run: |
+          pip install sphinx sphinx-rtd-theme m2r2
       - name: Build documentation site with Sphinx
         uses: ammaraskar/sphinx-action@master
         with:
