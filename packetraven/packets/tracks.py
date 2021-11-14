@@ -174,7 +174,7 @@ class LocationPacketTrack:
                 packets = self.packets[index]
             else:
                 packets = None
-            return self.__class__(self.name, packets, self.crs)
+            return self.__class__(packets, self.name, crs=self.crs)
         elif isinstance(index, (datetime, numpy.datetime64)):
             if not isinstance(index, numpy.datetime64):
                 index = numpy.datetime64(index)

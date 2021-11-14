@@ -320,7 +320,7 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
         PacketDatabaseTable.insert(self, packets)
 
     @property
-    def records(self) -> List[{str: Any}]:
+    def records(self) -> List[Dict[str, Any]]:
         if self.callsigns is not None:
             return self.records_where({'packet_from': self.callsigns})
         else:
