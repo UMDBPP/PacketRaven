@@ -281,7 +281,6 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
                     point['longitude'] -= 360
 
             return PredictedTrajectory(
-                name=self.name,
                 packets=[
                     LocationPacket(
                         point['datetime'],
@@ -292,6 +291,7 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
                     for point in points
                 ],
                 prediction_time=response['metadata']['complete_datetime'],
+                name=self.name,
             )
         else:
             raise PredictionError(response['error']['description'])

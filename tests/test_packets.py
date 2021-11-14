@@ -79,7 +79,7 @@ def test_append():
         "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu"
     )
 
-    track = APRSTrack('W3EAX-13')
+    track = APRSTrack(callsign='W3EAX-13')
 
     track.append(packet_1)
     track.append(packet_2)
@@ -90,7 +90,9 @@ def test_append():
     assert track[1] is packet_2
     assert track[-1] is packet_2
     assert track[:] == track
-    assert track[1:] == APRSTrack(track.name, track.packets[1:], track.crs)
+    assert track[1:] == APRSTrack(
+        packets=track.packets[1:], callsign=track.name, crs=track.crs
+    )
 
 
 def test_values():
@@ -100,7 +102,7 @@ def test_values():
         packet_time=datetime(2019, 2, 3, 14, 36, 16),
     )
 
-    track = APRSTrack('W3EAX-13', [packet_1])
+    track = APRSTrack(packets=[packet_1], callsign='W3EAX-13')
 
     assert numpy.all(track.coordinates[-1] == packet_1.coordinates)
 
@@ -121,7 +123,7 @@ def test_rates():
         packet_time=datetime(2019, 2, 3, 14, 39, 28),
     )
 
-    track = APRSTrack('W3EAX-13', [packet_1, packet_2, packet_3])
+    track = APRSTrack(packets=[packet_1, packet_2, packet_3], callsign='W3EAX-13')
 
     assert track.ascent_rates[1] == (packet_2 - packet_1).ascent_rate
     assert track.ground_speeds[1] == (packet_2 - packet_1).ground_speed
@@ -153,7 +155,7 @@ def test_time_to_ground():
         packet_time=datetime(2019, 2, 3, 14, 42, 34),
     )
 
-    track = APRSTrack('W3EAX-13')
+    track = APRSTrack(callsign='W3EAX-13')
 
     track.append(packet_1)
 
@@ -193,7 +195,7 @@ def test_sorting():
         packet_time=datetime(2019, 2, 3, 14, 39, 28),
     )
 
-    track = APRSTrack('W3EAX-13', [packet_2, packet_1, packet_3])
+    track = APRSTrack(packets=[packet_2, packet_1, packet_3], callsign='W3EAX-13')
 
     assert sorted(track) == [packet_1, packet_2, packet_3]
 
@@ -214,7 +216,7 @@ def test_index():
         packet_time=datetime(2019, 2, 3, 14, 39, 28),
     )
 
-    track = APRSTrack('W3EAX-13', [packet_1, packet_2, packet_3])
+    track = APRSTrack(packets=[packet_1, packet_2, packet_3], callsign='W3EAX-13')
 
     assert track[0] == packet_1
     assert track[0] is packet_1

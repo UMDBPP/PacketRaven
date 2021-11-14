@@ -19,14 +19,17 @@ from packetraven.packets.structures import DoublyLinkedList
 class LocationPacketTrack:
     """ collection of location packets """
 
-    def __init__(self, name: str, packets: [LocationPacket] = None, crs: CRS = None):
+    def __init__(self, packets: [LocationPacket] = None, name: str = None, crs: CRS = None):
         """
         location packet track
 
+        :param packets: iterable of packets
         :param name: name of packet track
         :param crs: coordinate reference system to use
-        :param packets: iterable of packets
         """
+
+        if name is None:
+            name = 'track'
 
         self.name = name
         self.packets = DoublyLinkedList(None)
@@ -235,8 +238,8 @@ class LocationPacketTrack:
 
 
 class BalloonTrack(LocationPacketTrack):
-    def __init__(self, name: str, packets: [LocationPacket] = None, crs: CRS = None):
-        super().__init__(name, packets, crs)
+    def __init__(self, packets: [LocationPacket] = None, name: str = None, crs: CRS = None):
+        super().__init__(packets=packets, name=name, crs=crs)
         self.__falling = False
 
     @property
@@ -273,22 +276,23 @@ class BalloonTrack(LocationPacketTrack):
 class APRSTrack(BalloonTrack):
     """ collection of APRS location packets """
 
-    def __init__(self, callsign: str, packets: [APRSPacket] = None, crs: CRS = None):
+    def __init__(self, packets: [APRSPacket] = None, callsign: str = None, crs: CRS = None):
         """
         APRS packet track
 
-        :param callsign: callsign of APRS packets
         :param packets: iterable of packets
+        :param callsign: callsign of APRS packets
         :param crs: coordinate reference system to use
         """
 
-        if not isinstance(callsign, str):
-            callsign = str(callsign)
-        if len(callsign) > 9 or ' ' in callsign:
-            raise ValueError(f'unrecognized callsign format: "{callsign}"')
+        if callsign is not None:
+            if not isinstance(callsign, str):
+                callsign = str(callsign)
+            if len(callsign) > 9 or ' ' in callsign:
+                raise ValueError(f'unrecognized callsign format: "{callsign}"')
 
         self.__callsign = callsign
-        super().__init__(self.callsign, packets, crs)
+        super().__init__(packets=packets, name=self.callsign, crs=crs)
 
     @property
     def callsign(self) -> str:
@@ -297,7 +301,7 @@ class APRSTrack(BalloonTrack):
     def append(self, packet: APRSPacket):
         packet_callsign = packet['callsign']
 
-        if packet_callsign == self.callsign:
+        if self.callsign is None or packet_callsign == self.callsign:
             super().append(packet)
         else:
             raise ValueError(
@@ -313,21 +317,25 @@ class APRSTrack(BalloonTrack):
 
 class PredictedTrajectory(LocationPacketTrack):
     def __init__(
-        self, name: str, packets: [LocationPacket], prediction_time: datetime, crs: CRS = None
+        self,
+        packets: [LocationPacket],
+        prediction_time: datetime,
+        name: str = None,
+        crs: CRS = None,
     ):
         """
         prediction trajectory
 
-        :param name: name of prediction
         :param packets: iterable of packets
         :param prediction_time: time of prediction
+        :param name: name of prediction
         :param crs: coordinate reference system to use
         """
 
         if isinstance(prediction_time, str):
             prediction_time = parse_date(prediction_time)
 
-        super().__init__(name, packets, crs)
+        super().__init__(packets=packets, name=name, crs=crs)
         self.prediction_time = prediction_time
 
     @property

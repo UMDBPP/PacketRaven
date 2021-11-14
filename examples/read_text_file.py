@@ -7,7 +7,7 @@ if __name__ == '__main__':
 
     packets = raw_packet_text_file.packets
 
-    packet_track = APRSTrack(callsign='W3EAX-11', packets=packets)
+    packet_track = APRSTrack(packets=packets, callsign='W3EAX-11')
 
     print(f'number of packets: {len(packet_track)}')
     print(f'time to ground: {packet_track.time_to_ground}')

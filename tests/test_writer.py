@@ -16,8 +16,7 @@ REFERENCE_DIRECTORY = repository_root() / 'tests' / 'reference'
 @pytest.fixture
 def packet_track():
     return APRSTrack(
-        'W3EAX-8',
-        [
+        packets=[
             APRSPacket.from_frame(
                 "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu",
                 packet_time=pytz.timezone('America/New_York').localize(
@@ -39,6 +38,7 @@ def packet_track():
                 ),
             ),
         ],
+        callsign='W3EAX-8',
     )
 
 

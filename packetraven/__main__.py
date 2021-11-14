@@ -496,7 +496,7 @@ def retrieve_packets(
                 continue
 
             if callsign not in packet_tracks:
-                packet_tracks[callsign] = APRSTrack(callsign, [parsed_packet])
+                packet_tracks[callsign] = APRSTrack(packets=[parsed_packet], callsign=callsign)
                 logger.debug(f'started tracking callsign {callsign:8}')
             else:
                 packet_track = packet_tracks[callsign]
