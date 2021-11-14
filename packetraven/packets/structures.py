@@ -170,7 +170,7 @@ class DoublyLinkedList(Sequence[T]):
         return instance
 
     @property
-    def difference(self) -> [Any]:
+    def difference(self) -> List[Any]:
         """
         differences between each value
 

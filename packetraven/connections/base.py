@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import timedelta
+from typing import List
 
 import requests
 from serial.tools import list_ports
@@ -45,7 +46,7 @@ class NetworkConnection(Connection):
 class PacketSource(Connection):
     @property
     @abstractmethod
-    def packets(self) -> [LocationPacket]:
+    def packets(self) -> List[LocationPacket]:
         """
         most recent available location packets, since the last minimum time interval if applicable
 
@@ -56,7 +57,7 @@ class PacketSource(Connection):
 
 
 class APRSPacketSource(PacketSource):
-    def __init__(self, location: str, callsigns: [str]):
+    def __init__(self, location: str, callsigns: List[str]):
         """
         Create a new generic APRS packet connection.
 
@@ -69,7 +70,7 @@ class APRSPacketSource(PacketSource):
 
     @property
     @abstractmethod
-    def packets(self) -> [APRSPacket]:
+    def packets(self) -> List[APRSPacket]:
         """ most recent available APRS packets, since the last minimum time interval (if applicable) """
         raise NotImplementedError
 
@@ -77,14 +78,14 @@ class APRSPacketSource(PacketSource):
 class PacketSink(Connection):
     @property
     @abstractmethod
-    def send(self, packets: [LocationPacket]):
+    def send(self, packets: List[LocationPacket]):
         """ send given packets to remote """
         raise NotImplementedError
 
 
 class APRSPacketSink(PacketSink):
     @property
-    def send(self, packets: [APRSPacket]):
+    def send(self, packets: List[APRSPacket]):
         super().send(packets)
 
 

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Generator, Optional, Tuple, Union
+from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
 from dateutil.parser import parse as parse_date
 import numpy
@@ -89,10 +89,10 @@ class BalloonPredictionQuery(ABC):
 
     @property
     @abstractmethod
-    def query(self) -> {str: Any}:
+    def query(self) -> Dict[str, Any]:
         raise NotImplementedError
 
-    def get(self) -> {str: Any}:
+    def get(self) -> Dict[str, Any]:
         response = requests.get(self.api_url, params=self.query)
         return response.json()
 
@@ -173,7 +173,7 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
         self.dataset_time = dataset_time
 
     @property
-    def query(self) -> {str: Any}:
+    def query(self) -> Dict[str, Any]:
         query = {
             'launch_longitude': self.launch_site.x,
             'launch_latitude': self.launch_site.y,
@@ -204,7 +204,7 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
 
         return query
 
-    def get(self) -> {str: Any}:
+    def get(self) -> Dict[str, Any]:
         response = requests.get(self.api_url, params=self.query)
 
         if response.status_code == 200:
@@ -350,7 +350,7 @@ class LukeRenegarBalloonPredictionQuery(CUSFBalloonPredictionQuery):
         self.physics_model = physics_model
 
     @property
-    def query(self):
+    def query(self) -> Dict[str, Any]:
         query = super().query
 
         if self.ascent_rate_standard_deviation is not None:
@@ -370,8 +370,8 @@ class LukeRenegarBalloonPredictionQuery(CUSFBalloonPredictionQuery):
 
 
 def get_predictions(
-    packet_tracks: {str: LocationPacketTrack},
-    start_location: (float, float, float) = None,
+    packet_tracks: Dict[str, LocationPacketTrack],
+    start_location: Tuple[float, float, float] = None,
     start_time: datetime = None,
     ascent_rate: float = None,
     burst_altitude: float = None,
@@ -380,7 +380,7 @@ def get_predictions(
     float_altitude_uncertainty: float = None,
     float_duration: timedelta = None,
     api_url: str = None,
-) -> [PredictedTrajectory]:
+) -> List[PredictedTrajectory]:
     """
     Return location tracks detailing predicted trajectory of balloon flight(s) from current location.
 

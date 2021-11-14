@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from time import sleep
-from typing import Any, Sequence
+from typing import Any, Dict, List, Sequence
 
 import aprslib
 import requests
@@ -26,7 +26,7 @@ from packetraven.utilities import read_configuration
 class APRSfi(APRSPacketSource, NetworkConnection):
     interval = timedelta(seconds=10)
 
-    def __init__(self, callsigns: [str], api_key: str = None):
+    def __init__(self, callsigns: List[str], api_key: str = None):
         """
         connect to https://aprs.fi
 
@@ -68,7 +68,7 @@ class APRSfi(APRSPacketSource, NetworkConnection):
         self.__api_key = api_key
 
     @property
-    def packets(self) -> [APRSPacket]:
+    def packets(self) -> List[APRSPacket]:
         if self.__last_access_time is not None and self.interval is not None:
             interval = datetime.now() - self.__last_access_time
             if interval < self.interval:
@@ -140,7 +140,7 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
         self.__send_buffer = []
 
     @property
-    def packets(self) -> [LocationPacket]:
+    def packets(self) -> List[LocationPacket]:
         if self.__last_access_time is not None and self.interval is not None:
             interval = datetime.now() - self.__last_access_time
             if interval < self.interval:
@@ -164,7 +164,7 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
             packet.transform_to(self.crs)
         PostGresTable.__setitem__(self, time, self.__packet_record(packet))
 
-    def insert(self, packets: [APRSPacket]):
+    def insert(self, packets: List[APRSPacket]):
         for packet in packets:
             if packet.crs != self.crs:
                 packet.transform_to(self.crs)
@@ -176,7 +176,7 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
             packet = [packet[key.replace('packet_', '')] for key in self.primary_key]
         return PostGresTable.__contains__(self, packet)
 
-    def send(self, packets: [LocationPacket]):
+    def send(self, packets: List[LocationPacket]):
         new_packets = [packet for packet in packets if packet not in self]
         if len(self.__send_buffer) > 0:
             new_packets.extend(self.__send_buffer)
@@ -197,7 +197,7 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
             self.tunnel.stop()
 
     @staticmethod
-    def __packet_record(packet: LocationPacket) -> {str: Any}:
+    def __packet_record(packet: LocationPacket) -> Dict[str, Any]:
         return {
             'time': packet.time,
             'x': packet.coordinates[0],
@@ -257,7 +257,7 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
         self.__last_access_time = None
 
     @property
-    def packets(self) -> [APRSPacket]:
+    def packets(self) -> List[APRSPacket]:
         if self.__last_access_time is not None and self.interval is not None:
             interval = datetime.now() - self.__last_access_time
             if interval < self.interval:
@@ -313,21 +313,21 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
     def __contains__(self, packet: APRSPacket) -> bool:
         return PacketDatabaseTable.__contains__(self, packet)
 
-    def send(self, packets: [APRSPacket]):
+    def send(self, packets: List[APRSPacket]):
         PacketDatabaseTable.send(self, packets)
 
-    def insert(self, packets: [APRSPacket]):
+    def insert(self, packets: List[APRSPacket]):
         PacketDatabaseTable.insert(self, packets)
 
     @property
-    def records(self) -> [{str: Any}]:
+    def records(self) -> List[Dict[str, Any]]:
         if self.callsigns is not None:
             return self.records_where({'packet_from': self.callsigns})
         else:
             return self.records_where(None)
 
     @staticmethod
-    def __packet_record(packet: LocationPacket) -> {str: Any}:
+    def __packet_record(packet: LocationPacket) -> Dict[str, Any]:
         return {
             'time': packet.time,
             'callsign': packet.callsign,
@@ -340,7 +340,7 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
 
 
 class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
-    def __init__(self, callsigns: [str] = None, hostname: str = None):
+    def __init__(self, callsigns: List[str] = None, hostname: str = None):
         """
         # Pick appropriate servers for your geographical region.
         noam.aprs2.net - for North America
@@ -370,7 +370,7 @@ class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
     def port(self) -> int:
         return self.__port
 
-    def send(self, packets: [APRSPacket]):
+    def send(self, packets: List[APRSPacket]):
         if not isinstance(packets, Sequence) or isinstance(packets, str):
             packets = [packets]
         packets = [
@@ -407,7 +407,7 @@ class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
                     self.__send_buffer.extend(packets)
 
     @property
-    def packets(self) -> [APRSPacket]:
+    def packets(self) -> List[APRSPacket]:
         if self.callsigns is None:
             raise ConnectionError(
                 f'cannot retrieve packets from APRS-IS with no callsigns specified'

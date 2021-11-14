@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import List
 
 from serial import Serial
 
@@ -12,7 +13,7 @@ from packetraven.packets import APRSPacket
 
 
 class SerialTNC(APRSPacketSource):
-    def __init__(self, serial_port: str = None, callsigns: [str] = None):
+    def __init__(self, serial_port: str = None, callsigns: List[str] = None):
         """
         Connect to TNC over given serial port.
 
@@ -33,7 +34,7 @@ class SerialTNC(APRSPacketSource):
         self.__last_access_time = None
 
     @property
-    def packets(self) -> [APRSPacket]:
+    def packets(self) -> List[APRSPacket]:
         if self.__last_access_time is not None and self.interval is not None:
             interval = datetime.now() - self.__last_access_time
             if interval < self.interval:

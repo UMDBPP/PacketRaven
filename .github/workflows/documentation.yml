@@ -1,0 +1,23 @@
+name: documentation
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@2
+      - name: Build documentation site with Sphinx
+        uses: ammaraskar/sphinx-action@master
+        with:
+          docs-folder: 'docs/'
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@4
+        with:
+          branch: gh-pages
+          folder: docs/build

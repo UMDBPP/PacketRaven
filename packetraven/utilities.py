@@ -3,6 +3,7 @@ import logging
 from os import PathLike
 from pathlib import Path
 import sys
+from typing import Dict
 
 LOGGER_NAME_LENGTH = 17
 
@@ -20,7 +21,7 @@ def repository_root(path: PathLike = None) -> Path:
         return repository_root(path.parent)
 
 
-def read_configuration(filename: PathLike) -> {str: str}:
+def read_configuration(filename: PathLike) -> Dict[str, str]:
     configuration_file = configparser.ConfigParser()
     configuration_file.read(filename)
     return {

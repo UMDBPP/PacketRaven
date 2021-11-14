@@ -5,7 +5,7 @@ from os import PathLike
 from pathlib import Path
 import re
 import sys
-from typing import Callable, Collection
+from typing import Callable, Collection, Dict, List
 
 from dateutil.parser import parse
 import numpy
@@ -28,7 +28,7 @@ from packetraven.utilities import get_logger
 class PacketRavenGUI:
     def __init__(
         self,
-        callsigns: [str] = None,
+        callsigns: List[str] = None,
         start_date: datetime = None,
         end_date: datetime = None,
         log_filename: PathLike = None,
@@ -309,7 +309,7 @@ class PacketRavenGUI:
         teek.run()
 
     @property
-    def callsigns(self) -> [str]:
+    def callsigns(self) -> List[str]:
         callsigns = self.__elements['callsigns'].text
         if len(callsigns) > 0:
             callsigns = [
@@ -322,7 +322,7 @@ class PacketRavenGUI:
         return callsigns
 
     @callsigns.setter
-    def callsigns(self, callsigns: [str]):
+    def callsigns(self, callsigns: List[str]):
         if callsigns is not None:
             callsigns = ', '.join([callsign.upper() for callsign in callsigns])
         else:
@@ -330,7 +330,7 @@ class PacketRavenGUI:
         self.__replace_text(self.__elements['callsigns'], callsigns)
 
     @property
-    def tncs(self) -> [str]:
+    def tncs(self) -> List[str]:
         """ locations of TNCs parsing APRS audio into ASCII frames """
         tncs = []
         for tnc in self.__elements['tnc'].text.split(','):
@@ -346,7 +346,7 @@ class PacketRavenGUI:
         return tncs
 
     @tncs.setter
-    def tncs(self, filenames: [PathLike]):
+    def tncs(self, filenames: List[PathLike]):
         if filenames is None:
             filenames = []
         elif not isinstance(filenames, Collection) or isinstance(filenames, str):
@@ -478,7 +478,7 @@ class PacketRavenGUI:
         self.__replace_text(self.__elements['prediction_file'], filename)
 
     @property
-    def toggles(self) -> {str: bool}:
+    def toggles(self) -> Dict[str, bool]:
         return {key: value.get() for key, value in self.__toggles.items()}
 
     @property
@@ -491,11 +491,11 @@ class PacketRavenGUI:
             self.toggle()
 
     @property
-    def packet_tracks(self) -> {str: LocationPacketTrack}:
+    def packet_tracks(self) -> Dict[str, LocationPacketTrack]:
         return self.__packet_tracks
 
     @property
-    def predictions(self) -> {str: PredictedTrajectory}:
+    def predictions(self) -> Dict[str, PredictedTrajectory]:
         return self.__predictions if self.toggles['prediction_file'] else None
 
     def toggle(self):
@@ -1215,7 +1215,7 @@ class PacketRavenGUI:
 
         return sources_window
 
-    async def __update_sources_window(self, sources: {str: [LocationPacket]}):
+    async def __update_sources_window(self, sources: Dict[str, List[LocationPacket]]):
         if 'sources' not in self.__windows:
             window = self.__add_sources_window()
         else:
@@ -1263,7 +1263,7 @@ class PacketRavenGUI:
         self,
         frame: teek.Frame,
         title: str,
-        options: [str],
+        options: List[str],
         option_select: Callable = None,
         **kwargs,
     ) -> teek.Combobox:
@@ -1368,7 +1368,7 @@ class PacketRavenGUI:
             element.text = str(value)
 
 
-def set_child_states(frame: teek.Frame, state: str = None, types: [type] = None):
+def set_child_states(frame: teek.Frame, state: str = None, types: List[type] = None):
     if state is None:
         state = 'normal'
     for child in frame.winfo_children():

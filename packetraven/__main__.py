@@ -5,6 +5,7 @@ from logging import Logger
 from pathlib import Path
 import sys
 import time
+from typing import Dict, List
 
 import humanize as humanize
 import numpy
@@ -459,13 +460,13 @@ def main():
 
 
 def retrieve_packets(
-    connections: [PacketSource],
-    packet_tracks: [LocationPacketTrack],
+    connections: List[PacketSource],
+    packet_tracks: List[LocationPacketTrack],
     database: PacketDatabaseTable = None,
     start_date: datetime = None,
     end_date: datetime = None,
     logger: Logger = None,
-) -> {str: APRSPacket}:
+) -> Dict[str, APRSPacket]:
     if logger is None:
         logger = LOGGER
 
