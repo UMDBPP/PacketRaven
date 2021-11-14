@@ -316,3 +316,25 @@ class APRSPacket(LocationPacket):
             f'{self.__class__.__name__}(from_callsign={repr(self.from_callsign)}, to_callsign={repr(self.to_callsign)}, time={repr(self.time)}, '
             f'{coordinate_string}, crs={self.crs.__class__.__name__}.from_epsg({repr(self.crs.to_epsg())}), {attribute_string})'
         )
+
+
+class IridiumPacket(LocationPacket):
+    def __init__(
+        self,
+        time: datetime,
+        x: float,
+        y: float,
+        device_type: str,
+        momsn,
+        imei: str,
+        serial: str,
+        data: str,
+        cep: str,
+    ):
+        super().__init__(time, x, y)
+        self.device_type = device_type
+        self.momsn = momsn
+        self.imei = imei
+        self.serial = serial
+        self.data = data
+        self.cep = cep
