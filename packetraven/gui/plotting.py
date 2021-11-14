@@ -1,4 +1,5 @@
 from tkinter import Toplevel
+from typing import Dict
 
 from matplotlib import pyplot
 from matplotlib.axes import Axes
@@ -26,9 +27,9 @@ VARIABLES = {
 class LivePlot:
     def __init__(
         self,
-        packet_tracks: {str: LocationPacketTrack},
+        packet_tracks: Dict[str, LocationPacketTrack],
         variable: str,
-        predictions: {str: PredictedTrajectory} = None,
+        predictions: Dict[str, PredictedTrajectory] = None,
     ):
         pyplot.ion()
         pyplot.show()
@@ -49,8 +50,8 @@ class LivePlot:
 
     def update(
         self,
-        packet_tracks: {str: LocationPacketTrack} = None,
-        predictions: {str: PredictedTrajectory} = None,
+        packet_tracks: Dict[str, LocationPacketTrack] = None,
+        predictions: Dict[str, PredictedTrajectory] = None,
     ):
         if packet_tracks is not None:
             self.packet_tracks.update(packet_tracks)

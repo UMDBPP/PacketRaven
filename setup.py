@@ -5,7 +5,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
-from typing import Mapping
+from typing import Dict, List, Mapping
 
 from setuptools import config, find_packages, setup
 
@@ -28,7 +28,7 @@ DEPENDENCIES = {
 }
 
 
-def installed_packages() -> [str]:
+def installed_packages() -> List[str]:
     return [
         re.split('#egg=', re.split('==| @ ', package.decode())[0])[-1].lower()
         for package in subprocess.run(
@@ -37,7 +37,7 @@ def installed_packages() -> [str]:
     ]
 
 
-def missing_packages(required_packages: {str: [str]}) -> {str: [str]}:
+def missing_packages(required_packages: Dict[str, List[str]]) -> Dict[str, List[str]]:
     if isinstance(required_packages, Mapping):
         missing_dependencies = missing_packages(list(required_packages))
         output = {}

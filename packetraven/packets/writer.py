@@ -1,6 +1,7 @@
 from datetime import timedelta
 from os import PathLike
 from pathlib import Path
+from typing import List
 
 from geojson import Point
 import numpy
@@ -12,7 +13,7 @@ from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
 KML_STANDARD = '{http://www.opengis.net/kml/2.2}'
 
 
-def write_packet_tracks(packet_tracks: [LocationPacketTrack], output_filename: PathLike):
+def write_packet_tracks(packet_tracks: List[LocationPacketTrack], output_filename: PathLike):
     if not isinstance(output_filename, Path):
         output_filename = Path(output_filename)
     output_filename = output_filename.resolve().expanduser()

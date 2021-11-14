@@ -1,6 +1,7 @@
 from datetime import datetime
 from os import PathLike
 from pathlib import Path
+from typing import List
 from urllib.parse import urlparse
 
 from dateutil.parser import parse as parse_date
@@ -38,7 +39,7 @@ class RawAPRSTextFile(APRSPacketSource):
         self.__parsed_lines = []
 
     @property
-    def packets(self) -> [APRSPacket]:
+    def packets(self) -> List[APRSPacket]:
         if self.__last_access_time is not None and self.interval is not None:
             interval = datetime.now() - self.__last_access_time
             if interval < self.interval:
@@ -108,7 +109,7 @@ class PacketGeoJSON(PacketSource):
         self.__last_access_time = None
 
     @property
-    def packets(self) -> [LocationPacket]:
+    def packets(self) -> List[LocationPacket]:
         if self.__last_access_time is not None and self.interval is not None:
             interval = datetime.now() - self.__last_access_time
             if interval < self.interval:

@@ -1,6 +1,6 @@
 from copy import copy
 from datetime import datetime, timedelta
-from typing import Iterable, Union
+from typing import Iterable, List, Union
 
 from dateutil.parser import parse as parse_date
 import numpy
@@ -20,7 +20,9 @@ from packetraven.packets.structures import DoublyLinkedList
 class LocationPacketTrack:
     """ collection of location packets """
 
-    def __init__(self, packets: [LocationPacket] = None, name: str = None, crs: CRS = None):
+    def __init__(
+        self, packets: List[LocationPacket] = None, name: str = None, crs: CRS = None
+    ):
         """
         location packet track
 
@@ -48,7 +50,7 @@ class LocationPacketTrack:
                 packet.transform_to(self.crs)
             self.packets.append(packet)
 
-    def extend(self, packets: [LocationPacket]):
+    def extend(self, packets: List[LocationPacket]):
         for packet in packets:
             self.append(packet)
 
@@ -244,7 +246,9 @@ class LocationPacketTrack:
 
 
 class BalloonTrack(LocationPacketTrack):
-    def __init__(self, packets: [LocationPacket] = None, name: str = None, crs: CRS = None):
+    def __init__(
+        self, packets: List[LocationPacket] = None, name: str = None, crs: CRS = None
+    ):
         super().__init__(packets=packets, name=name, crs=crs)
         self.__falling = False
 
@@ -282,7 +286,9 @@ class BalloonTrack(LocationPacketTrack):
 class APRSTrack(BalloonTrack):
     """ collection of APRS location packets """
 
-    def __init__(self, packets: [APRSPacket] = None, callsign: str = None, crs: CRS = None):
+    def __init__(
+        self, packets: List[APRSPacket] = None, callsign: str = None, crs: CRS = None
+    ):
         """
         APRS packet track
 
@@ -324,7 +330,7 @@ class APRSTrack(BalloonTrack):
 class PredictedTrajectory(LocationPacketTrack):
     def __init__(
         self,
-        packets: [LocationPacket],
+        packets: List[LocationPacket],
         prediction_time: datetime,
         name: str = None,
         crs: CRS = None,
