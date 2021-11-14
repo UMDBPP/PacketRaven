@@ -1,3 +1,4 @@
+from copy import copy
 from datetime import datetime, timedelta
 from typing import Iterable, Union
 
@@ -52,7 +53,12 @@ class LocationPacketTrack:
             self.append(packet)
 
     def sort(self, inplace: bool = False):
-        self.packets.sort(inplace=inplace)
+        if inplace:
+            instance = self
+        else:
+            instance = copy(self)
+        instance.packets.sort(inplace=True)
+        return instance
 
     @property
     def data(self) -> DataFrame:
