@@ -1,7 +1,7 @@
-.. mdinclude:: ../../README.md
-
 .. toctree::
-   :maxdepth: 2
-   :caption: Reference
+   packetraven.connections
+   packetraven.packets
+   packetraven.gui
+   packetraven
 
-   modules
+.. mdinclude:: ../../README.md

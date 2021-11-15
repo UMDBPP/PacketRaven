@@ -1,47 +1,26 @@
-packetraven package
-===================
+packetraven
+===========
 
-Subpackages
------------
-
-.. toctree::
-   :maxdepth: 4
-
-   packetraven.connections
-   packetraven.gui
-   packetraven.packets
-
-Submodules
-----------
-
-packetraven.model module
-------------------------
+packetraven.model
+-----------------
 
 .. automodule:: packetraven.model
    :members:
    :undoc-members:
    :show-inheritance:
 
-packetraven.predicts module
----------------------------
+packetraven.predicts
+--------------------
 
 .. automodule:: packetraven.predicts
    :members:
    :undoc-members:
    :show-inheritance:
 
-packetraven.utilities module
+packetraven.utilities
 ----------------------------
 
 .. automodule:: packetraven.utilities
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: packetraven
    :members:
    :undoc-members:
    :show-inheritance:

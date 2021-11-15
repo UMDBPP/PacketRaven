@@ -1,29 +1,18 @@
-packetraven.gui package
-=======================
+packetraven.gui
+===============
 
-Submodules
-----------
-
-packetraven.gui.base module
----------------------------
+packetraven.gui.base
+--------------------
 
 .. automodule:: packetraven.gui.base
    :members:
    :undoc-members:
    :show-inheritance:
 
-packetraven.gui.plotting module
--------------------------------
+packetraven.gui.plotting
+------------------------
 
 .. automodule:: packetraven.gui.plotting
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: packetraven.gui
    :members:
    :undoc-members:
    :show-inheritance:
