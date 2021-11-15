@@ -27,20 +27,16 @@ jobs:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('setup.py') }}
           restore-keys: ${{ runner.os }}-pip-${{ matrix.python-version }}-
-      - name: Install dependencies
-        run: |
-          pip install dunamai
-          pip install -e .[documentation]
       - name: Retrieve latest version from Git tags
         uses: mtkennerly/dunamai-action@v1
         with:
           env-var: VERSION
           args: --style semver
       - name: Build documentation site with Sphinx
-        uses: ammaraskar/sphinx-action@0.4
-        with:
-          pre-build-command: 'pip install dunamai m2r2 sphinx-rtd-theme'
-          docs-folder: 'docs/'
+        run: |
+          pip install dunamai m2r2 sphinx sphinx-rtd-theme
+          cd docs
+          make html
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@4.1.5
         with:
