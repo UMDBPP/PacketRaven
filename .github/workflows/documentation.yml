@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  release:
+    types:
+      - published
 
 jobs:
   build:
@@ -14,7 +17,8 @@ jobs:
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
-      - uses: mtkennerly/dunamai-action@v1
+      - name: Retrieve latest version from Git tags
+        uses: mtkennerly/dunamai-action@v1
         with:
           env-var: VERSION
           args: --style semver
