@@ -4,4 +4,4 @@
    :maxdepth: 2
    :caption: Reference
 
-   api
+   modules

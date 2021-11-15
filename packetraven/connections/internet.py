@@ -212,7 +212,7 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
     __aprs_fields = {
         'from': str,
         'to': str,
-        'path': [str],
+        'path': List[str],
         'via': str,
         'timestamp': str,
         'symbol': str,
@@ -228,7 +228,7 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
     }
 
     def __init__(
-        self, hostname: str, database: str, table: str, callsigns: [str] = None, **kwargs
+        self, hostname: str, database: str, table: str, callsigns: List[str] = None, **kwargs
     ):
         """
         Create a new database connection to a table containing APRS packet data.

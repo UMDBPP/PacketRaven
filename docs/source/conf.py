@@ -13,6 +13,9 @@ from os import PathLike
 from pathlib import Path
 import sys
 
+from dunamai import Version
+from setuptools import config
+
 
 def repository_root(path: PathLike = None) -> Path:
     if path is None:
@@ -30,13 +33,14 @@ def repository_root(path: PathLike = None) -> Path:
 sys.path.insert(0, str(repository_root()))
 
 # -- Project information -----------------------------------------------------
+metadata = config.read_configuration('../../setup.cfg')['metadata']
 
-project = 'PacketRaven'
-copyright = '2021, Zach Burnett'
-author = 'Zach Burnett'
+project = metadata['name']
+author = metadata['author']
+copyright = f'2021, {author}'
 
 # The full version, including alpha/beta/rc tags
-release = '1.7.18'
+release = Version.from_any_vcs().serialize()
 
 
 # -- General configuration ---------------------------------------------------
