@@ -15,7 +15,7 @@ jobs:
       - name: Build documentation site with Sphinx
         uses: ammaraskar/sphinx-action@0.4
         with:
-          pre-build-command: 'pip install sphinx-rtd-theme m2r2'
+          pre-build-command: 'pip install dunamai m2r2 sphinx-rtd-theme'
           docs-folder: 'docs/'
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@4.1.5
