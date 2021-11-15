@@ -34,7 +34,7 @@ jobs:
           args: --style semver
       - name: Build documentation site with Sphinx
         run: |
-          pip install dunamai m2r2 sphinx
+          pip install dunamai m2r2 sphinx sphinx-rtd-theme
           cd docs
           make html
       - name: Deploy to GitHub Pages

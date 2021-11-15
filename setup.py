@@ -170,7 +170,7 @@ setup(
     extras_require={
         'testing': ['pytest', 'pytest-cov', 'pytest-xdist', 'pytz'],
         'development': ['dunamai', 'flake8', 'isort', 'oitnb', 'wheel'],
-        'documentation': ['dunamai', 'm2r2', 'sphinx'],
+        'documentation': ['dunamai', 'm2r2', 'sphinx', 'sphinx-rtd-theme'],
     },
     entry_points={'console_scripts': ['packetraven=packetraven.__main__:main']},
 )
