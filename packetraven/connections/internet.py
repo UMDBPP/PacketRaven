@@ -27,7 +27,7 @@ class APRSfi(APRSPacketSource, NetworkConnection):
     """
     connection to https://aprs.fi
 
-    you can get an APRS.fi API key from https://aprs.fi/page/api
+    >>> # you can get an APRS.fi API key from https://aprs.fi/page/api
     >>> aprs_fi = APRSfi(callsigns=['W3EAX-8', 'W3EAX-12', 'KC3FXX', 'KC3ZRB'], api_key='<api_key>')
     >>> print(aprs_fi.packets)
     """
