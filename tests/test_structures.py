@@ -43,7 +43,7 @@ def test_append():
 
 def test_insert():
     list_1 = DoublyLinkedList([0, 'foo'])
-    list_1.insert('bar', 0)
+    list_1.insert(0, 'bar')
 
     assert list_1 == ['bar', 0, 'foo']
 

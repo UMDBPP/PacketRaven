@@ -18,6 +18,10 @@ class TimeIntervalError(Exception):
 
 
 class Connection(ABC):
+    """
+    abstraction of a generic connection
+    """
+
     interval: timedelta = None
 
     def __init__(self, location: str):
@@ -28,9 +32,9 @@ class Connection(ABC):
         raise NotImplementedError
 
 
-class NetworkConnection(Connection):
+class NetworkConnection(Connection, ABC):
     """
-    A connection over the Internet
+    abstraction of a generic Internet connection
     """
 
     @property
@@ -43,7 +47,11 @@ class NetworkConnection(Connection):
             return False
 
 
-class PacketSource(Connection):
+class PacketSource(Connection, ABC):
+    """
+    abstraction of a connection that can retrieve packets
+    """
+
     @property
     @abstractmethod
     def packets(self) -> List[LocationPacket]:
@@ -59,8 +67,6 @@ class PacketSource(Connection):
 class APRSPacketSource(PacketSource):
     def __init__(self, location: str, callsigns: List[str]):
         """
-        Create a new generic APRS packet connection.
-
         :param location: location of APRS packets
         :param callsigns: list of callsigns to return from source
         """
@@ -76,6 +82,10 @@ class APRSPacketSource(PacketSource):
 
 
 class PacketSink(Connection):
+    """
+    abstraction of a connection that can receive packets (upload)
+    """
+
     @property
     @abstractmethod
     def send(self, packets: List[LocationPacket]):
@@ -91,7 +101,7 @@ class APRSPacketSink(PacketSink):
 
 def next_open_serial_port() -> str:
     """
-    Get next port in ports list.
+    get next port in ports list
 
     :return: port name
     """
@@ -104,7 +114,7 @@ def next_open_serial_port() -> str:
 
 def available_serial_ports() -> str:
     """
-    Iterate over available serial ports.
+    iterate over available serial ports
 
     :return: port name
     """

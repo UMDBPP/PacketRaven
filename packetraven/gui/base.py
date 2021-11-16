@@ -17,7 +17,7 @@ from packetraven.__main__ import DEFAULT_INTERVAL_SECONDS, LOGGER, retrieve_pack
 from packetraven.connections.base import available_serial_ports, next_open_serial_port
 from packetraven.connections.file import PacketGeoJSON
 from packetraven.connections.internet import APRSis
-from packetraven.gui.plotting import LivePlot
+from packetraven.gui.plotting import LiveTrackPlot
 from packetraven.packets import APRSPacket, LocationPacket
 from packetraven.packets.tracks import LocationPacketTrack, PredictedTrajectory
 from packetraven.packets.writer import write_packet_tracks
@@ -686,7 +686,7 @@ class PacketRavenGUI:
                 for variable, enabled in self.__plot_toggles.items():
                     enabled = enabled.get()
                     if enabled and variable not in self.__plots:
-                        self.__plots[variable] = LivePlot(
+                        self.__plots[variable] = LiveTrackPlot(
                             self.packet_tracks, variable, self.predictions
                         )
                     elif not enabled and variable in self.__plots:

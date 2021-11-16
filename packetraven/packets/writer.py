@@ -14,6 +14,10 @@ KML_STANDARD = '{http://www.opengis.net/kml/2.2}'
 
 
 def write_packet_tracks(packet_tracks: List[LocationPacketTrack], output_filename: PathLike):
+    """
+    write the following packet tracks to a file
+    """
+
     if not isinstance(output_filename, Path):
         output_filename = Path(output_filename)
     output_filename = output_filename.resolve().expanduser()

@@ -24,7 +24,11 @@ VARIABLES = {
 }
 
 
-class LivePlot:
+class LiveTrackPlot:
+    """
+    wrapper for a `matplotlib` plot window that can be updated on the fly with packet tracks
+    """
+
     def __init__(
         self,
         packet_tracks: Dict[str, LocationPacketTrack],

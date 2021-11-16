@@ -11,7 +11,9 @@ DEFAULT_CRS = CRS.from_epsg(4326)
 
 
 class LocationPacket:
-    """ location packet encoding (x, y, z) and time """
+    """
+    location packet encoding (x, y, z) and time
+    """
 
     def __init__(
         self,
@@ -95,6 +97,10 @@ class LocationPacket:
 
 
 class Distance:
+    """
+    a delta between two location packets
+    """
+
     def __init__(self, interval: timedelta, horizontal: float, vertical: float, crs: CRS):
         if not isinstance(interval, timedelta):
             interval = timedelta(seconds=interval)
@@ -166,7 +172,11 @@ class Distance:
 
 
 class APRSPacket(LocationPacket):
-    """ APRS packet containing parsed APRS fields, along with location and time """
+    """
+    APRS packet containing parsed APRS fields, along with location and time
+
+    >>> packet = APRSPacket.from_frame('W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh\\'O   /A=053614|!g|  /W3EAX,313,0,21C,nearspace.umd.edu', packet_time=datetime(2019, 2, 3, 14, 36, 16))
+    """
 
     def __init__(
         self,
@@ -180,8 +190,6 @@ class APRSPacket(LocationPacket):
         **kwargs,
     ):
         """
-        APRS packet object from raw packet and given datetime
-
         :param from_callsign: originating callsign of packet
         :param to_callsign: destination callsign of packet
         :param x: x value
@@ -200,7 +208,7 @@ class APRSPacket(LocationPacket):
         cls, frame: Union[str, bytes, dict], packet_time: datetime = None, **kwargs
     ) -> 'APRSPacket':
         """
-        APRS packet object from raw packet and given datetime
+        parse an APRS packet from a raw APRS packet string and given datetime
 
         :param frame: string containing raw packet
         :param packet_time: Time of packet, either as datetime object, seconds since Unix epoch, or ISO format date string.

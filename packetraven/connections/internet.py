@@ -24,12 +24,18 @@ from packetraven.utilities import read_configuration
 
 
 class APRSfi(APRSPacketSource, NetworkConnection):
+    """
+    connection to https://aprs.fi
+
+    you can get an APRS.fi API key from https://aprs.fi/page/api
+    >>> aprs_fi = APRSfi(callsigns=['W3EAX-8', 'W3EAX-12', 'KC3FXX', 'KC3ZRB'], api_key='<api_key>')
+    >>> print(aprs_fi.packets)
+    """
+
     interval = timedelta(seconds=10)
 
     def __init__(self, callsigns: List[str], api_key: str = None):
         """
-        connect to https://aprs.fi
-
         :param callsigns: list of callsigns to return from source
         :param api_key: API key for aprs.fi
         """
@@ -111,6 +117,13 @@ class APRSfi(APRSPacketSource, NetworkConnection):
 
 
 class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
+    """
+    connection to a PostGreSQL database table containing location packet data
+
+    >>> table = PacketDatabaseTable(hostname='<hostname>:5432', database='<database_name>', table='<table_name>', username='<username>', password='<password>')
+    >>> print(table.packets)
+    """
+
     __default_fields = {
         'time': datetime,
         'x': float,
@@ -209,6 +222,13 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
 
 
 class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
+    """
+    connection to a PostGreSQL database table containing APRS packet data
+
+    >>> table = APRSDatabaseTable(hostname='<hostname>:5432', database='<database_name>', table='<table_name>', username='<username>', password='<password>', callsigns=['W3EAX-8', 'W3EAX-12', 'KC3FXX', 'KC3ZRB'])
+    >>> print(table.packets)
+    """
+
     __aprs_fields = {
         'from': str,
         'to': str,
@@ -231,8 +251,6 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
         self, hostname: str, database: str, table: str, callsigns: List[str] = None, **kwargs
     ):
         """
-        Create a new database connection to a table containing APRS packet data.
-
         :param hostname: hostname of database
         :param database: database name
         :param table: table name
@@ -340,6 +358,10 @@ class APRSDatabaseTable(PacketDatabaseTable, APRSPacketSource, APRSPacketSink):
 
 
 class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
+    """
+    connection to the APRS.is service
+    """
+
     def __init__(self, callsigns: List[str] = None, hostname: str = None):
         """
         # Pick appropriate servers for your geographical region.
@@ -349,6 +371,7 @@ class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
         asia.aprs2.net - for Asia
         aunz.aprs2.net - for Oceania
         """
+
         if hostname is not None:
             self.__hostname, self.__port = split_hostname_port(hostname)
         else:

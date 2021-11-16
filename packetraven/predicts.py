@@ -31,6 +31,10 @@ class FlightProfile(Enum):
 
 
 class BalloonPredictionQuery(ABC):
+    """
+    balloon prediction API query
+    """
+
     def __init__(
         self,
         api_url: str,
@@ -45,8 +49,6 @@ class BalloonPredictionQuery(ABC):
         descent_only: bool = False,
     ):
         """
-        initialize a new balloon prediction API query
-
         :param api_url: URL of API
         :param launch_site: location of balloon launch
         :param launch_time: date and time of balloon launch
@@ -110,6 +112,13 @@ class PredictionError(Exception):
 
 
 class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
+    """
+    connection to https://predict.cusf.co.uk/api/v1/
+
+    >>> cusf_api = CUSFBalloonPredictionQuery(launch_site=(-77.547824, 39.359031), launch_datetime=datetime.now(), ascent_rate=5.5, burst_altitude=28000, descent_rate=9)
+    >>> predicted_track = cusf_api.predict
+    """
+
     def __init__(
         self,
         launch_site: Union[Tuple[float, float], Point],
@@ -298,6 +307,10 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
 
 
 class LukeRenegarBalloonPredictionQuery(CUSFBalloonPredictionQuery):
+    """
+    connection to https://predict.lukerenegar.com/api/v1.1/
+    """
+
     def __init__(
         self,
         launch_site: Union[Tuple[float, float], Point],
@@ -382,7 +395,7 @@ def get_predictions(
     api_url: str = None,
 ) -> List[PredictedTrajectory]:
     """
-    Return location tracks detailing predicted trajectory of balloon flight(s) from current location.
+    retrieve location tracks detailing predicted trajectory of balloon flight(s) from the current track location
 
     :param packet_tracks: location packet tracks
     :param start_time: start location
@@ -456,7 +469,7 @@ def get_predictions(
         if float_altitude is not None and not packet_track.falling:
             packets_at_float_altitude = packet_track[
                 numpy.abs(float_altitude - packet_track.altitudes) < float_altitude_uncertainty
-            ]
+                ]
             if (
                 len(packets_at_float_altitude) > 0
                 and packets_at_float_altitude[-1].time == packet_track.times[-1]
@@ -466,7 +479,7 @@ def get_predictions(
             elif packet_track.ascent_rates[-1] >= 0:
                 prediction_float_start_time = prediction_start_time + timedelta(
                     seconds=(float_altitude - prediction_start_location[2])
-                    / prediction_ascent_rate
+                            / prediction_ascent_rate
                 )
                 descent_only = False
             else:

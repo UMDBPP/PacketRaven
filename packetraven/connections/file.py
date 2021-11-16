@@ -18,11 +18,12 @@ from packetraven.packets import APRSPacket, LocationPacket
 
 
 class RawAPRSTextFile(APRSPacketSource):
+    """
+    connection to a text file where each line consists of the time sent (`YYYY-MM-DDTHH:MM:SS`) followed by a colon `:` and then a raw APRS string
+    """
+
     def __init__(self, filename: PathLike = None, callsigns: str = None):
         """
-        read APRS packets from a given text file where each line consists of the time sent (`YYYY-MM-DDTHH:MM:SS`) followed by
-        a colon `:` and then the raw APRS string
-
         :param filename: path to text file
         :param callsigns: list of callsigns to return from source
         """
@@ -91,10 +92,12 @@ class RawAPRSTextFile(APRSPacketSource):
 
 
 class PacketGeoJSON(PacketSource):
+    """
+    connection to a GeoJSON file containing packet locations as points
+    """
+
     def __init__(self, filename: PathLike = None):
         """
-        read location packets from a given GeoJSON file
-
         :param filename: path to GeoJSON file
         """
 

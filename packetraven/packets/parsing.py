@@ -5,12 +5,14 @@ import aprslib
 
 def parse_raw_aprs(raw_aprs: Union[str, dict]) -> dict:
     """
-    Parse APRS fields from raw packet string.
+    parse APRS fields from raw packet string
 
     APRS format reference: http://www.aprs.org/doc/APRS101.PDF
 
     :param raw_aprs: raw APRS string
     :return: dictionary of APRS fields
+
+    >>> parsed_packet = parse_raw_aprs("W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu")
     """
 
     if not isinstance(raw_aprs, dict):
@@ -73,7 +75,7 @@ class InvalidPacketError(Exception):
 
 def decompress_longitude(compressed_longitude: str) -> float:
     """
-    Decode longitude string from APRS compressed format (shifted ASCII in model.py 91) to a float.
+    decode longitude string from APRS compressed format (shifted ASCII in model.py 91) to a float
 
     :param compressed_longitude: compressed APRS longitude string
     :return: longitude
@@ -91,7 +93,7 @@ def decompress_longitude(compressed_longitude: str) -> float:
 
 def decompress_latitude(compressed_latitude: str) -> float:
     """
-    Decode latitude string from APRS compressed format (shifted ASCII in model.py 91) to a float.
+    decode latitude string from APRS compressed format (shifted ASCII in model.py 91) to a float
 
     :param compressed_latitude: compressed APRS latitude string
     :return: latitude

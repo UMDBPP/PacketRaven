@@ -1,3 +1,7 @@
+"""
+this module defines models and approximations useful for predicting flight behavior
+"""
+
 import numpy
 
 # `dh/dt` based on historical flight data

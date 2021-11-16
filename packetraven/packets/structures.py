@@ -15,12 +15,24 @@ class DoublyLinkedList(Sequence[T]):
     Doubly-linked lists have an additional "tail" attribute, alongside "head".
 
     node_1 (head) <-> node_2 <-> node_3 (tail)
+
+    >>> list_1 = DoublyLinkedList([0, 5, 4, 'foo', 5, 6])
+    >>> list_1[2]
+    4
+    >>> list_1.index('foo')
+    3
+
+    >>> list_2 = DoublyLinkedList()
+    >>> list_2.append('test')
+    >>> list_2[0]
+    'test'
+    >>> list_2.insert(0, 'test2')
+    >>> list_2[0]
+    'test2'
     """
 
     def __init__(self, sequence: Sequence = None):
         """
-        instantiate new doubly-linked list
-
         :param sequence: iterable sequence to populate list
         """
 
@@ -85,12 +97,12 @@ class DoublyLinkedList(Sequence[T]):
 
             self.append(entry)
 
-    def insert(self, value: T, index: int):
+    def insert(self, index: int, value: T):
         """
         insert value at given index
 
-        :param value: value to insert
         :param index: index at which to insert value
+        :param value: value to insert
         """
 
         node_at_index = self._node_at_index(index)

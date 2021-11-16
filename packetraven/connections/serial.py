@@ -13,6 +13,17 @@ from packetraven.packets import APRSPacket
 
 
 class SerialTNC(APRSPacketSource):
+    """
+    connection to a TNC sending raw APRS strings over a USB connection
+
+    >>> tnc = SerialTNC(serial_port='COM5')
+    >>> print(tnc.packets)
+
+    alternatively, set to `'auto'` to connect to the first open serial port
+    >>> tnc = SerialTNC(serial_port='auto')
+    >>> print(tnc.packets)
+    """
+
     def __init__(self, serial_port: str = None, callsigns: List[str] = None):
         """
         Connect to TNC over given serial port.

@@ -18,14 +18,14 @@ from packetraven.packets.structures import DoublyLinkedList
 
 
 class LocationPacketTrack:
-    """ collection of location packets """
+    """
+    a collection of location packets in chronological order
+    """
 
     def __init__(
         self, packets: List[LocationPacket] = None, name: str = None, crs: CRS = None
     ):
         """
-        location packet track
-
         :param packets: iterable of packets
         :param name: name of packet track
         :param crs: coordinate reference system to use
@@ -246,6 +246,10 @@ class LocationPacketTrack:
 
 
 class BalloonTrack(LocationPacketTrack):
+    """
+    a packet track describing the path of a balloon
+    """
+
     def __init__(
         self, packets: List[LocationPacket] = None, name: str = None, crs: CRS = None
     ):
@@ -284,7 +288,9 @@ class BalloonTrack(LocationPacketTrack):
 
 
 class APRSTrack(BalloonTrack):
-    """ collection of APRS location packets """
+    """
+    a balloon track comprised of APRS packets
+    """
 
     def __init__(
         self,
@@ -294,8 +300,6 @@ class APRSTrack(BalloonTrack):
         **kwargs,
     ):
         """
-        APRS packet track
-
         :param packets: iterable of packets
         :param callsign: callsign of APRS packets
         :param crs: coordinate reference system to use
@@ -337,6 +341,10 @@ class APRSTrack(BalloonTrack):
 
 
 class PredictedTrajectory(LocationPacketTrack):
+    """
+    a prediction trajectory retrieved from a prediction API
+    """
+
     def __init__(
         self,
         packets: List[LocationPacket],
@@ -345,8 +353,6 @@ class PredictedTrajectory(LocationPacketTrack):
         crs: CRS = None,
     ):
         """
-        prediction trajectory
-
         :param packets: iterable of packets
         :param prediction_time: time of prediction
         :param name: name of prediction
