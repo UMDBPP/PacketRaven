@@ -700,12 +700,18 @@ class PacketRavenGUI:
 
                 self.__running = True
             except Exception as error:
-                teek.dialog.error(error.__class__.__name__, str(error))
-                if '\n' in str(error):
-                    for connection_error in str(error).split('\n'):
-                        LOGGER.error(connection_error)
+                error_message = f'{error.__class__.__name__} - {error}'
+                if '\n' in error_message:
+                    for error_line in error_message.split('\n'):
+                        LOGGER.error(error_line)
                 else:
-                    LOGGER.error(error)
+                    LOGGER.exception(error)
+                _, error, error_traceback = sys.exc_info()
+                filename = error_traceback.tb_frame.f_code.co_filename
+                line_number = error_traceback.tb_lineno
+                teek.dialog.error(
+                    error.__class__.__name__, f'{error_message}\n\n{filename}:{line_number}'
+                )
                 self.__running = False
                 set_child_states(self.__frames['configuration'], 'normal')
 
