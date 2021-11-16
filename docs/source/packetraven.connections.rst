@@ -1,5 +1,5 @@
-packetraven.connections
-=======================
+Connection Objects
+==================
 
 packetraven.connections.serial
 ------------------------------

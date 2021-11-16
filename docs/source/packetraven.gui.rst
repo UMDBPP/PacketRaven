@@ -1,5 +1,5 @@
-packetraven.gui
-===============
+GUI and Plotting
+================
 
 packetraven.gui.base
 --------------------
