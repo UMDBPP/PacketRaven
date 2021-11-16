@@ -1,32 +1,32 @@
-Connection Objects
-==================
+Packet Sources and USB / Network Connections
+============================================
 
-packetraven.connections.serial
-------------------------------
+serial (USB) connections
+------------------------
 
 .. automodule:: packetraven.connections.serial
    :members:
    :undoc-members:
    :show-inheritance:
 
-packetraven.connections.internet
---------------------------------
+network connections
+-------------------
 
 .. automodule:: packetraven.connections.internet
    :members:
    :undoc-members:
    :show-inheritance:
 
-packetraven.connections.file
-----------------------------
+file watchers
+-------------
 
 .. automodule:: packetraven.connections.file
    :members:
    :undoc-members:
    :show-inheritance:
 
-packetraven.connections.base
-----------------------------
+abstract classes
+----------------
 
 .. automodule:: packetraven.connections.base
    :members:

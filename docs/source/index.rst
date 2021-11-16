@@ -1,6 +1,9 @@
-.. toctree::
-   :maxdepth: 1
+.. mdinclude:: ../../README.md
 
+.. toctree::
+   :hidden:
+
+   readme
    packetraven.connections
    packetraven.packets
    packetraven.packets.tracks
@@ -8,5 +11,3 @@
    packetraven.predicts
    packetraven.model
    packetraven.utilities
-
-.. mdinclude:: ../../README.md

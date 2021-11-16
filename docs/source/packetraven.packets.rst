@@ -1,16 +1,16 @@
 Packets
 =======
 
-packetraven.packets.base
-------------------------
+packets
+-------
 
 .. automodule:: packetraven.packets.base
    :members:
    :undoc-members:
    :show-inheritance:
 
-packetraven.packets.parsing
----------------------------
+packet parsing
+--------------
 
 .. automodule:: packetraven.packets.parsing
    :members:

@@ -1,24 +1,24 @@
 Packet Tracks
 =============
 
-packetraven.packets.tracks
---------------------------
+packet tracks
+-------------
 
 .. automodule:: packetraven.packets.tracks
    :members:
    :undoc-members:
    :show-inheritance:
 
-packetraven.packets.writer
---------------------------
+packet track file writer
+------------------------
 
 .. automodule:: packetraven.packets.writer
    :members:
    :undoc-members:
    :show-inheritance:
 
-packetraven.packets.structures
-------------------------------
+underlying data structure
+-------------------------
 
 .. automodule:: packetraven.packets.structures
    :members:

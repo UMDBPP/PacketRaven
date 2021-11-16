@@ -9,7 +9,7 @@
 
 PacketRaven is a dashboard built to track high-altitude balloon flights from their location telemetry.
 
-```bash
+```shell
 pip install packetraven
 ```
 
@@ -18,25 +18,25 @@ pip install packetraven
 0. install Python
    https://www.python.org/downloads/
 1. create a virtual environment so you don't pollute your system Python installation (or skip to step 3 if you don't care)
-   ```bash
+   ```
    pip install virtualenv
    virtualenv packetraven_env
    ```
 2. activate your new virtual environment
     - On Linux:
-   ```bash
+   ```
    source packetraven_env/bin/activate
    ```
     - On Windows native command prompt (`cmd`):
-   ```cmd
+   ```
    .\packetraven_env\Scripts\activate.bat
    ```
     - On Windows PowerShell:
-   ```cmd
+   ```
    .\packetraven_env\Scripts\activate.ps1
    ```
 3. install `packetraven`
-   ```bash
+   ```
    pip install packetraven
    ```
 
@@ -88,49 +88,49 @@ optional arguments:
 
 ## Command-line Examples
 
-#### listen to a TNC sending raw APRS strings over USB port COM4:
+#### listen to a TNC sending raw APRS strings over USB port COM4
 
 you can set this to `auto` to try the first open USB port
 
-```bash
+```shell
 packetraven --tnc COM4
 ```
 
-#### listen to APRS.fi, watching specific callsigns:
+#### listen to APRS.fi, watching specific callsigns
 
 you need an API key to connect to APRS.fi; you can get one from https://aprs.fi/page/api
 
-```bash
+```shell
 packetraven --aprsfi-key <api_key> --callsigns W3EAX-8,W3EAX-14
 ```
 
-#### listen to a PostGIS database table:
+#### listen to a PostGIS database table
 
-```bash
+```shell
 packetraven --database <username>@<hostname>:5432/<database_name>/<table_name>
 ```
 
-#### watch a text file for new lines containing raw APRS strings:
+#### watch a text file for new lines containing raw APRS strings
 
-```bash
+```shell
 packetraven --tnc http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-11/W3EAX-11_raw_NS95.txt
 ```
 
-#### listen to a TNC on COM3, watching specific callsigns, and synchronize new packets with a database table via SSH tunnel:
+#### listen to a TNC on COM3, watching specific callsigns, and synchronize new packets with a database table via SSH tunnel
 
-```bash
+```shell
 packetraven --tnc COM3 --callsigns W3EAX-8,W3EAX-14 --database <username>@<hostname>:5432/<database_name>/<table_name> --tunnel <ssh_username>@<hostname>:22
 ```
 
-## GUI Examples
+## Graphical User Interface (GUI) Examples
 
 to start the GUI, add `--gui` to any `packetraven` command
 
-```bash
+```shell
 packetraven --gui
 ```
 
-```bash
+```shell
 packetraven --callsigns W3EAX-8,W3EAX-14 --aprsfi-key <api_key> --gui
 ```
 

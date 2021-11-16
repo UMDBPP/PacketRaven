@@ -1,16 +1,16 @@
-GUI and Plotting
-================
+Graphical User Interface (GUI) and Plotting
+===========================================
 
-packetraven.gui.base
---------------------
+graphical user interface (GUI)
+------------------------------
 
 .. automodule:: packetraven.gui.base
    :members:
    :undoc-members:
    :show-inheritance:
 
-packetraven.gui.plotting
-------------------------
+plotting
+--------
 
 .. automodule:: packetraven.gui.plotting
    :members:
