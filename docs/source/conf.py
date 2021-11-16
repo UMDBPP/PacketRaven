@@ -46,7 +46,6 @@ try:
 except RuntimeError:
     release = os.environ.get('VERSION')
 
-
 # -- General configuration ---------------------------------------------------
 
 autoclass_content = 'both'  # include both class docstring and __init__
