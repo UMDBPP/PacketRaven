@@ -23,7 +23,7 @@ DEPENDENCIES = {
     'requests': [],
     'shapely': [],
     'sshtunnel': [],
-    'tablecrow>=1.4.1': [],
+    'tablecrow>=1.4.3': [],
     'teek': [],
 }
 
@@ -51,7 +51,7 @@ def missing_packages(required_packages: Dict[str, List[str]]) -> Dict[str, List[
             required_package
             for required_package in required_packages
             if re.split('<|<=|==|>=|>', required_package)[0].lower()
-            not in installed_packages()
+               not in installed_packages()
         ]
 
 
