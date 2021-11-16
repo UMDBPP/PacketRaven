@@ -204,7 +204,7 @@ class LocationPacketTrack:
             elif len(matching_packets) == 1:
                 return matching_packets[0]
             else:
-                return self.__class__(self.name, matching_packets, self.crs)
+                return self.__class__(packets=matching_packets, name=self.name, crs=self.crs)
         else:
             raise ValueError(f'unrecognized index: {index}')
 
@@ -287,7 +287,11 @@ class APRSTrack(BalloonTrack):
     """ collection of APRS location packets """
 
     def __init__(
-        self, packets: List[APRSPacket] = None, callsign: str = None, crs: CRS = None
+        self,
+        packets: List[APRSPacket] = None,
+        callsign: str = None,
+        crs: CRS = None,
+        **kwargs,
     ):
         """
         APRS packet track
@@ -296,6 +300,11 @@ class APRSTrack(BalloonTrack):
         :param callsign: callsign of APRS packets
         :param crs: coordinate reference system to use
         """
+
+        if 'name' in kwargs:
+            if callsign is None:
+                callsign = kwargs['name']
+            del kwargs['name']
 
         if callsign is not None:
             if not isinstance(callsign, str):
