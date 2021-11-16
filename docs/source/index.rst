@@ -3,7 +3,10 @@
 
    packetraven.connections
    packetraven.packets
+   packetraven.packets.tracks
    packetraven.gui
-   packetraven
+   packetraven.predicts
+   packetraven.model
+   packetraven.utilities
 
 .. mdinclude:: ../../README.md
