@@ -1,5 +1,5 @@
-Balloon Track Prediction
-========================
+Balloon Flight Prediction
+=========================
 
 .. automodule:: packetraven.predicts
    :members:

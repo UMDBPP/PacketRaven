@@ -13,7 +13,7 @@ PacketRaven is a dashboard built to track high-altitude balloon flights from the
 pip install packetraven
 ```
 
-# Installation
+## Installation
 
 0. install Python
    https://www.python.org/downloads/
@@ -40,9 +40,7 @@ pip install packetraven
    pip install packetraven
    ```
 
-# Usage
-
-## Command-line Options
+## Command-line Interface (CLI)
 
 ```text
 usage: packetraven [-h] [--callsigns CALLSIGNS] [--aprsfi-key APRSFI_KEY] [--tnc TNC] [--database DATABASE] [--tunnel TUNNEL]
@@ -86,8 +84,6 @@ optional arguments:
   --gui                 start the graphical interface
 ```
 
-## Command-line Examples
-
 #### listen to a TNC sending raw APRS strings over USB port COM4
 
 you can set this to `auto` to try the first open USB port
@@ -122,7 +118,7 @@ packetraven --tnc http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3E
 packetraven --tnc COM3 --callsigns W3EAX-8,W3EAX-14 --database <username>@<hostname>:5432/<database_name>/<table_name> --tunnel <ssh_username>@<hostname>:22
 ```
 
-## Graphical User Interface (GUI) Examples
+## Graphical User Interface (GUI)
 
 to start the GUI, add `--gui` to any `packetraven` command
 
@@ -134,7 +130,7 @@ packetraven --gui
 packetraven --callsigns W3EAX-8,W3EAX-14 --aprsfi-key <api_key> --gui
 ```
 
-## Python API Examples
+## Python API
 
 to retrieve packets directly from https://aprs.fi:
 
