@@ -40,7 +40,7 @@ pip install packetraven
    pip install packetraven
    ```
 
-## usage
+## examples
 
 #### listen to a TNC sending raw APRS strings over USB port COM4
 
