@@ -3,23 +3,21 @@ from typing import List
 
 from serial import Serial
 
-from packetraven.connections.base import (
-    APRSPacketSource,
-    LOGGER,
-    next_open_serial_port,
-    TimeIntervalError,
-)
+from packetraven.connections.base import (APRSPacketSource, LOGGER, TimeIntervalError, next_open_serial_port)
 from packetraven.packets import APRSPacket
 
 
 class SerialTNC(APRSPacketSource):
     """
-    connection to a TNC sending raw APRS strings over a USB connection
+    listens for raw APRS frames being sent over USB `in ASCII text`
+
+    An example of this is the Kenwood TNC.
 
     >>> tnc = SerialTNC(serial_port='COM5')
     >>> print(tnc.packets)
 
     alternatively, set to `'auto'` to connect to the first open serial port
+
     >>> tnc = SerialTNC(serial_port='auto')
     >>> print(tnc.packets)
     """

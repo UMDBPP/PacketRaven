@@ -7,15 +7,24 @@ packet sources and USB / network connections
 serial (USB) connection
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-This class listens for raw APRS frames being sent over USB `in ASCII text`. An example of this is the Kenwood TNC.
-
 .. autoclass:: packetraven.connections.serial.SerialTNC
 
 network connections
 ^^^^^^^^^^^^^^^^^^^
 
+https://aprs.fi
+"""""""""""""""
+
 .. autoclass:: packetraven.connections.internet.APRSfi
+
+PostGreSQL database
+"""""""""""""""""""
+
 .. autoclass:: packetraven.connections.internet.APRSDatabaseTable
+
+APRS Internet Service (APRS-IS)
+"""""""""""""""""""""""""""""""
+
 .. autoclass:: packetraven.connections.internet.APRSis
 
 file watchers
