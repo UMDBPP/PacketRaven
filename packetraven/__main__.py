@@ -9,7 +9,8 @@ from typing import Dict, List
 
 import humanize as humanize
 import numpy
-from tablecrow.utilities import convert_value, parse_hostname
+from tablecrow.utilities import parse_hostname
+from typepigeon import convert_value
 
 from packetraven.connections import (
     APRSDatabaseTable,
@@ -25,7 +26,7 @@ from packetraven.connections.base import PacketSource
 from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
 from packetraven.packets.writer import write_packet_tracks
-from packetraven.predicts import get_predictions, PredictionAPIURL, PredictionError
+from packetraven.predicts import PredictionAPIURL, PredictionError, get_predictions
 from packetraven.utilities import get_logger, read_configuration, repository_root
 
 LOGGER = get_logger('packetraven', log_format='%(asctime)s | %(levelname)-8s | %(message)s')
@@ -43,7 +44,7 @@ def main():
     args_parser.add_argument(
         '--tnc',
         help='comma-separated list of serial ports / text files of a TNC parsing APRS packets from analog audio to ASCII'
-        ' (set to `auto` to use the first open serial port)',
+             ' (set to `auto` to use the first open serial port)',
     )
     args_parser.add_argument(
         '--database', help='PostGres database table `user@hostname:port/database/table`'
@@ -255,8 +256,9 @@ def main():
         filter_message += f' from {len(callsigns)} callsigns: {callsigns}'
     LOGGER.info(filter_message)
 
-    aprsfi_url = f'https://aprs.fi/#!ts={start_date:%s}&te={end_date:%s}&call=a%2F{"%2Ca%2F".join(callsigns)}'
-    LOGGER.info(f'tracking URL: {aprsfi_url}')
+    if callsigns is not None:
+        aprsfi_url = f'https://aprs.fi/#!ts={start_date:%s}&te={end_date:%s}&call=a%2F{"%2Ca%2F".join(callsigns)}'
+        LOGGER.info(f'tracking URL: {aprsfi_url}')
 
     if using_gui:
         from packetraven.gui import PacketRavenGUI

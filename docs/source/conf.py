@@ -64,6 +64,7 @@ napoleon_use_rtype = False  # More legible
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinxcontrib.programoutput',
     # Need the autodoc and autosummary packages to generate our docs.
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',

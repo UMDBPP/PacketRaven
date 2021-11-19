@@ -1,4 +1,0 @@
-Models
-======
-
-.. automodule:: packetraven.model

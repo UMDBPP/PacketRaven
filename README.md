@@ -13,7 +13,7 @@ PacketRaven is a dashboard built to track high-altitude balloon flights from the
 pip install packetraven
 ```
 
-## Installation
+## installation
 
 0. install Python
    https://www.python.org/downloads/
@@ -40,49 +40,7 @@ pip install packetraven
    pip install packetraven
    ```
 
-## Command-line Interface (CLI)
-
-```text
-usage: packetraven [-h] [--callsigns CALLSIGNS] [--aprsfi-key APRSFI_KEY] [--tnc TNC] [--database DATABASE] [--tunnel TUNNEL]
-                   [--igate] [--start START] [--end END] [--log LOG] [--output OUTPUT] [--prediction-output PREDICTION_OUTPUT]
-                   [--prediction-ascent-rate PREDICTION_ASCENT_RATE] [--prediction-burst-altitude PREDICTION_BURST_ALTITUDE]
-                   [--prediction-descent-rate PREDICTION_DESCENT_RATE] [--prediction-float-altitude PREDICTION_FLOAT_ALTITUDE]
-                   [--prediction-float-duration PREDICTION_FLOAT_DURATION] [--prediction-api PREDICTION_API] [--interval INTERVAL]
-                   [--gui]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --callsigns CALLSIGNS
-                        comma-separated list of callsigns to track
-  --aprsfi-key APRSFI_KEY
-                        APRS.fi API key (from https://aprs.fi/page/api)
-  --tnc TNC             comma-separated list of serial ports / text files of a TNC parsing APRS packets from analog audio to ASCII
-                        (set to `auto` to use the first open serial port)
-  --database DATABASE   PostGres database table `user@hostname:port/database/table`
-  --tunnel TUNNEL       SSH tunnel `user@hostname:port`
-  --igate               send new packets to APRS-IS
-  --start START         start date / time, in any common date format
-  --end END             end date / time, in any common date format
-  --log LOG             path to log file to save log messages
-  --output OUTPUT       path to output file to save packets
-  --prediction-output PREDICTION_OUTPUT
-                        path to output file to save most up-to-date predicted trajectory
-  --prediction-ascent-rate PREDICTION_ASCENT_RATE
-                        ascent rate to use for prediction (m/s)
-  --prediction-burst-altitude PREDICTION_BURST_ALTITUDE
-                        burst altitude to use for prediction (m)
-  --prediction-descent-rate PREDICTION_DESCENT_RATE
-                        descent rate to use for prediction (m/s)
-  --prediction-float-altitude PREDICTION_FLOAT_ALTITUDE
-                        float altitude to use for prediction (m)
-  --prediction-float-duration PREDICTION_FLOAT_DURATION
-                        duration of float (s)
-  --prediction-api PREDICTION_API
-                        API URL to use for prediction (one of ['https://predict.cusf.co.uk/api/v1/',
-                        'https://predict.lukerenegar.com/api/v1.1/'])
-  --interval INTERVAL   seconds between each main loop (default: 20)
-  --gui                 start the graphical interface
-```
+## usage
 
 #### listen to a TNC sending raw APRS strings over USB port COM4
 
@@ -118,7 +76,7 @@ packetraven --tnc http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3E
 packetraven --tnc COM3 --callsigns W3EAX-8,W3EAX-14 --database <username>@<hostname>:5432/<database_name>/<table_name> --tunnel <ssh_username>@<hostname>:22
 ```
 
-## Graphical User Interface (GUI)
+### graphical user interface (GUI)
 
 to start the GUI, add `--gui` to any `packetraven` command
 
