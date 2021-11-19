@@ -76,7 +76,7 @@ packetraven --tnc http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3E
 packetraven --tnc COM3 --callsigns W3EAX-8,W3EAX-14 --database <username>@<hostname>:5432/<database_name>/<table_name> --tunnel <ssh_username>@<hostname>:22
 ```
 
-### graphical user interface (GUI)
+### start the graphical user interface (GUI)
 
 to start the GUI, add `--gui` to any `packetraven` command
 
@@ -86,51 +86,4 @@ packetraven --gui
 
 ```shell
 packetraven --callsigns W3EAX-8,W3EAX-14 --aprsfi-key <api_key> --gui
-```
-
-## Python API
-
-to retrieve packets directly from https://aprs.fi:
-
-```python
-from packetraven import APRSfi
-
-aprs_fi = APRSfi(
-    callsigns=['W3EAX-8', 'W3EAX-12', 'KC3FXX', 'KC3ZRB'],
-    api_key='<api_key>',  # enter your APRS.fi API key here - you can get one from https://aprs.fi/page/api
-)
-
-print(aprs_fi.packets)
-```
-
-or parse packets from a TNC sending parsed APRS over a USB connection:
-
-```python
-from packetraven import SerialTNC
-
-tnc = SerialTNC(
-    serial_port='COM5',  # set to `'auto'` to connect to the first open serial port
-)
-
-print(tnc.packets)
-```
-
-or connect to a PostGreSQL database running PostGIS:
-
-```python
-from packetraven import APRSDatabaseTable
-
-table = APRSDatabaseTable(
-    hostname='<hostname>:5432',
-    database='<database_name>',
-    table='packets',
-    callsigns=['W3EAX-8', 'W3EAX-12', 'KC3FXX', 'KC3ZRB'],
-    username='<username>',
-    password='<password>',
-    ssh_hostname=None,
-    ssh_username=None,
-    ssh_password=None,
-)
-
-print(table.packets)
 ```
