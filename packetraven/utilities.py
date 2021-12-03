@@ -38,6 +38,17 @@ def get_logger(
     console_level: int = None,
     log_format: str = None,
 ) -> logging.Logger:
+    """
+    instantiate logger instance
+
+    :param name: name of logger
+    :param log_filename: path to log file
+    :param file_level: minimum log level to write to log file
+    :param console_level: minimum log level to print to console
+    :param log_format: logger message format
+    :return: instance of a Logger object
+    """
+
     if file_level is None:
         file_level = logging.DEBUG
     if console_level is None:
@@ -48,34 +59,29 @@ def get_logger(
     if logger.level == logging.NOTSET and len(logger.handlers) == 0:
         # check if logger has a parent
         if '.' in name:
+            if isinstance(logger.parent, logging.RootLogger):
+                for existing_console_handler in [
+                    handler for handler in logger.parent.handlers if not isinstance(handler, logging.FileHandler)
+                ]:
+                    logger.parent.removeHandler(existing_console_handler)
             logger.parent = get_logger(name.rsplit('.', 1)[0])
         else:
             # otherwise create a new split-console logger
-            logger.setLevel(logging.DEBUG)
             if console_level != logging.NOTSET:
-                if console_level <= logging.INFO:
+                for existing_console_handler in [
+                    handler for handler in logger.handlers if not isinstance(handler, logging.FileHandler)
+                ]:
+                    logger.removeHandler(existing_console_handler)
 
-                    class LoggingOutputFilter(logging.Filter):
-                        def filter(self, rec):
-                            return rec.levelno in (logging.DEBUG, logging.INFO)
-
-                    console_output = logging.StreamHandler(sys.stdout)
-                    console_output.setLevel(console_level)
-                    console_output.addFilter(LoggingOutputFilter())
-                    logger.addHandler(console_output)
-
-                console_errors = logging.StreamHandler(sys.stderr)
-                console_errors.setLevel(max((console_level, logging.WARNING)))
-                logger.addHandler(console_errors)
+                console_output = logging.StreamHandler(sys.stdout)
+                console_output.setLevel(console_level)
+                logger.addHandler(console_output)
 
     if log_filename is not None:
-        if not isinstance(log_filename, Path):
-            log_filename = Path(log_filename)
-        log_filename = log_filename.resolve().expanduser()
         file_handler = logging.FileHandler(log_filename)
         file_handler.setLevel(file_level)
         for existing_file_handler in [
-            handler for handler in logger.handlers if type(handler) is logging.FileHandler
+            handler for handler in logger.handlers if isinstance(handler, logging.FileHandler)
         ]:
             logger.removeHandler(existing_file_handler)
         logger.addHandler(file_handler)
