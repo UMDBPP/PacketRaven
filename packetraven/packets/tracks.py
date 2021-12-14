@@ -1,8 +1,10 @@
 from copy import copy
 from datetime import datetime, timedelta
+from os import PathLike
 from typing import Iterable, List, Union
 
 from dateutil.parser import parse as parse_date
+import geojson
 import numpy
 from pandas import DataFrame
 from pyproj import CRS
@@ -33,6 +35,8 @@ class LocationPacketTrack:
 
         if name is None:
             name = 'track'
+        elif not isinstance(name, str):
+            name = str(name)
 
         self.name = name
         self.packets = DoublyLinkedList(None)
@@ -244,6 +248,48 @@ class LocationPacketTrack:
             }
         )
 
+    @classmethod
+    def from_file(cls, filename: PathLike) -> List['LocationPacketTrack']:
+        """
+        load packet tracks from the given file
+
+        :param filename: file path to GeoJSON
+        :return: packet tracks
+        """
+
+        with open(filename) as input_file:
+            data = geojson.load(input_file)
+
+        points = []
+        linestrings = []
+        for feature in data['features']:
+            if feature['geometry']['type'] == 'Point':
+                points.append(feature)
+            elif feature['geometry']['type'] == 'LineString':
+                linestrings.append(feature)
+
+        tracks = []
+        for linestring in linestrings:
+            packets = []
+            for coordinate in linestring['geometry']['coordinates']:
+                for index, point in enumerate(points):
+                    if point['geometry']['coordinates'] == coordinate:
+                        packet = LocationPacket(
+                            x=point['geometry']['coordinates'][0],
+                            y=point['geometry']['coordinates'][1],
+                            z=point['geometry']['coordinates'][2],
+                            **point['properties'],
+                        )
+                        packets.append(packet)
+                        if index != 0:
+                            points.pop(index)
+                        break
+            track = LocationPacketTrack(packets=packets, name=linestring['properties']['name'])
+
+            tracks.append(track)
+
+        return tracks
+
 
 class BalloonTrack(LocationPacketTrack):
     """
@@ -316,12 +362,11 @@ class APRSTrack(BalloonTrack):
             if len(callsign) > 9 or ' ' in callsign:
                 raise ValueError(f'unrecognized callsign format: "{callsign}"')
 
-        self.__callsign = callsign
-        super().__init__(packets=packets, name=self.callsign, crs=crs)
+        super().__init__(packets=packets, name=callsign, crs=crs)
 
     @property
     def callsign(self) -> str:
-        return self.__callsign
+        return self.name
 
     def append(self, packet: APRSPacket):
         packet_callsign = packet['callsign']
@@ -333,11 +378,38 @@ class APRSTrack(BalloonTrack):
                 f'Packet callsign {packet_callsign} does not match ground track callsign {self.callsign}.'
             )
 
-    def __eq__(self, other) -> bool:
-        return self.callsign == other.__callsign and super().__eq__(other)
+    def __eq__(self, other: 'APRSTrack') -> bool:
+        return self.callsign == other.name and super().__eq__(other)
 
     def __str__(self) -> str:
         return f'{self.callsign}: {super().__str__()}'
+
+    @classmethod
+    def from_file(cls, filename: PathLike) -> List['APRSTrack']:
+        tracks = LocationPacketTrack.from_file(filename)
+
+        for index in range(len(tracks)):
+            track = tracks[index]
+            packets = []
+            for packet in track.packets:
+                packets.append(
+                    APRSPacket(
+                        from_callsign=packet.attributes['from'],
+                        to_callsign=packet.attributes['to'],
+                        time=packet.time,
+                        x=packet.coordinates[0],
+                        y=packet.coordinates[1],
+                        z=packet.coordinates[2],
+                        **{
+                            key: value
+                            for key, value in packet.attributes.items()
+                            if key not in ['from', 'to']
+                        },
+                    )
+                )
+            tracks[index] = APRSTrack(packets=packets, callsign=track.name, crs=track.crs)
+
+        return tracks
 
 
 class PredictedTrajectory(LocationPacketTrack):
@@ -349,22 +421,46 @@ class PredictedTrajectory(LocationPacketTrack):
         self,
         packets: List[LocationPacket],
         prediction_time: datetime,
-        name: str = None,
+        dataset_time: datetime,
         crs: CRS = None,
     ):
         """
         :param packets: iterable of packets
-        :param prediction_time: time of prediction
-        :param name: name of prediction
+        :param prediction_time: time of completed prediction
+        :param dataset_time: time of last dataset update
         :param crs: coordinate reference system to use
         """
 
         if isinstance(prediction_time, str):
             prediction_time = parse_date(prediction_time)
 
-        super().__init__(packets=packets, name=name, crs=crs)
+        if isinstance(dataset_time, str):
+            dataset_time = parse_date(dataset_time)
+
+        super().__init__(
+            packets=packets,
+            name=f'{prediction_time:%Y-%m-%dT%H:%M:%S} {dataset_time:%Y-%m-%dT%H:%M:%S}',
+            crs=crs,
+        )
         self.prediction_time = prediction_time
+        self.dataset_time = dataset_time
 
     @property
     def landing_site(self) -> (float, float, float):
         return self.coordinates[-1]
+
+    @classmethod
+    def from_file(cls, filename: PathLike) -> List['PredictedTrajectory']:
+        tracks = LocationPacketTrack.from_file(filename)
+
+        for index in range(len(tracks)):
+            track = tracks[index]
+            prediction_time, dataset_time = track.name.split()
+            tracks[index] = PredictedTrajectory(
+                packets=track.packets,
+                prediction_time=prediction_time,
+                dataset_time=dataset_time,
+                crs=track.crs,
+            )
+
+        return tracks

@@ -300,7 +300,7 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
                     for point in points
                 ],
                 prediction_time=response['metadata']['complete_datetime'],
-                name=self.name,
+                dataset_time=response['request']['dataset'],
             )
         else:
             raise PredictionError(response['error']['description'])

@@ -6,7 +6,7 @@ import pytest
 import pytz
 
 from packetraven.packets import APRSPacket
-from packetraven.packets.tracks import APRSTrack
+from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
 from packetraven.packets.writer import write_packet_tracks
 from packetraven.utilities import repository_root
 
@@ -60,6 +60,17 @@ def test_write_geojson(packet_track):
         write_packet_tracks([packet_track], output_filename)
         with open(output_filename) as output_file, open(reference_filename) as reference_file:
             assert output_file.read() == reference_file.read()
+
+
+def test_read_geojson():
+    filename = 'test_output.geojson'
+    reference_filename = REFERENCE_DIRECTORY / filename
+
+    tracks = LocationPacketTrack.from_file(reference_filename)
+    aprs_tracks = APRSTrack.from_file(reference_filename)
+
+    assert tracks[0].name == 'W3EAX-8'
+    assert aprs_tracks[0].name == 'W3EAX-8'
 
 
 def test_write_txt(packet_track):

@@ -3,6 +3,7 @@ from os import PathLike
 from pathlib import Path
 from typing import List
 
+import geojson
 from geojson import Point
 import numpy
 from shapely.geometry import LineString
@@ -13,15 +14,15 @@ from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
 KML_STANDARD = '{http://www.opengis.net/kml/2.2}'
 
 
-def write_packet_tracks(packet_tracks: List[LocationPacketTrack], output_filename: PathLike):
+def write_packet_tracks(packet_tracks: List[LocationPacketTrack], filename: PathLike):
     """
-    write the following packet tracks to a file
+    write packet tracks to file
     """
 
-    if not isinstance(output_filename, Path):
-        output_filename = Path(output_filename)
-    output_filename = output_filename.resolve().expanduser()
-    if output_filename.suffix == '.txt':
+    if not isinstance(filename, Path):
+        filename = Path(filename)
+    filename = filename.resolve().expanduser()
+    if filename.suffix == '.txt':
         packets = []
         for packet_track_index, packet_track in enumerate(packet_tracks):
             packets.extend(packet_track)
@@ -32,11 +33,9 @@ def write_packet_tracks(packet_tracks: List[LocationPacketTrack], output_filenam
             else f'{packet.time:%Y-%m-%d %H:%M:%S %Z}'
             for packet in packets
         ]
-        with open(output_filename, 'w') as output_file:
+        with open(filename, 'w') as output_file:
             output_file.write('\n'.join(lines))
-    elif output_filename.suffix == '.geojson':
-        import geojson
-
+    elif filename.suffix in ['.geojson', '.json']:
         features = []
         for packet_track in packet_tracks:
             ascent_rates = numpy.round(packet_track.ascent_rates, 3)
@@ -60,15 +59,13 @@ def write_packet_tracks(packet_tracks: List[LocationPacketTrack], output_filenam
                 )
 
             properties = {
+                'name': packet_track.name,
                 'time': f'{packet_track.packets[-1].time:%Y%m%d%H%M%S}',
                 'altitude': float(packet_track.coordinates[-1, -1]),
                 'ascent_rate': float(ascent_rates[-1]),
                 'ground_speed': float(ground_speeds[-1]),
                 'seconds_to_ground': packet_track.time_to_ground / timedelta(seconds=1),
             }
-
-            if isinstance(packet_track, APRSTrack):
-                properties['callsign'] = packet_track.callsign
 
             features.append(
                 geojson.Feature(
@@ -81,9 +78,9 @@ def write_packet_tracks(packet_tracks: List[LocationPacketTrack], output_filenam
 
         features = geojson.FeatureCollection(features)
 
-        with open(output_filename, 'w') as output_file:
+        with open(filename, 'w') as output_file:
             geojson.dump(features, output_file)
-    elif output_filename.suffix == '.kml':
+    elif filename.suffix == '.kml':
         from fastkml import kml
 
         output_kml = kml.KML()
@@ -111,7 +108,7 @@ def write_packet_tracks(packet_tracks: List[LocationPacketTrack], output_filenam
             placemark = kml.Placemark(
                 KML_STANDARD,
                 f'1 {packet_track_index}',
-                packet_track.callsign if isinstance(packet_track, APRSTrack) else '',
+                packet_track.name,
                 f'altitude={packet_track.coordinates[-1, -1]} '
                 f'ascent_rate={ascent_rates[-1]} '
                 f'ground_speed={ground_speeds[-1]} '
@@ -120,9 +117,9 @@ def write_packet_tracks(packet_tracks: List[LocationPacketTrack], output_filenam
             placemark.geometry = LineString(packet_track.coordinates)
             document.append(placemark)
 
-        with open(output_filename, 'w') as output_file:
+        with open(filename, 'w') as output_file:
             output_file.write(output_kml.to_string())
     else:
         raise NotImplementedError(
-            f'saving to file type "{output_filename.suffix}" has not been implemented'
+            f'saving to file type "{filename.suffix}" has not been implemented'
         )
