@@ -1,4 +1,5 @@
 from datetime import timedelta
+import os
 from os import PathLike
 from pathlib import Path
 from typing import List
@@ -22,7 +23,6 @@ def write_packet_tracks(packet_tracks: List[LocationPacketTrack], filename: Path
 
     if not isinstance(filename, Path):
         filename = Path(filename)
-    filename = filename.resolve().expanduser()
     if filename.suffix == '.txt':
         packets = []
         for packet_track_index, packet_track in enumerate(packet_tracks):
@@ -61,12 +61,14 @@ def write_packet_tracks(packet_tracks: List[LocationPacketTrack], filename: Path
 
             properties = {
                 'name': packet_track.name,
-                'time': f'{packet_track.packets[-1].time:%Y%m%d%H%M%S}',
-                'altitude': float(packet_track.coordinates[-1, -1]),
-                'ascent_rate': float(ascent_rates[-1]),
-                'ground_speed': float(ground_speeds[-1]),
-                'seconds_to_ground': packet_track.time_to_ground / timedelta(seconds=1),
-                **typepigeon.convert_to_json(packet_track.attributes),
+                'start_time': f'{packet_track.packets[0].time:%Y-%m-%d %H:%M:%S}',
+                'end_time': f'{packet_track.packets[-1].time:%Y-%m-%d %H:%M:%S}',
+                'duration': f'{packet_track.packets[-1].time - packet_track.packets[0].time}',
+                'last_altitude': float(packet_track.coordinates[-1, -1]),
+                'last_ascent_rate': float(ascent_rates[-1]),
+                'last_ground_speed': float(ground_speeds[-1]),
+                'seconds_to_ground': packet_track.time_to_ground,
+                **packet_track.attributes,
             }
 
             features.append(
@@ -74,7 +76,7 @@ def write_packet_tracks(packet_tracks: List[LocationPacketTrack], filename: Path
                     geometry=geojson.LineString(
                         [packet.coordinates.tolist() for packet in packet_track.packets]
                     ),
-                    properties=properties,
+                    properties=typepigeon.convert_to_json(properties),
                 )
             )
 
