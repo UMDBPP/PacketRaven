@@ -91,7 +91,7 @@ def test_append():
     assert track[-1] is packet_2
     assert track[:] == track
     assert track[1:] == APRSTrack(
-        packets=track.packets[1:], callsign=track.name, crs=track.crs
+        packets=track.packets[1:], callsign=track.callsign, crs=track.crs
     )
 
 

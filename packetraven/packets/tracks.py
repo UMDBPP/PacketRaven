@@ -25,7 +25,11 @@ class LocationPacketTrack:
     """
 
     def __init__(
-        self, packets: List[LocationPacket] = None, name: str = None, crs: CRS = None
+        self,
+        packets: List[LocationPacket] = None,
+        name: str = None,
+        crs: CRS = None,
+        **attributes,
     ):
         """
         :param packets: iterable of packets
@@ -34,13 +38,14 @@ class LocationPacketTrack:
         """
 
         if name is None:
-            name = 'track'
+            name = 'packet track'
         elif not isinstance(name, str):
             name = str(name)
 
         self.name = name
         self.packets = DoublyLinkedList(None)
         self.crs = crs if crs is not None else DEFAULT_CRS
+        self.attributes = attributes
 
         if packets is not None:
             self.extend(packets)
@@ -297,9 +302,13 @@ class BalloonTrack(LocationPacketTrack):
     """
 
     def __init__(
-        self, packets: List[LocationPacket] = None, name: str = None, crs: CRS = None
+        self,
+        packets: List[LocationPacket] = None,
+        name: str = None,
+        crs: CRS = None,
+        **attributes,
     ):
-        super().__init__(packets=packets, name=name, crs=crs)
+        LocationPacketTrack.__init__(self, packets=packets, name=name, crs=crs, **attributes)
         self.__falling = False
 
     @property
@@ -343,7 +352,7 @@ class APRSTrack(BalloonTrack):
         packets: List[APRSPacket] = None,
         callsign: str = None,
         crs: CRS = None,
-        **kwargs,
+        **attributes,
     ):
         """
         :param packets: iterable of packets
@@ -351,10 +360,8 @@ class APRSTrack(BalloonTrack):
         :param crs: coordinate reference system to use
         """
 
-        if 'name' in kwargs:
-            if callsign is None:
-                callsign = kwargs['name']
-            del kwargs['name']
+        if 'name' not in attributes:
+            attributes['name'] = 'APRS track'
 
         if callsign is not None:
             if not isinstance(callsign, str):
@@ -362,11 +369,11 @@ class APRSTrack(BalloonTrack):
             if len(callsign) > 9 or ' ' in callsign:
                 raise ValueError(f'unrecognized callsign format: "{callsign}"')
 
-        super().__init__(packets=packets, name=callsign, crs=crs)
+        BalloonTrack.__init__(self, packets=packets, callsign=callsign, crs=crs, **attributes)
 
     @property
     def callsign(self) -> str:
-        return self.name
+        return self.attributes['callsign']
 
     def append(self, packet: APRSPacket):
         packet_callsign = packet['callsign']
@@ -423,6 +430,7 @@ class PredictedTrajectory(LocationPacketTrack):
         prediction_time: datetime,
         dataset_time: datetime,
         crs: CRS = None,
+        **attributes,
     ):
         """
         :param packets: iterable of packets
@@ -431,19 +439,23 @@ class PredictedTrajectory(LocationPacketTrack):
         :param crs: coordinate reference system to use
         """
 
+        if 'name' not in attributes:
+            attributes['name'] = 'predicted trajectory'
+
         if isinstance(prediction_time, str):
             prediction_time = parse_date(prediction_time)
 
         if isinstance(dataset_time, str):
             dataset_time = parse_date(dataset_time)
 
-        super().__init__(
+        LocationPacketTrack.__init__(
+            self,
             packets=packets,
-            name=f'{prediction_time:%Y-%m-%dT%H:%M:%S} {dataset_time:%Y-%m-%dT%H:%M:%S}',
+            prediction_time=prediction_time,
+            dataset_time=dataset_time,
             crs=crs,
+            **attributes,
         )
-        self.prediction_time = prediction_time
-        self.dataset_time = dataset_time
 
     @property
     def landing_site(self) -> (float, float, float):
