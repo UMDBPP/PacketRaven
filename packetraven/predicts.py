@@ -3,11 +3,11 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, Generator, List, Optional, Tuple, Union
 
-from dateutil.parser import parse as parse_date
 import numpy
 import pytz
 import requests
 from shapely.geometry import Point
+import typepigeon
 
 from packetraven.model import FREEFALL_DESCENT_RATE
 from packetraven.packets import LocationPacket
@@ -240,7 +240,9 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
                                 float_end['latitude'],
                                 float_end['altitude'],
                             ],
-                            launch_time=parse_date(float_end['datetime']),
+                            launch_time=typepigeon.convert_value(
+                                float_end['datetime'], datetime
+                            ),
                             ascent_rate=10,
                             burst_altitude=float_end['altitude'] + 0.1,
                             sea_level_descent_rate=self.sea_level_descent_rate,

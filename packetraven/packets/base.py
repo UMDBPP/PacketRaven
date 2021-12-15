@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta
 from typing import Any, Union
 
-from dateutil.parser import parse as parse_date
 import numpy
 from pyproj import CRS, Geod, Transformer
+import typepigeon
 
 from packetraven.packets.parsing import InvalidPacketError, parse_raw_aprs
 
@@ -25,8 +25,8 @@ class LocationPacket:
         source: str = None,
         **kwargs,
     ):
-        if isinstance(time, str):
-            time = parse_date(time)
+        if not isinstance(time, datetime):
+            time = typepigeon.convert_value(time, datetime)
 
         self.time = time
         self.coordinates = numpy.array((x, y, z if z is not None else 0))

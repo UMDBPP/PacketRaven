@@ -8,6 +8,7 @@ import geojson
 import numpy
 from pandas import DataFrame
 from pyproj import CRS
+import typepigeon
 
 from packetraven.model import (
     FREEFALL_DESCENT_RATE,
@@ -183,7 +184,7 @@ class LocationPacketTrack:
                 packets = self.packets[index]
             else:
                 packets = None
-            return self.__class__(packets, self.name, crs=self.crs)
+            return self.__class__(packets=packets, crs=self.crs, **self.attributes)
         elif isinstance(index, (datetime, numpy.datetime64)):
             if not isinstance(index, numpy.datetime64):
                 index = numpy.datetime64(index)
@@ -230,7 +231,7 @@ class LocationPacketTrack:
         return len(self.packets)
 
     def __eq__(self, other) -> bool:
-        return self.packets == other.packets
+        return self.packets == other.packets and self.attributes == other.attributes
 
     def __str__(self) -> str:
         return str(list(self))
@@ -289,7 +290,7 @@ class LocationPacketTrack:
                         if index != 0:
                             points.pop(index)
                         break
-            track = LocationPacketTrack(packets=packets, name=linestring['properties']['name'])
+            track = LocationPacketTrack(packets=packets, **linestring['properties'])
 
             tracks.append(track)
 
@@ -385,9 +386,6 @@ class APRSTrack(BalloonTrack):
                 f'Packet callsign {packet_callsign} does not match ground track callsign {self.callsign}.'
             )
 
-    def __eq__(self, other: 'APRSTrack') -> bool:
-        return self.callsign == other.name and super().__eq__(other)
-
     def __str__(self) -> str:
         return f'{self.callsign}: {super().__str__()}'
 
@@ -414,7 +412,7 @@ class APRSTrack(BalloonTrack):
                         },
                     )
                 )
-            tracks[index] = APRSTrack(packets=packets, callsign=track.name, crs=track.crs)
+            tracks[index] = APRSTrack(packets=packets, crs=track.crs, **track.attributes)
 
         return tracks
 
@@ -442,11 +440,11 @@ class PredictedTrajectory(LocationPacketTrack):
         if 'name' not in attributes:
             attributes['name'] = 'predicted trajectory'
 
-        if isinstance(prediction_time, str):
-            prediction_time = parse_date(prediction_time)
+        if not isinstance(prediction_time, datetime):
+            prediction_time = typepigeon.convert_value(prediction_time, datetime)
 
-        if isinstance(dataset_time, str):
-            dataset_time = parse_date(dataset_time)
+        if not isinstance(dataset_time, datetime):
+            dataset_time = typepigeon.convert_value(dataset_time, datetime)
 
         LocationPacketTrack.__init__(
             self,
@@ -467,12 +465,8 @@ class PredictedTrajectory(LocationPacketTrack):
 
         for index in range(len(tracks)):
             track = tracks[index]
-            prediction_time, dataset_time = track.name.split()
             tracks[index] = PredictedTrajectory(
-                packets=track.packets,
-                prediction_time=prediction_time,
-                dataset_time=dataset_time,
-                crs=track.crs,
+                packets=track.packets, crs=track.crs, **track.attributes,
             )
 
         return tracks

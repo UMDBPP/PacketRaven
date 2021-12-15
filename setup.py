@@ -25,6 +25,7 @@ DEPENDENCIES = {
     'sshtunnel': [],
     'tablecrow>=1.4.3': [],
     'teek': [],
+    'typepigeon': [],
 }
 
 

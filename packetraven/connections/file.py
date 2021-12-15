@@ -4,9 +4,9 @@ from pathlib import Path
 from typing import List
 from urllib.parse import urlparse
 
-from dateutil.parser import parse as parse_date
 import geojson
 import requests
+import typepigeon
 
 from packetraven.connections.base import (
     APRSPacketSource,
@@ -64,7 +64,7 @@ class RawAPRSTextFile(APRSPacketSource):
                     self.__parsed_lines.append(line)
                     try:
                         packet_time, raw_aprs = line.split(': ', 1)
-                        packet_time = parse_date(packet_time)
+                        packet_time = typepigeon.convert_value(packet_time, datetime)
                     except:
                         raw_aprs = line
                         packet_time = datetime.now()
@@ -131,7 +131,7 @@ class PacketGeoJSON(PacketSource):
         for feature in features['features']:
             if feature['geometry']['type'] == 'Point':
                 properties = feature['properties']
-                time = parse_date(properties['time'])
+                time = typepigeon.convert_value(properties['time'], datetime)
                 del properties['time']
 
                 if 'from' in properties:

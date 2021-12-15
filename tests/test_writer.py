@@ -1,6 +1,4 @@
 from datetime import datetime
-from pathlib import Path
-from tempfile import TemporaryDirectory
 
 import pytest
 import pytz
@@ -9,8 +7,10 @@ from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
 from packetraven.packets.writer import write_packet_tracks
 from packetraven.utilities import repository_root
+from tests import check_reference_directory
 
 REFERENCE_DIRECTORY = repository_root() / 'tests' / 'reference'
+OUTPUT_DIRECTORY = repository_root() / 'tests' / 'output'
 
 
 @pytest.fixture
@@ -43,41 +43,43 @@ def packet_track():
 
 
 def test_write_kml(packet_track):
-    filename = 'test_output.kml'
-    reference_filename = REFERENCE_DIRECTORY / filename
-    with TemporaryDirectory() as temporary_directory:
-        output_filename = Path(temporary_directory) / filename
-        write_packet_tracks([packet_track], output_filename)
-        with open(output_filename) as output_file, open(reference_filename) as reference_file:
-            assert output_file.read() == reference_file.read()
+    reference_directory = REFERENCE_DIRECTORY / 'test_write_kml'
+    output_directory = OUTPUT_DIRECTORY / 'test_write_kml'
+
+    if not output_directory.exists():
+        output_directory.mkdir(parents=True, exist_ok=True)
+
+    write_packet_tracks([packet_track], output_directory / 'tracks.kml')
+    check_reference_directory(output_directory, reference_directory)
 
 
 def test_write_geojson(packet_track):
-    filename = 'test_output.geojson'
-    reference_filename = REFERENCE_DIRECTORY / filename
-    with TemporaryDirectory() as temporary_directory:
-        output_filename = Path(temporary_directory) / filename
-        write_packet_tracks([packet_track], output_filename)
-        with open(output_filename) as output_file, open(reference_filename) as reference_file:
-            assert output_file.read() == reference_file.read()
+    reference_directory = REFERENCE_DIRECTORY / 'test_write_geojson'
+    output_directory = OUTPUT_DIRECTORY / 'test_write_geojson'
+
+    if not output_directory.exists():
+        output_directory.mkdir(parents=True, exist_ok=True)
+
+    write_packet_tracks([packet_track], output_directory / 'tracks.geojson')
+    check_reference_directory(output_directory, reference_directory)
 
 
 def test_read_geojson():
-    filename = 'test_output.geojson'
-    reference_filename = REFERENCE_DIRECTORY / filename
+    reference_directory = REFERENCE_DIRECTORY / 'test_write_geojson'
 
-    tracks = LocationPacketTrack.from_file(reference_filename)
-    aprs_tracks = APRSTrack.from_file(reference_filename)
+    tracks = LocationPacketTrack.from_file(reference_directory / 'tracks.geojson')
+    aprs_tracks = APRSTrack.from_file(reference_directory / 'tracks.geojson')
 
-    assert tracks[0].name == 'W3EAX-8'
-    assert aprs_tracks[0].name == 'W3EAX-8'
+    assert tracks[0].attributes['callsign'] == 'W3EAX-8'
+    assert aprs_tracks[0].callsign == 'W3EAX-8'
 
 
 def test_write_txt(packet_track):
-    filename = 'test_output.txt'
-    reference_filename = REFERENCE_DIRECTORY / filename
-    with TemporaryDirectory() as temporary_directory:
-        output_filename = Path(temporary_directory) / filename
-        write_packet_tracks([packet_track], output_filename)
-        with open(output_filename) as output_file, open(reference_filename) as reference_file:
-            assert output_file.read() == reference_file.read()
+    reference_directory = REFERENCE_DIRECTORY / 'test_write_txt'
+    output_directory = OUTPUT_DIRECTORY / 'test_write_txt'
+
+    if not output_directory.exists():
+        output_directory.mkdir(parents=True, exist_ok=True)
+
+    write_packet_tracks([packet_track], output_directory / 'tracks.txt')
+    check_reference_directory(output_directory, reference_directory)
