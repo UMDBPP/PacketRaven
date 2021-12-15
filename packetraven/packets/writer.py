@@ -7,6 +7,7 @@ import geojson
 from geojson import Point
 import numpy
 from shapely.geometry import LineString
+import typepigeon
 
 from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
@@ -65,7 +66,7 @@ def write_packet_tracks(packet_tracks: List[LocationPacketTrack], filename: Path
                 'ascent_rate': float(ascent_rates[-1]),
                 'ground_speed': float(ground_speeds[-1]),
                 'seconds_to_ground': packet_track.time_to_ground / timedelta(seconds=1),
-                **packet_track.attributes,
+                **typepigeon.convert_to_json(packet_track.attributes),
             }
 
             features.append(
