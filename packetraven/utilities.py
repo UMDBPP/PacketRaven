@@ -1,9 +1,12 @@
 import configparser
+from datetime import datetime
 import logging
 from os import PathLike
 from pathlib import Path
 import sys
 from typing import Dict
+
+from dateutil.tz import tzlocal
 
 LOGGER_NAME_LENGTH = 17
 
@@ -29,6 +32,12 @@ def read_configuration(filename: PathLike) -> Dict[str, str]:
         for section_name, section in configuration_file.items()
         if section_name.upper() != 'DEFAULT'
     }
+
+
+def ensure_datetime_timezone(value: datetime) -> datetime:
+    if value.tzinfo is None or value.tzinfo.utcoffset(value) is None:
+        value = value.replace(tzinfo=tzlocal())
+    return value
 
 
 def get_logger(

@@ -27,7 +27,12 @@ from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
 from packetraven.packets.writer import write_packet_tracks
 from packetraven.predicts import get_predictions, PredictionAPIURL, PredictionError
-from packetraven.utilities import get_logger, read_configuration, repository_root
+from packetraven.utilities import (
+    ensure_datetime_timezone,
+    get_logger,
+    read_configuration,
+    repository_root,
+)
 
 LOGGER = get_logger('packetraven', log_format='%(asctime)s | %(levelname)-8s | %(message)s')
 
@@ -493,6 +498,10 @@ def retrieve_packets(
         for parsed_packet in parsed_packets:
             callsign = parsed_packet['callsign']
 
+            start_date = ensure_datetime_timezone(start_date)
+            end_date = ensure_datetime_timezone(start_date)
+            parsed_packet.time = ensure_datetime_timezone(start_date)
+
             if start_date is not None and parsed_packet.time <= start_date:
                 continue
             if end_date is not None and parsed_packet.time >= end_date:
@@ -532,7 +541,7 @@ def retrieve_packets(
         for callsign in updated_callsigns:
             packet_track = packet_tracks[callsign]
             packet_time = datetime.utcfromtimestamp(
-                (packet_track.times[-1] - numpy.datetime64('1970-01-01T00:00:00Z'))
+                (packet_track.times[-1] - numpy.datetime64('1970-01-01T00:00:00'))
                 / numpy.timedelta64(1, 's')
             )
             packet_track.sort(inplace=True)
@@ -552,7 +561,7 @@ def retrieve_packets(
         for callsign in updated_callsigns:
             packet_track = packet_tracks[callsign]
             packet_time = datetime.utcfromtimestamp(
-                (packet_track.times[-1] - numpy.datetime64('1970-01-01T00:00:00Z'))
+                (packet_track.times[-1] - numpy.datetime64('1970-01-01T00:00:00'))
                 / numpy.timedelta64(1, 's')
             )
             try:
