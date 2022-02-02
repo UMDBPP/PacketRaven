@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest ]
-        python-version: [ 3.8, 3.9 ]
+        python-version: [ 3.8, '3.x' ]
     services:
       postgres:
         image: postgis/postgis:13-3.1
@@ -55,8 +55,8 @@ jobs:
           POSTGRES_PASSWORD: test_password
         run: pytest --cov=packetraven --numprocesses auto
       - name: Upload coverage to Codecov
-        if: matrix.python-version == 3.9
-        uses: codecov/codecov-action@v1
+        if: matrix.python-version == '3.x'
+        uses: codecov/codecov-action@v2.1.0
         with:
           flags: python${{ matrix.python-version }}-${{ runner.os }}
           fail_ci_if_error: true
