@@ -58,5 +58,6 @@ jobs:
         if: matrix.python-version == '3.x'
         uses: codecov/codecov-action@v2.1.0
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           flags: python${{ matrix.python-version }}-${{ runner.os }}
           fail_ci_if_error: true
