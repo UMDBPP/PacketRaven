@@ -499,7 +499,7 @@ def retrieve_packets(
             callsign = parsed_packet['callsign']
 
             start_date = ensure_datetime_timezone(start_date)
-            end_date = ensure_datetime_timezone(start_date)
+            end_date = ensure_datetime_timezone(end_date)
             parsed_packet.time = ensure_datetime_timezone(start_date)
 
             if start_date is not None and parsed_packet.time <= start_date:
