@@ -16,29 +16,25 @@ pip install packetraven
 ## installation
 
 0. install Python
+
    https://www.python.org/downloads/
-1. create a virtual environment so you don't pollute your system Python installation (or skip to step 3 if you don't care)
-   ```
-   pip install virtualenv
-   virtualenv packetraven_env
-   ```
-2. activate your new virtual environment
-    - On Linux:
-   ```
-   source packetraven_env/bin/activate
-   ```
-    - On Windows native command prompt (`cmd`):
-   ```
-   .\packetraven_env\Scripts\activate.bat
-   ```
-    - On Windows PowerShell:
-   ```
-   .\packetraven_env\Scripts\activate.ps1
-   ```
-3. install `packetraven`
-   ```
-   pip install packetraven
-   ```
+
+1. install `packetraven`
+    ```
+    pip install packetraven
+    ```
+
+### from source
+
+1. download the source code
+    ```
+    git clone https://github.com/UMDBPP/PacketRaven.git
+    ```
+3. install from source
+    ```
+    cd packetraven
+    pip install .
+    ```
 
 ## examples
 
