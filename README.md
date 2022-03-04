@@ -19,7 +19,7 @@ pip install packetraven
 
    https://www.python.org/downloads/
 
-1. install `packetraven`
+1. install with `pip`
     ```
     pip install packetraven
     ```
