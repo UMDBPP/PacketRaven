@@ -57,4 +57,15 @@ jobs:
       - name: install dependencies
         run: pip install ".[testing]"
       - name: run tests
+        if: matrix.python-version != '3.x' || matrix.os != 'ubuntu'
         run: pytest --numprocesses auto
+      - name: run tests with coverage
+        if: matrix.python-version == '3.x' && matrix.os == 'ubuntu'
+        run: pytest --numprocesses auto --cov . --cov-report xml:coverage.xml
+      - name: upload coverage to Codecov
+        if: matrix.python-version == '3.x' && matrix.os == 'ubuntu'
+        uses: codecov/codecov-action@v2.1.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
+          fail_ci_if_error: true
