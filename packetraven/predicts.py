@@ -463,14 +463,13 @@ def packet_track_predictions(
         else:
             prediction_sea_level_descent_rate = FREEFALL_DESCENT_RATE(0)
 
-        prediction_start_time = packet_track[-1].time
+        last_packet = packet_track[-1]
 
-        try:
-            prediction_start_location = packet_track[prediction_start_time].coordinates
-            if len(prediction_start_location.shape) > 1:
-                prediction_start_location = prediction_start_location[0, :]
-        except KeyError:
-            prediction_start_location = packet_track[-1].coordinates
+        prediction_start_time = last_packet.time
+
+        prediction_start_location = last_packet.coordinates
+        if len(prediction_start_location.shape) > 1:
+            prediction_start_location = prediction_start_location[0, :]
         if len(prediction_start_location) == 2:
             prediction_start_location = (*prediction_start_location, 0)
 
