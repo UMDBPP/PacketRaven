@@ -500,11 +500,11 @@ def retrieve_packets(
 
             start_date = ensure_datetime_timezone(start_date)
             end_date = ensure_datetime_timezone(end_date)
-            parsed_packet.time = ensure_datetime_timezone(start_date)
+            parsed_packet.time = ensure_datetime_timezone(parsed_packet.time)
 
-            if start_date is not None and parsed_packet.time <= start_date:
+            if start_date is not None and parsed_packet.time < start_date:
                 continue
-            if end_date is not None and parsed_packet.time >= end_date:
+            if end_date is not None and parsed_packet.time > end_date:
                 continue
 
             if callsign not in packet_tracks:
