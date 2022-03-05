@@ -26,7 +26,7 @@ from packetraven.connections.base import PacketSource
 from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
 from packetraven.packets.writer import write_packet_tracks
-from packetraven.predicts import get_predictions, PredictionAPIURL, PredictionError
+from packetraven.predicts import packet_track_predictions, PredictionAPIURL, PredictionError
 from packetraven.utilities import (
     ensure_datetime_timezone,
     get_logger,
@@ -429,7 +429,7 @@ def main():
                     if prediction_filename is not None:
                         try:
                             predictions.update(
-                                get_predictions(
+                                packet_track_predictions(
                                     packet_tracks,
                                     **{
                                         key.replace('prediction_', ''): value

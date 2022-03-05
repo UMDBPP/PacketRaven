@@ -1,14 +1,13 @@
 from copy import copy
 from datetime import datetime, timedelta
 from os import PathLike
-from typing import Iterable, List, Union
+from typing import Any, Dict, Iterable, List, Union
 
 from dateutil.parser import parse as parse_date
 import geojson
 import numpy
 from pandas import DataFrame
 from pyproj import CRS
-import typepigeon
 
 from packetraven.model import (
     FREEFALL_DESCENT_RATE,
@@ -425,34 +424,26 @@ class PredictedTrajectory(LocationPacketTrack):
     def __init__(
         self,
         packets: List[LocationPacket],
-        prediction_time: datetime,
-        dataset_time: datetime,
+        parameters: Dict[str, Any],
+        metadata: Dict[str, Any],
         crs: CRS = None,
         **attributes,
     ):
         """
         :param packets: iterable of packets
-        :param prediction_time: time of completed prediction
-        :param dataset_time: time of last dataset update
+        :param parameters: prediction parameters
+        :param metadata: prediction completion metadata
         :param crs: coordinate reference system to use
         """
 
         if 'name' not in attributes:
             attributes['name'] = 'predicted trajectory'
 
-        if not isinstance(prediction_time, datetime):
-            prediction_time = typepigeon.convert_value(prediction_time, datetime)
-
-        if not isinstance(dataset_time, datetime):
-            dataset_time = typepigeon.convert_value(dataset_time, datetime)
+        self.__parameters = parameters
+        self.__metadata = metadata
 
         LocationPacketTrack.__init__(
-            self,
-            packets=packets,
-            prediction_time=prediction_time,
-            dataset_time=dataset_time,
-            crs=crs,
-            **attributes,
+            self, packets=packets, crs=crs, **attributes,
         )
 
     @property
@@ -470,3 +461,11 @@ class PredictedTrajectory(LocationPacketTrack):
             )
 
         return tracks
+
+    @property
+    def parameters(self) -> Dict[str, Any]:
+        return self.__parameters
+
+    @property
+    def metadata(self) -> Dict[str, Any]:
+        return self.__metadata

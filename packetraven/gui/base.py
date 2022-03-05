@@ -21,7 +21,7 @@ from packetraven.gui.plotting import LiveTrackPlot
 from packetraven.packets import APRSPacket, LocationPacket
 from packetraven.packets.tracks import LocationPacketTrack, PredictedTrajectory
 from packetraven.packets.writer import write_packet_tracks
-from packetraven.predicts import get_predictions, PredictionError
+from packetraven.predicts import packet_track_predictions, PredictionError
 from packetraven.utilities import get_logger
 
 
@@ -773,7 +773,7 @@ class PacketRavenGUI:
                 if self.toggles['prediction_file']:
                     try:
                         self.__predictions.update(
-                            get_predictions(
+                            packet_track_predictions(
                                 self.packet_tracks,
                                 **{
                                     key.replace('prediction_', ''): value
