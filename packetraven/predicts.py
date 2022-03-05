@@ -275,7 +275,11 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
             else:
                 raise PredictionError(response['error']['description'])
         else:
-            raise ConnectionError(f'connection raised error {response.status_code}')
+            try:
+                error = response.json()['error']['description']
+            except:
+                error = ''
+            raise ConnectionError(f'connection raised error {response.status_code} for {response.url} - {error}')
 
     @property
     def predict(self) -> PredictedTrajectory:
@@ -471,7 +475,7 @@ def get_predictions(
         if float_altitude is not None and not packet_track.falling:
             packets_at_float_altitude = packet_track[
                 numpy.abs(float_altitude - packet_track.altitudes) < float_altitude_uncertainty
-            ]
+                ]
             if (
                 len(packets_at_float_altitude) > 0
                 and packets_at_float_altitude[-1].time == packet_track.times[-1]
@@ -481,7 +485,7 @@ def get_predictions(
             elif packet_track.ascent_rates[-1] >= 0:
                 prediction_float_start_time = prediction_start_time + timedelta(
                     seconds=(float_altitude - prediction_start_location[2])
-                    / prediction_ascent_rate
+                            / prediction_ascent_rate
                 )
                 descent_only = False
             else:
