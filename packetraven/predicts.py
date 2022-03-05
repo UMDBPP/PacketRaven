@@ -425,6 +425,9 @@ def packet_track_predictions(
         elif len(start_location) == 2:
             start_location = (*start_location, 0)
 
+    if burst_altitude <= start_location[2]:
+        burst_altitude = start_location[2] + 1
+
     if float_altitude is not None and float_duration is None:
         raise ValueError('`float_duration` was not provided')
 
