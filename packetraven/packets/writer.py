@@ -1,5 +1,3 @@
-from datetime import timedelta
-import os
 from os import PathLike
 from pathlib import Path
 from typing import List
@@ -11,7 +9,7 @@ from shapely.geometry import LineString
 import typepigeon
 
 from packetraven.packets import APRSPacket
-from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
+from packetraven.packets.tracks import APRSTrack, LocationPacketTrack, PredictedTrajectory
 
 KML_STANDARD = '{http://www.opengis.net/kml/2.2}'
 
@@ -64,12 +62,22 @@ def write_packet_tracks(packet_tracks: List[LocationPacketTrack], filename: Path
                 'start_time': f'{packet_track.packets[0].time:%Y-%m-%d %H:%M:%S}',
                 'end_time': f'{packet_track.packets[-1].time:%Y-%m-%d %H:%M:%S}',
                 'duration': f'{packet_track.packets[-1].time - packet_track.packets[0].time}',
-                'last_altitude': float(packet_track.coordinates[-1, -1]),
-                'last_ascent_rate': float(ascent_rates[-1]),
-                'last_ground_speed': float(ground_speeds[-1]),
-                'seconds_to_ground': packet_track.time_to_ground,
                 **packet_track.attributes,
             }
+
+            if isinstance(packet_track, PredictedTrajectory):
+                properties.update(
+                    {**packet_track.metadata, **packet_track.parameters,}
+                )
+            else:
+                properties.update(
+                    {
+                        'seconds_to_ground': packet_track.time_to_ground,
+                        'last_altitude': float(packet_track.coordinates[-1, -1]),
+                        'last_ascent_rate': float(ascent_rates[-1]),
+                        'last_ground_speed': float(ground_speeds[-1]),
+                    }
+                )
 
             features.append(
                 geojson.Feature(
@@ -109,14 +117,29 @@ def write_packet_tracks(packet_tracks: List[LocationPacketTrack], filename: Path
                 placemark.geometry = Point(packet.coordinates.tolist())
                 document.append(placemark)
 
+            properties = {
+                'altitude': packet_track.coordinates[-1, -1],
+                'duration': f'{packet_track.packets[-1].time - packet_track.packets[0].time}',
+            }
+
+            if isinstance(packet_track, PredictedTrajectory):
+                properties.update(
+                    {**packet_track.metadata, **packet_track.parameters,}
+                )
+            else:
+                properties.update(
+                    {
+                        'seconds_to_ground': packet_track.time_to_ground,
+                        'last_altitude': float(packet_track.coordinates[-1, -1]),
+                        'last_ascent_rate': float(ascent_rates[-1]),
+                        'last_ground_speed': float(ground_speeds[-1]),
+                    }
+                )
+
+            properties = ' '.join(f'{key}={value}' for key, value in properties.items())
+
             placemark = kml.Placemark(
-                KML_STANDARD,
-                f'1 {packet_track_index}',
-                packet_track.name,
-                f'altitude={packet_track.coordinates[-1, -1]} '
-                f'ascent_rate={ascent_rates[-1]} '
-                f'ground_speed={ground_speeds[-1]} '
-                f'seconds_to_ground={packet_track.time_to_ground / timedelta(seconds=1)}',
+                KML_STANDARD, f'1 {packet_track_index}', packet_track.name, properties,
             )
             placemark.geometry = LineString(packet_track.coordinates)
             document.append(placemark)
