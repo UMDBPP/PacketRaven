@@ -9,6 +9,7 @@ from typing import Dict, List
 
 import humanize as humanize
 import numpy
+from packetraven.configuration.credentials import CredentialsYAML
 from tablecrow.utilities import parse_hostname
 from typepigeon import convert_value
 
@@ -30,13 +31,12 @@ from packetraven.predicts import packet_track_predictions, PredictionAPIURL, Pre
 from packetraven.utilities import (
     ensure_datetime_timezone,
     get_logger,
-    read_configuration,
     repository_root,
 )
 
 LOGGER = get_logger('packetraven', log_format='%(asctime)s | %(levelname)-8s | %(message)s')
 
-CREDENTIALS_FILENAME = repository_root() / 'credentials.config'
+CREDENTIALS_FILENAME = repository_root() / 'credentials.yaml'
 DEFAULT_INTERVAL_SECONDS = 20
 
 
@@ -241,6 +241,7 @@ def main():
 
     if CREDENTIALS_FILENAME.exists():
         credentials = kwargs.copy()
+        file_credentials = CredentialsYAML.from_file(CREDENTIALS_FILENAME)
         for section in read_configuration(CREDENTIALS_FILENAME).values():
             credentials.update(section)
         kwargs = {

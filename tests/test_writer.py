@@ -6,11 +6,7 @@ import pytz
 from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
 from packetraven.packets.writer import write_packet_tracks
-from packetraven.utilities import repository_root
-from tests import check_reference_directory
-
-REFERENCE_DIRECTORY = repository_root() / 'tests' / 'reference'
-OUTPUT_DIRECTORY = repository_root() / 'tests' / 'output'
+from tests import OUTPUT_DIRECTORY, REFERENCE_DIRECTORY, check_reference_directory
 
 
 @pytest.fixture

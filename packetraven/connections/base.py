@@ -10,7 +10,7 @@ from packetraven.utilities import get_logger, repository_root
 
 LOGGER = get_logger('connection')
 
-CREDENTIALS_FILENAME = repository_root() / 'credentials.config'
+CREDENTIALS_FILENAME = repository_root() / 'credentials.yaml'
 
 
 class TimeIntervalError(Exception):

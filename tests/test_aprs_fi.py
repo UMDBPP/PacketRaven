@@ -1,18 +1,11 @@
-import os
-
 from packetraven import APRSfi
 from packetraven.packets import APRSPacket
-from packetraven.utilities import read_configuration, repository_root
+# noinspection PyUnresolvedReferences
+from tests import credentials
 
-CREDENTIALS_FILENAME = repository_root() / 'credentials.config'
 
-
-def test_aprs_fi():
+def test_aprs_fi(credentials):
     balloon_callsigns = ['W3EAX-10', 'W3EAX-11', 'W3EAX-13', 'W3EAX-14']
-
-    credentials = read_configuration(CREDENTIALS_FILENAME)
-    if 'aprs_fi' not in credentials:
-        credentials['aprs_fi'] = {'api_key': os.getenv('APRS_FI_API_KEY', None)}
 
     aprs_api = APRSfi(balloon_callsigns, credentials['aprs_fi']['api_key'])
 

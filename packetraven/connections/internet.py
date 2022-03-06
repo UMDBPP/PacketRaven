@@ -11,7 +11,6 @@ from tablecrow.utilities import split_hostname_port
 from packetraven.connections.base import (
     APRSPacketSink,
     APRSPacketSource,
-    CREDENTIALS_FILENAME,
     LOGGER,
     NetworkConnection,
     PacketSink,
@@ -20,7 +19,6 @@ from packetraven.connections.base import (
 )
 from packetraven.packets import APRSPacket, LocationPacket
 from packetraven.packets.parsing import InvalidPacketError
-from packetraven.utilities import read_configuration
 
 
 class APRSfi(APRSPacketSource, NetworkConnection):

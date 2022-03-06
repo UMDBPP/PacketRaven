@@ -3,30 +3,24 @@ from os import PathLike
 from pathlib import Path
 from typing import Any, Dict
 
-from typepigeon import convert_value
+import typepigeon
 import yaml
 
 
 class Configuration(ABC):
-    field_types: Dict[str, type]
+    fields: Dict[str, type]
+    defaults: Dict[str, Any] = None
 
-    def __init__(self, fields: Dict[str, type] = None, **configuration):
-        self.field_types = {key.lower(): value for key, value in self.field_types.items()}
-
-        if not hasattr(self, 'fields'):
-            self.fields = {}
-
-        self.fields.update({key: None for key in self.field_types if key not in self.fields})
-
-        if fields is not None:
-            fields = {key.lower(): value for key, value in fields.items()}
-            self.fields.update(fields)
-
+    def __init__(self, **configuration):
         if not hasattr(self, 'configuration'):
             self.configuration = {field: None for field in self.fields}
-
         if len(configuration) > 0:
             self.configuration.update(configuration)
+
+        if self.defaults is not None:
+            for key, value in self.defaults.items():
+                if key not in self.configuration:
+                    self.configuration[key] = value
 
     @classmethod
     @abstractmethod
@@ -49,16 +43,16 @@ class Configuration(ABC):
     def __setitem__(self, key: str, value: Any):
         if key in self.fields:
             field_type = self.fields[key]
+            if not isinstance(value, field_type):
+                value = typepigeon.convert_value(value, self.fields[key])
         else:
-            field_type = type(value)
-        self.configuration[key] = convert_value(value, field_type)
-        if key not in self.fields:
-            self.fields[key] = field_type
+            self.fields[key] = type(value)
+        self.configuration[key] = value
 
     def update(self, configuration: Dict[str, Any]):
         for key, value in configuration.items():
             if key in self:
-                converted_value = convert_value(value, self.fields[key])
+                converted_value = typepigeon.convert_value(value, self.fields[key])
                 if self[key] != converted_value:
                     value = converted_value
                 else:
@@ -69,14 +63,18 @@ class Configuration(ABC):
         return other.configuration == self.configuration
 
     def __repr__(self):
-        configuration_string = ', '.join(
+        configuration = ', '.join(
             [f'{key}={repr(value)}' for key, value in self.configuration.items()]
         )
-        return f'{self.__class__.__name__}({configuration_string})'
+        return f'{self.__class__.__name__}({configuration})'
 
     @abstractmethod
     def to_file(self, filename: PathLike = None, overwrite: bool = False):
         raise NotImplementedError()
+
+
+class ConfigurationSection:
+    name: str
 
 
 class ConfigurationYAML(Configuration):
@@ -95,5 +93,6 @@ class ConfigurationYAML(Configuration):
         if not isinstance(filename, Path):
             filename = Path(filename)
         if overwrite or not filename.exists():
-            with open(filename) as input_file:
-                yaml.safe_dump(self.configuration, input_file)
+            content = typepigeon.convert_to_json(self.configuration)
+            with open(filename, 'w') as input_file:
+                yaml.safe_dump(content, input_file)
