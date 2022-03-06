@@ -35,7 +35,7 @@ def read_configuration(filename: PathLike) -> Dict[str, str]:
 
 
 def ensure_datetime_timezone(value: datetime) -> datetime:
-    if value.tzinfo is None or value.tzinfo.utcoffset(value) is None:
+    if value is not None and (value.tzinfo is None or value.tzinfo.utcoffset(value) is None):
         value = value.replace(tzinfo=tzlocal())
     return value
 
