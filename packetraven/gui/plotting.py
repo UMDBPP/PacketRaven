@@ -1,6 +1,9 @@
 from tkinter import Toplevel
 from typing import Dict
 
+import matplotlib
+
+matplotlib.use('TkAgg')
 from matplotlib import pyplot
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure

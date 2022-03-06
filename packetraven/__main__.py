@@ -26,7 +26,7 @@ from packetraven.connections.base import PacketSource
 from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
 from packetraven.packets.writer import write_packet_tracks
-from packetraven.predicts import PredictionAPIURL, PredictionError, packet_track_predictions
+from packetraven.predicts import packet_track_predictions, PredictionAPIURL, PredictionError
 from packetraven.utilities import (
     ensure_datetime_timezone,
     get_logger,
@@ -49,7 +49,7 @@ def main():
     args_parser.add_argument(
         '--tnc',
         help='comma-separated list of serial ports / text files of a TNC parsing APRS packets from analog audio to ASCII'
-             ' (set to `auto` to use the first open serial port)',
+        ' (set to `auto` to use the first open serial port)',
     )
     args_parser.add_argument(
         '--database', help='PostGres database table `user@hostname:port/database/table`'
