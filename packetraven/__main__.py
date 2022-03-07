@@ -9,10 +9,10 @@ from typing import Dict, List
 
 import humanize as humanize
 import numpy
-from packetraven.configuration.credentials import CredentialsYAML
 from tablecrow.utilities import parse_hostname
 from typepigeon import convert_value
 
+from packetraven.configuration.credentials import CredentialsYAML
 from packetraven.connections import (
     APRSDatabaseTable,
     APRSfi,
@@ -28,11 +28,7 @@ from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
 from packetraven.packets.writer import write_packet_tracks
 from packetraven.predicts import packet_track_predictions, PredictionAPIURL, PredictionError
-from packetraven.utilities import (
-    ensure_datetime_timezone,
-    get_logger,
-    repository_root,
-)
+from packetraven.utilities import ensure_datetime_timezone, get_logger, repository_root
 
 LOGGER = get_logger('packetraven', log_format='%(asctime)s | %(levelname)-8s | %(message)s')
 

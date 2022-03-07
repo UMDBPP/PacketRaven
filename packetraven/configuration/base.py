@@ -1,13 +1,13 @@
 from abc import ABC, abstractmethod
 from os import PathLike
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Generator, Mapping
 
 import typepigeon
 import yaml
 
 
-class Configuration(ABC):
+class Configuration(ABC, Mapping):
     fields: Dict[str, type]
     defaults: Dict[str, Any] = None
 
@@ -19,13 +19,14 @@ class Configuration(ABC):
 
         if self.defaults is not None:
             for key, value in self.defaults.items():
-                if key not in self.configuration:
+                if key not in self.configuration or self.configuration[key] is None:
                     self.configuration[key] = value
 
-    @classmethod
-    @abstractmethod
-    def from_string(cls, string: str) -> 'Configuration':
-        raise NotImplementedError()
+        missing_fields = [field for field in self.fields if field not in self.configuration]
+        if len(missing_fields) > 0:
+            raise ValueError(
+                f'missing {len(missing_fields)} fields required by "{self.__class__.__name__}" - {list(missing_fields)}'
+            )
 
     @classmethod
     def from_file(cls, filename: PathLike) -> 'Configuration':
@@ -68,6 +69,15 @@ class Configuration(ABC):
         )
         return f'{self.__class__.__name__}({configuration})'
 
+    def __len__(self) -> int:
+        return len(self.configuration)
+
+    def __iter__(self) -> Generator:
+        yield from self.configuration
+
+    def __delitem__(self, key):
+        del self.configuration[key]
+
     @abstractmethod
     def to_file(self, filename: PathLike = None, overwrite: bool = False):
         raise NotImplementedError()
@@ -78,11 +88,6 @@ class ConfigurationSection:
 
 
 class ConfigurationYAML(Configuration):
-    @classmethod
-    def from_string(cls, string: str) -> 'Configuration':
-        configuration = yaml.safe_load(string)
-        return cls(**configuration)
-
     @classmethod
     def from_file(cls, filename: PathLike) -> 'Configuration':
         with open(filename) as input_file:

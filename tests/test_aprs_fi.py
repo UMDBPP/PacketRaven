@@ -1,5 +1,6 @@
 from packetraven import APRSfi
 from packetraven.packets import APRSPacket
+
 # noinspection PyUnresolvedReferences
 from tests import credentials
 

@@ -1,0 +1,27 @@
+default:
+  api_url: https://predict.cusf.co.uk/api/v1/
+  ascent_rate: 6.5
+  burst_altitude: 25000
+  descent_only: false
+  descent_rate: 9
+  float_altitude: null
+  float_end_time: null
+  launch_site:
+  - -78.4987
+  - 40.0157
+  launch_time: '2022-03-05 10:36:00'
+  name: null
+  sea_level_descent_rate: null
+perturbations:
+  profile_1:
+    burst_altitude: 20000
+  profile_2:
+    burst_altitude: 22000
+  profile_3:
+    burst_altitude: 24000
+  profile_4:
+    burst_altitude: 26000
+  profile_5:
+    burst_altitude: 28000
+  profile_6:
+    burst_altitude: 30000

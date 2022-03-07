@@ -1,0 +1,13 @@
+api_url: null
+ascent_rate: 6.5
+burst_altitude: 25000
+descent_only: null
+descent_rate: 9
+float_altitude: null
+float_end_time: null
+launch_site:
+- -78.4987
+- 40.0157
+launch_time: '2022-03-05 10:36:00'
+name: null
+sea_level_descent_rate: null
