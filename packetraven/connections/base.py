@@ -52,6 +52,10 @@ class PacketSource(Connection, ABC):
     abstraction of a connection that can retrieve packets
     """
 
+    def __init__(self, location: str, callsigns: [str] = None):
+        self.callsigns = callsigns
+        super().__init__(location)
+
     @property
     @abstractmethod
     def packets(self) -> List[LocationPacket]:
@@ -71,8 +75,7 @@ class APRSPacketSource(PacketSource):
         :param callsigns: list of callsigns to return from source
         """
 
-        super().__init__(location)
-        self.callsigns = callsigns
+        super().__init__(location, callsigns)
 
     @property
     @abstractmethod

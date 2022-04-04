@@ -4,11 +4,17 @@ from packetraven.configuration.base import ConfigurationYAML
 from packetraven.configuration.credentials import CredentialsYAML
 
 # noinspection PyUnresolvedReferences
-from packetraven.configuration.predict import (
+from packetraven.configuration.prediction import (
     PredictionCloudConfiguration,
     PredictionConfiguration,
 )
-from tests import check_reference_directory, OUTPUT_DIRECTORY, REFERENCE_DIRECTORY
+from packetraven.configuration.run import RunConfiguration
+from tests import (
+    check_reference_directory,
+    INPUT_DIRECTORY,
+    OUTPUT_DIRECTORY,
+    REFERENCE_DIRECTORY,
+)
 
 
 class TestConfiguration(ConfigurationYAML):
@@ -21,9 +27,9 @@ class TestConfiguration(ConfigurationYAML):
     }
 
 
-def test_configuration():
-    output_directory = OUTPUT_DIRECTORY / 'test_configuration'
-    reference_directory = REFERENCE_DIRECTORY / 'test_configuration'
+def test_run_configuration():
+    output_directory = OUTPUT_DIRECTORY / 'test_run_configuration'
+    reference_directory = REFERENCE_DIRECTORY / 'test_run_configuration'
 
     if not output_directory.exists():
         output_directory.mkdir(parents=True, exist_ok=True)
@@ -34,7 +40,22 @@ def test_configuration():
         test3=[True, False, True],
         test4={'a': 2, 'b': 'test value', 'test5': '2'},
     )
-    configuration.to_file(output_directory / 'testconfiguration.yaml')
+    configuration.to_file(output_directory / 'test_run_configuration.yaml')
+
+    check_reference_directory(output_directory, reference_directory)
+
+
+def test_configuration_from_file():
+    input_directory = INPUT_DIRECTORY / 'test_configuration_from_file'
+    output_directory = OUTPUT_DIRECTORY / 'test_configuration_from_file'
+    reference_directory = REFERENCE_DIRECTORY / 'test_configuration_from_file'
+
+    if not output_directory.exists():
+        output_directory.mkdir(parents=True, exist_ok=True)
+
+    configuration = RunConfiguration.from_file(input_directory / 'configuration.yaml')
+
+    configuration.to_file(output_directory / 'configuration.yaml', overwrite=True)
 
     check_reference_directory(output_directory, reference_directory)
 

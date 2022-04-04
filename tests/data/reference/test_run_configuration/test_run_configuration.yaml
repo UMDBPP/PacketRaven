@@ -1,0 +1,32 @@
+test1: 1
+test2: a
+test3:
+- true
+- false
+- true
+test4:
+  a:
+    a: 2
+    b: test value
+    test5: '2'
+  b:
+    a:
+      a: 2
+      b: test value
+      test5: '2'
+    b: test value
+    test5: '2'
+  test5:
+    a:
+      a: 2
+      b: test value
+      test5: '2'
+    b:
+      a:
+        a: 2
+        b: test value
+        test5: '2'
+      b: test value
+      test5: '2'
+    test5: '2'
+test5: null

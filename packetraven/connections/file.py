@@ -96,9 +96,10 @@ class PacketGeoJSON(PacketSource):
     connection to a GeoJSON file containing packet locations as points
     """
 
-    def __init__(self, filename: PathLike = None):
+    def __init__(self, filename: PathLike = None, callsigns: [str] = None):
         """
         :param filename: path to GeoJSON file
+        :param callsigns: list of callsigns to return from source
         """
 
         if not urlparse(str(filename)).scheme in ['http', 'https', 'ftp', 'sftp']:
@@ -108,7 +109,7 @@ class PacketGeoJSON(PacketSource):
                 filename = Path(filename)
             filename = str(filename)
 
-        super().__init__(filename)
+        super().__init__(filename, callsigns)
         self.__last_access_time = None
 
     @property

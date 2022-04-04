@@ -1,17 +1,15 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, Generator, List, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union
 
-import numpy
 import pytz
 import requests
 from shapely.geometry import Point
 import typepigeon
 
-from packetraven.model import FREEFALL_DESCENT_RATE
 from packetraven.packets import LocationPacket
-from packetraven.packets.tracks import LocationPacketTrack, PredictedTrajectory
+from packetraven.packets.tracks import PredictedTrajectory
 from packetraven.utilities import get_logger
 
 DEFAULT_FLOAT_ALTITUDE_UNCERTAINTY = 500
@@ -38,54 +36,53 @@ class BalloonPredictionQuery(ABC):
     def __init__(
         self,
         api_url: str,
-        launch_site: Union[Tuple[float, float, Optional[float]], Point],
-        launch_time: datetime,
+        start_location: Union[Tuple[float, float, Optional[float]], Point],
+        start_time: datetime,
         ascent_rate: float,
         burst_altitude: float,
         sea_level_descent_rate: float,
         float_altitude: float = None,
-        float_end_time: datetime = None,
+        float_duration: timedelta = None,
         name: str = None,
         descent_only: bool = False,
     ):
         """
         :param api_url: URL of API
-        :param launch_site: location of balloon launch
-        :param launch_time: date and time of balloon launch
+        :param start_location: location of balloon launch
+        :param start_time: date and time of balloon launch
         :param ascent_rate: average ascent rate (m/s)
         :param burst_altitude: altitude at which balloon will burst
         :param sea_level_descent_rate: descent rate at sea level (m/s)
         :param float_altitude: altitude of float (m)
-        :param float_end_time: date and time of float end
+        :param float_duration: date and time of float end
         :param name: name of prediction track
         :param descent_only: whether to query for descent only
         """
 
-        if not isinstance(launch_site, Point):
-            launch_site = Point(*launch_site)
+        if not isinstance(start_location, Point):
+            start_location = typepigeon.convert_value(start_location, Point)
 
         if name is None:
             name = 'prediction'
 
-        if launch_time is not None:
-            if launch_time.tzinfo is None or launch_time.tzinfo.utcoffset(launch_time) is None:
-                launch_time = UTC_TIMEZONE.localize(launch_time)
+        if start_time is not None:
+            if not isinstance(start_time, datetime):
+                start_time = typepigeon.convert_value(start_time, datetime)
+            if start_time.tzinfo is None or start_time.tzinfo.utcoffset(start_time) is None:
+                start_time = UTC_TIMEZONE.localize(start_time)
 
-        if float_end_time is not None:
-            if (
-                float_end_time.tzinfo is None
-                or float_end_time.tzinfo.utcoffset(float_end_time) is None
-            ):
-                float_end_time = UTC_TIMEZONE.localize(float_end_time)
+        if float_duration is not None:
+            if not isinstance(float_duration, datetime):
+                float_duration = typepigeon.convert_value(float_duration, timedelta)
 
         self.api_url = api_url
-        self.launch_site = launch_site
-        self.launch_time = launch_time
+        self.start_location = start_location
+        self.start_time = start_time
         self.ascent_rate = ascent_rate
         self.burst_altitude = burst_altitude
         self.sea_level_descent_rate = abs(sea_level_descent_rate)
         self.float_altitude = float_altitude
-        self.float_end_time = float_end_time
+        self.float_duration = float_duration
         self.name = name
         self.descent_only = descent_only
 
@@ -104,7 +101,7 @@ class BalloonPredictionQuery(ABC):
         raise NotImplementedError
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}({repr(self.api_url)}, {repr(self.launch_site)}, {repr(self.launch_time)}, {repr(self.ascent_rate)}, {repr(self.burst_altitude)}, {repr(self.sea_level_descent_rate)})'
+        return f'{self.__class__.__name__}({repr(self.api_url)}, {repr(self.start_location)}, {repr(self.start_time)}, {repr(self.ascent_rate)}, {repr(self.burst_altitude)}, {repr(self.sea_level_descent_rate)})'
 
 
 class PredictionError(Exception):
@@ -115,14 +112,14 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
     """
     connection to https://predict.cusf.co.uk/api/v1/
 
-    >>> cusf_api = CUSFBalloonPredictionQuery(launch_site=(-77.547824, 39.359031), launch_datetime=datetime.now(), ascent_rate=5.5, burst_altitude=28000, descent_rate=9)
+    >>> cusf_api = CUSFBalloonPredictionQuery(start_location=(-77.547824, 39.359031), launch_datetime=datetime.now(), ascent_rate=5.5, burst_altitude=28000, descent_rate=9)
     >>> predicted_track = cusf_api.predict
     """
 
     def __init__(
         self,
-        launch_site: Union[Tuple[float, float], Point],
-        launch_time: datetime,
+        start_location: Union[Tuple[float, float, Optional[float]], Point],
+        start_time: datetime,
         ascent_rate: float,
         burst_altitude: float,
         sea_level_descent_rate: float,
@@ -130,18 +127,20 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
         version: float = None,
         dataset_time: datetime = None,
         float_altitude: float = None,
-        float_end_time: datetime = None,
+        float_duration: timedelta = None,
         api_url: PredictionAPIURL = None,
         name: str = None,
         descent_only: bool = False,
     ):
         if profile is None:
-            if float_altitude is not None or float_end_time is not None and not descent_only:
+            if not descent_only and (float_altitude is not None or float_duration is not None):
                 profile = FlightProfile.float
             else:
                 profile = FlightProfile.standard
 
         if dataset_time is not None:
+            if not isinstance(dataset_time, datetime):
+                dataset_time = typepigeon.convert_value(dataset_time, datetime)
             if (
                 dataset_time.tzinfo is None
                 or dataset_time.tzinfo.utcoffset(dataset_time) is None
@@ -159,23 +158,26 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
 
         super().__init__(
             api_url,
-            launch_site,
-            launch_time,
+            start_location,
+            start_time,
             ascent_rate,
             burst_altitude,
             sea_level_descent_rate,
             float_altitude,
-            float_end_time,
+            float_duration,
             name,
             descent_only,
         )
 
         # CUSF API requires longitude in 0-360 format
-        if self.launch_site.x < 0:
-            launch_coordinates = [self.launch_site.x + 360, self.launch_site.y]
-            if self.launch_site.has_z:
-                launch_coordinates.append(self.launch_site.z)
-            self.launch_site = Point(launch_coordinates)
+        if self.start_location.x < 0:
+            x = self.start_location.x + 360
+        else:
+            x = self.start_location.x
+        launch_coordinates = [x, self.start_location.y]
+        if self.start_location.has_z:
+            launch_coordinates.append(self.start_location.z)
+        self.launch_site = Point(launch_coordinates)
 
         self.profile = profile if not self.descent_only else FlightProfile.standard
         self.version = version
@@ -186,7 +188,7 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
         query = {
             'launch_longitude': self.launch_site.x,
             'launch_latitude': self.launch_site.y,
-            'launch_datetime': self.launch_time.isoformat(),
+            'launch_datetime': self.start_time.isoformat(),
             'ascent_rate': self.ascent_rate,
             'burst_altitude': self.burst_altitude
             if not self.descent_only
@@ -206,10 +208,14 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
         if self.profile == FlightProfile.float and not self.descent_only:
             if self.float_altitude is None:
                 self.float_altitude = self.burst_altitude
-            if self.float_end_time is None:
-                raise PredictionError('float stop time `float_end_time` not provided')
+            if self.float_duration is None:
+                raise PredictionError('float duration not provided')
             query['float_altitude'] = self.float_altitude
-            query['stop_datetime'] = self.float_end_time.isoformat()
+            start_altitude = self.start_location.z if self.start_location.has_z else 0
+            float_start_time = self.start_time + timedelta(
+                seconds=(self.float_altitude - start_altitude) / self.ascent_rate
+            )
+            query['stop_datetime'] = (float_start_time + self.float_duration).isoformat()
 
         return query
 
@@ -235,12 +241,12 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
                             raise PredictionError('API did not return a float trajectory')
 
                         standard_profile_query = self.__class__(
-                            launch_site=[
+                            start_location=[
                                 float_end['longitude'],
                                 float_end['latitude'],
                                 float_end['altitude'],
                             ],
-                            launch_time=typepigeon.convert_value(
+                            start_time=typepigeon.convert_value(
                                 float_end['datetime'], datetime
                             ),
                             ascent_rate=10,
@@ -250,7 +256,7 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
                             version=self.version,
                             dataset_time=self.dataset_time,
                             float_altitude=None,
-                            float_end_time=None,
+                            float_duration=None,
                             api_url=self.api_url,
                             name=self.name,
                             descent_only=True,
@@ -321,8 +327,8 @@ class LukeRenegarBalloonPredictionQuery(CUSFBalloonPredictionQuery):
 
     def __init__(
         self,
-        launch_site: Union[Tuple[float, float], Point],
-        launch_time: datetime,
+        start_location: Union[Tuple[float, float, Optional[float]], Point],
+        start_time: datetime,
         ascent_rate: float,
         burst_altitude: float,
         sea_level_descent_rate: float,
@@ -336,7 +342,7 @@ class LukeRenegarBalloonPredictionQuery(CUSFBalloonPredictionQuery):
         version: float = None,
         dataset_time: datetime = None,
         float_altitude: float = None,
-        float_end_time: datetime = None,
+        float_duration: timedelta = None,
         api_url: str = None,
         name: str = None,
         descent_only: bool = False,
@@ -348,8 +354,8 @@ class LukeRenegarBalloonPredictionQuery(CUSFBalloonPredictionQuery):
             name = 'lrenegar_prediction'
 
         super().__init__(
-            launch_site,
-            launch_time,
+            start_location,
+            start_time,
             ascent_rate,
             burst_altitude,
             sea_level_descent_rate,
@@ -357,7 +363,7 @@ class LukeRenegarBalloonPredictionQuery(CUSFBalloonPredictionQuery):
             version,
             dataset_time,
             float_altitude,
-            float_end_time,
+            float_duration,
             api_url,
             name,
             descent_only,
@@ -388,191 +394,3 @@ class LukeRenegarBalloonPredictionQuery(CUSFBalloonPredictionQuery):
             query['physics_model'] = self.physics_model
 
         return query
-
-
-def packet_track_predictions(
-    packet_tracks: Dict[str, LocationPacketTrack],
-    start_location: Tuple[float, float, float] = None,
-    start_time: datetime = None,
-    ascent_rate: float = None,
-    burst_altitude: float = None,
-    sea_level_descent_rate: float = None,
-    float_altitude: float = None,
-    float_altitude_uncertainty: float = None,
-    float_duration: timedelta = None,
-    api_url: str = None,
-) -> List[PredictedTrajectory]:
-    """
-    retrieve location tracks detailing predicted trajectory of balloon flight(s) from the current track location
-
-    :param packet_tracks: location packet tracks
-    :param start_time: start location
-    :param start_location: start time
-    :param ascent_rate: ascent rate (m/s)
-    :param burst_altitude: altitude at which balloon will burst (m)
-    :param sea_level_descent_rate: descent rate of payload at sea level (m/s)
-    :param float_altitude: altitude at which to float (m)
-    :param float_altitude_uncertainty: tolerance around which to consider the balloon "at float altitude"
-    :param float_duration: expected duration of float
-    :param api_url: URL of prediction API to use
-    """
-
-    if start_location is not None:
-        if isinstance(start_location, Generator):
-            start_location = list(start_location)
-        if len(start_location) == 0:
-            start_location = None
-        elif len(start_location) == 2:
-            start_location = (*start_location, 0)
-
-    if burst_altitude <= start_location[2]:
-        burst_altitude = start_location[2] + 1
-
-    if float_altitude is not None and float_duration is None:
-        raise ValueError('`float_duration` was not provided')
-
-    if float_duration is not None and float_altitude is None:
-        float_altitude = burst_altitude
-
-    if float_altitude_uncertainty is None:
-        float_altitude_uncertainty = DEFAULT_FLOAT_ALTITUDE_UNCERTAINTY
-
-    if api_url is None:
-        api_url = PredictionAPIURL.cusf
-
-    prediction_tracks = {}
-    for name, packet_track in packet_tracks.items():
-        prediction_ascent_rate = None
-        prediction_burst_altitude = None
-
-        ascent_rates = packet_track.ascent_rates[packet_track.ascent_rates > 0]
-        if len(ascent_rates) > 0:
-            average_ascent_rate = numpy.mean(ascent_rates)
-            if average_ascent_rate > 0:
-                prediction_ascent_rate = average_ascent_rate
-
-            # if packet track is descending, override given burst altitude
-            if len(ascent_rates) > 2 and all(ascent_rates[-2:] < 0):
-                prediction_burst_altitude = packet_track.altitudes[-1] + 1
-
-        if prediction_ascent_rate is None:
-            prediction_ascent_rate = ascent_rate
-
-        if prediction_burst_altitude is None:
-            prediction_burst_altitude = burst_altitude
-
-        if sea_level_descent_rate is not None:
-            prediction_sea_level_descent_rate = sea_level_descent_rate
-        else:
-            prediction_sea_level_descent_rate = FREEFALL_DESCENT_RATE(0)
-
-        last_packet = packet_track[-1]
-
-        prediction_start_time = last_packet.time
-
-        prediction_start_location = last_packet.coordinates
-        if len(prediction_start_location.shape) > 1:
-            prediction_start_location = prediction_start_location[0, :]
-        if len(prediction_start_location) == 2:
-            prediction_start_location = (*prediction_start_location, 0)
-
-        if float_altitude is not None and not packet_track.falling:
-            packets_at_float_altitude = packet_track[
-                numpy.abs(float_altitude - packet_track.altitudes) < float_altitude_uncertainty
-            ]
-            if (
-                len(packets_at_float_altitude) > 0
-                and packets_at_float_altitude[-1].time == packet_track.times[-1]
-            ):
-                prediction_float_start_time = packets_at_float_altitude[0].time
-                descent_only = False
-            elif packet_track.ascent_rates[-1] >= 0:
-                prediction_float_start_time = prediction_start_time + timedelta(
-                    seconds=(float_altitude - prediction_start_location[2])
-                    / prediction_ascent_rate
-                )
-                descent_only = False
-            else:
-                prediction_float_start_time = None
-                descent_only = True
-                prediction_sea_level_descent_rate = packet_track.ascent_rates[-1]
-            if prediction_float_start_time is not None:
-                prediction_float_end_time = prediction_float_start_time + float_duration
-            else:
-                prediction_float_end_time = None
-        else:
-            prediction_float_end_time = None
-            descent_only = packet_track.falling or numpy.any(
-                packet_track.ascent_rates[-2:] < 0
-            )
-
-        try:
-            prediction_query = CUSFBalloonPredictionQuery(
-                launch_site=prediction_start_location,
-                launch_time=prediction_start_time,
-                ascent_rate=prediction_ascent_rate,
-                burst_altitude=prediction_burst_altitude,
-                sea_level_descent_rate=prediction_sea_level_descent_rate,
-                float_altitude=float_altitude,
-                float_end_time=prediction_float_end_time,
-                api_url=api_url,
-                name=name,
-                descent_only=descent_only,
-            )
-
-            prediction = prediction_query.predict
-
-            if packet_track.time_to_ground >= timedelta(seconds=0):
-                LOGGER.info(
-                    f'{packet_track.name:<9} - predicted landing location: {prediction.coordinates[-1]} - https://www.google.com/maps/place/{prediction.coordinates[-1][1]},{prediction.coordinates[-1][0]}'
-                )
-
-            prediction_tracks[name] = prediction
-        except Exception as error:
-            LOGGER.warning(
-                f'error retrieving prediction trajectory - {error.__class__.__name__} - {error}'
-            )
-
-    if all(
-        value is not None
-        for value in [
-            start_location,
-            start_time,
-            ascent_rate,
-            burst_altitude,
-            sea_level_descent_rate,
-        ]
-    ):
-        name = 'flight'
-
-        if all(value is not None for value in [float_altitude, float_duration]):
-            float_end_time = (
-                start_time
-                + timedelta(seconds=(float_altitude - start_location[2]) / ascent_rate)
-                + float_duration
-            )
-        else:
-            float_end_time = None
-
-        try:
-            prediction_query = CUSFBalloonPredictionQuery(
-                launch_site=start_location,
-                launch_time=start_time,
-                ascent_rate=ascent_rate,
-                burst_altitude=burst_altitude,
-                sea_level_descent_rate=sea_level_descent_rate,
-                float_altitude=float_altitude,
-                float_end_time=float_end_time,
-                api_url=api_url,
-                name=name,
-                descent_only=False,
-            )
-
-            prediction = prediction_query.predict
-            prediction_tracks[name] = prediction
-        except Exception as error:
-            LOGGER.warning(
-                f'error retrieving prediction trajectory - {error.__class__.__name__} - {error}'
-            )
-
-    return prediction_tracks

@@ -12,66 +12,28 @@ import numpy
 import teek
 from teek.extras import more_dialogs
 
-from packetraven import APRSDatabaseTable, APRSfi, RawAPRSTextFile, SerialTNC
-from packetraven.__main__ import DEFAULT_INTERVAL_SECONDS, LOGGER, retrieve_packets
+from packetraven import APRSfi, RawAPRSTextFile, SerialTNC
+from packetraven.__main__ import LOGGER, packet_track_predictions, retrieve_packets
+from packetraven.configuration.credentials import APRSfiCredentials
+from packetraven.configuration.prediction import PredictionConfiguration
+from packetraven.configuration.run import RunConfiguration
+from packetraven.configuration.tnc import TextConfiguration
 from packetraven.connections.base import available_serial_ports, next_open_serial_port
 from packetraven.connections.file import PacketGeoJSON
-from packetraven.connections.internet import APRSis
 from packetraven.gui.plotting import LiveTrackPlot
 from packetraven.packets import APRSPacket, LocationPacket
 from packetraven.packets.tracks import LocationPacketTrack, PredictedTrajectory
 from packetraven.packets.writer import write_packet_tracks
-from packetraven.predicts import packet_track_predictions, PredictionError
+from packetraven.predicts import PredictionError
 from packetraven.utilities import get_logger
 
 
 class PacketRavenGUI:
-    def __init__(
-        self,
-        callsigns: List[str] = None,
-        start_date: datetime = None,
-        end_date: datetime = None,
-        log_filename: PathLike = None,
-        output_filename: PathLike = None,
-        prediction_filename: PathLike = None,
-        interval_seconds: int = None,
-        igate: bool = False,
-        **kwargs,
-    ):
+    def __init__(self, configuration: RunConfiguration):
         main_window = teek.Window('PacketRaven')
         self.__windows = {'main': main_window}
 
-        self.interval_seconds = (
-            interval_seconds if interval_seconds is not None else DEFAULT_INTERVAL_SECONDS
-        )
-
-        self.__configuration = {
-            'aprs_fi': {'aprs_fi_key': None},
-            'tnc': {'tnc': None},
-            'database': {
-                'database_hostname': None,
-                'database_database': None,
-                'database_table': None,
-                'database_username': None,
-                'database_password': None,
-            },
-            'ssh_tunnel': {'ssh_hostname': None, 'ssh_username': None, 'ssh_password': None},
-            'prediction': {
-                'prediction_start_time': None,
-                'prediction_start_location': None,
-                'prediction_ascent_rate': None,
-                'prediction_burst_altitude': None,
-                'prediction_sea_level_descent_rate': None,
-                'prediction_float_altitude': None,
-                'prediction_float_duration': None,
-                'prediction_api_url': None,
-            },
-        }
-
-        for section_name, section in self.__configuration.items():
-            section.update({key: value for key, value in kwargs.items() if key in section})
-
-        self.igate = igate
+        self.__configuration = configuration
 
         self.database = None
         self.aprs_is = None
@@ -151,10 +113,12 @@ class PacketRavenGUI:
             columnspan=len(configuration_frame.grid_columns) - 1,
         )
 
-        self.__toggles['log_file'] = teek.BooleanVar()
-        self.__toggles['log_file'].set(log_filename is not None)
+        self.__toggles['log_to_file'] = teek.BooleanVar()
+        self.__toggles['log_to_file'].set(self.__configuration['log']['filename'] is not None)
         log_file_checkbox = teek.Checkbutton(
-            log_file_frame, variable=self.__toggles['log_file'], command=self.__toggle_log_file
+            log_file_frame,
+            variable=self.__toggles['log_to_file'],
+            command=self.__toggle_log_file,
         )
         log_file_checkbox.grid(row=0, column=0, padx=10)
 
@@ -178,11 +142,13 @@ class PacketRavenGUI:
             columnspan=len(configuration_frame.grid_columns) - 1,
         )
 
-        self.__toggles['output_file'] = teek.BooleanVar()
-        self.__toggles['output_file'].set(output_filename is not None)
+        self.__toggles['output_to_file'] = teek.BooleanVar()
+        self.__toggles['output_to_file'].set(
+            self.__configuration['output']['filename'] is not None
+        )
         output_file_checkbox = teek.Checkbutton(
             output_file_frame,
-            variable=self.__toggles['output_file'],
+            variable=self.__toggles['output_to_file'],
             command=self.__toggle_output_file,
         )
         output_file_checkbox.grid(row=0, column=0, padx=10)
@@ -216,11 +182,11 @@ class PacketRavenGUI:
             columnspan=len(configuration_frame.grid_columns) - 1,
         )
 
-        self.__toggles['prediction_file'] = teek.BooleanVar()
-        self.__toggles['prediction_file'].set(prediction_filename is not None)
+        self.__toggles['run_prediction'] = teek.BooleanVar()
+        self.__toggles['run_prediction'].set(self.__configuration['prediction'] is not None)
         prediction_checkbox = teek.Checkbutton(
             prediction_frame,
-            variable=self.__toggles['prediction_file'],
+            variable=self.__toggles['run_prediction'],
             command=self.__toggle_prediction_file,
         )
         prediction_checkbox.grid(row=0, column=0, padx=10)
@@ -280,25 +246,29 @@ class PacketRavenGUI:
         toggle_button.grid(row=len(control_frame.grid_rows), column=0, sticky='nsew')
         self.__elements['toggle_button'] = toggle_button
 
-        self.callsigns = callsigns
-        self.tncs = self.__configuration['tnc']['tnc']
+        self.callsigns = self.__configuration['callsigns']
 
+        if self.__configuration['packets']['tnc'] is not None:
+            self.tncs = self.__configuration['packets']['tnc']['location']
+
+        start_date = self.__configuration['time']['start']
         if start_date is not None:
             self.start_date = start_date
+        end_date = self.__configuration['time']['end']
         if end_date is not None:
             self.end_date = end_date
 
-        self.log_filename = log_filename
+        self.log_filename = self.__configuration['log']['filename']
         if self.log_filename is None:
             self.log_filename = Path('~') / 'Desktop'
         self.__toggle_log_file()
 
-        self.output_filename = output_filename
+        self.output_filename = self.__configuration['output']['filename']
         if self.output_filename is None:
             self.output_filename = Path('~') / 'Desktop'
         self.__toggle_output_file()
 
-        self.prediction_filename = prediction_filename
+        self.prediction_filename = self.__configuration['prediction']['output']['filename']
         if self.prediction_filename is None:
             self.prediction_filename = Path('~') / 'Desktop'
         self.__toggle_prediction_file()
@@ -307,6 +277,14 @@ class PacketRavenGUI:
         self.__windows['main'].on_delete_window.connect(self.close)
 
         teek.run()
+
+    @property
+    def callsigns(self) -> List[str]:
+        return self.__configuration['callsigns']
+
+    @property
+    def interval(self) -> timedelta:
+        return self.__configuration['time']['interval']
 
     @property
     def callsigns(self) -> List[str]:
@@ -354,7 +332,10 @@ class PacketRavenGUI:
 
         filenames = [str(filename) for filename in filenames]
 
-        self.__configuration['tnc']['tnc'] = filenames
+        if self.__configuration['packets']['tnc'] is None:
+            self.__configuration['packets']['tnc'] = TextConfiguration(location=filenames)
+        else:
+            self.__configuration['packets']['tnc']['location'] = filenames
         self.__replace_text(self.__elements['tnc'], ', '.join(filenames))
 
     @property
@@ -397,7 +378,7 @@ class PacketRavenGUI:
 
     @property
     def log_filename(self) -> Path:
-        if self.toggles['log_file']:
+        if self.toggles['log_to_file']:
             filename = self.__elements['log_file'].text
             if len(filename) > 0:
                 filename = Path(filename)
@@ -423,7 +404,7 @@ class PacketRavenGUI:
 
     @property
     def output_filename(self) -> Path:
-        if self.toggles['output_file']:
+        if self.toggles['output_to_file']:
             filename = self.__elements['output_file'].text
             if len(filename) > 0:
                 filename = Path(filename)
@@ -451,7 +432,7 @@ class PacketRavenGUI:
 
     @property
     def prediction_filename(self) -> Path:
-        if self.toggles['prediction_file']:
+        if self.toggles['run_prediction']:
             filename = self.__elements['prediction_file'].text
             if len(filename) > 0:
                 filename = Path(filename)
@@ -466,6 +447,12 @@ class PacketRavenGUI:
 
     @prediction_filename.setter
     def prediction_filename(self, filename: PathLike):
+        if self.__configuration['prediction'] is None:
+            self.__configuration['prediction'] = PredictionConfiguration(
+                output={'filename': filename}
+            )
+        else:
+            self.__configuration['prediction']['output']['filename'] = filename
         if filename is not None:
             if not isinstance(filename, Path):
                 filename = Path(filename)
@@ -496,7 +483,7 @@ class PacketRavenGUI:
 
     @property
     def predictions(self) -> Dict[str, PredictedTrajectory]:
-        return self.__predictions if self.toggles['prediction_file'] else None
+        return self.__predictions if self.toggles['run_prediction'] else None
 
     def toggle(self):
         if not self.running:
@@ -506,7 +493,7 @@ class PacketRavenGUI:
             if self.log_filename is not None:
                 get_logger(LOGGER.name, self.log_filename)
 
-            if self.toggles['log_file']:
+            if self.toggles['log_to_file']:
                 set_child_states(self.__elements['log_file_box'], 'disabled')
 
             start_date = self.start_date
@@ -551,7 +538,10 @@ class PacketRavenGUI:
                     or isinstance(connection, RawAPRSTextFile)
                 ]
 
-                api_key = self.__configuration['aprs_fi']['aprs_fi_key']
+                if self.__configuration['packets']['aprs_fi'] is not None:
+                    api_key = self.__configuration['packets']['aprs_fi']['api_key']
+                else:
+                    api_key = None
                 if api_key is None:
                     api_key = more_dialogs.ask_string(
                         'APRS.fi API Key',
@@ -563,85 +553,72 @@ class PacketRavenGUI:
                     aprs_api = APRSfi(self.callsigns, api_key=api_key)
                     LOGGER.info(f'established connection to {aprs_api.location}')
                     self.__connections.append(aprs_api)
-                    self.__configuration['aprs_fi']['aprs_fi_key'] = api_key
+                    if self.__configuration['packets']['aprs_fi'] is None:
+                        self.__configuration['packets']['aprs_fi'] = APRSfiCredentials(
+                            api_key=api_key
+                        )
+                    else:
+                        self.__configuration['packets']['aprs_fi']['api_key'] = api_key
                 except Exception as error:
                     connection_errors.append(f'aprs.fi - {error}')
 
-                if (
-                    'database' in self.__configuration
-                    and self.__configuration['database']['database_hostname'] is not None
-                ):
+                if self.__configuration['packets']['database'] is not None:
                     try:
-                        ssh_tunnel_kwargs = {}
-                        if 'ssh_tunnel' in self.__configuration:
-                            ssh_hostname = self.__configuration['ssh_tunnel']['ssh_hostname']
-                            if ssh_hostname is not None:
-                                ssh_tunnel_kwargs.update(self.__configuration['ssh_tunnel'])
-                                if '@' in ssh_hostname:
-                                    (
-                                        ssh_tunnel_kwargs['ssh_username'],
-                                        ssh_tunnel_kwargs['ssh_hostname'],
-                                    ) = ssh_hostname.split('@', 1)
-                                if (
-                                    'ssh_username' not in ssh_tunnel_kwargs
-                                    or ssh_tunnel_kwargs['ssh_username'] is None
-                                ):
-                                    ssh_username = more_dialogs.ask_string(
-                                        'SSH Tunnel Username',
-                                        f'enter username for SSH host "{ssh_tunnel_kwargs["ssh_hostname"]}"',
-                                        parent=self.__windows['main'],
-                                    )
-                                    if ssh_username is None or len(ssh_username) == 0:
-                                        raise ConnectionError('missing SSH username')
-                                    ssh_tunnel_kwargs['ssh_username'] = ssh_username
+                        ssh_tunnel_credentials = self.__configuration['packets']['database'][
+                            'tunnel'
+                        ]
+                        if ssh_tunnel_credentials is not None:
+                            ssh_hostname = ssh_tunnel_credentials['hostname']
+                            if '@' in ssh_hostname:
+                                (
+                                    ssh_tunnel_credentials['username'],
+                                    ssh_tunnel_credentials['hostname'],
+                                ) = ssh_hostname.split('@', 1)
+                            if ssh_tunnel_credentials['username'] is None:
+                                ssh_username = more_dialogs.ask_string(
+                                    'SSH Tunnel Username',
+                                    f'enter username for SSH host "{ssh_tunnel_credentials["hostname"]}"',
+                                    parent=self.__windows['main'],
+                                )
+                                if ssh_username is None or len(ssh_username) == 0:
+                                    raise ConnectionError('missing SSH username')
+                                ssh_tunnel_credentials['username'] = ssh_username
 
-                                if (
-                                    'ssh_password' not in ssh_tunnel_kwargs
-                                    or ssh_tunnel_kwargs['ssh_password'] is None
-                                ):
-                                    password = more_dialogs.ask_string(
-                                        'SSH Tunnel Password',
-                                        f'enter password for SSH user '
-                                        f'"{ssh_tunnel_kwargs["ssh_username"]}"',
-                                        parent=self.__windows['main'],
-                                    )
-                                    if password is None or len(password) == 0:
-                                        raise ConnectionError('missing SSH password')
-                                    ssh_tunnel_kwargs['ssh_password'] = password
+                            if ssh_tunnel_credentials['password'] is None:
+                                password = more_dialogs.ask_string(
+                                    'SSH Tunnel Password',
+                                    f'enter password for SSH user '
+                                    f'"{ssh_tunnel_credentials["username"]}"',
+                                    parent=self.__windows['main'],
+                                )
+                                if password is None or len(password) == 0:
+                                    raise ConnectionError('missing SSH password')
+                                ssh_tunnel_credentials['password'] = password
 
-                        database_kwargs = {
-                            key.replace('database_', ''): value
-                            for key, value in self.__configuration['database'].items()
-                        }
-                        if (
-                            'username' not in database_kwargs
-                            or database_kwargs['username'] is None
-                        ):
+                        database_credentials = self.__configuration['packets']['database']
+                        if database_credentials['username'] is None:
                             database_username = more_dialogs.ask_string(
                                 'Database Username',
                                 f'enter username for database '
-                                f'"{database_kwargs["database_hostname"]}/'
-                                f'{database_kwargs["database_database"]}"',
+                                f'"{database_credentials["database_hostname"]}/'
+                                f'{database_credentials["database_database"]}"',
                                 parent=self.__windows['main'],
                             )
                             if database_username is None or len(database_username) == 0:
                                 raise ConnectionError('missing database username')
-                            database_kwargs['username'] = database_username
+                            database_credentials['username'] = database_username
 
-                        if (
-                            'password' not in database_kwargs
-                            or database_kwargs['password'] is None
-                        ):
+                        if database_credentials['password'] is None:
                             database_password = more_dialogs.ask_string(
                                 'Database Password',
                                 f'enter password for database user '
-                                f'"{database_kwargs["database_username"]}"',
+                                f'"{database_credentials["database_username"]}"',
                                 parent=self.__windows['main'],
                             )
                             if database_password is None or len(database_password) == 0:
                                 raise ConnectionError('missing database password')
-                            database_kwargs['password'] = database_password
-                        if 'table' not in database_kwargs or database_kwargs['table'] is None:
+                            database_credentials['password'] = database_password
+                        if database_credentials['table'] is None:
                             database_table = more_dialogs.ask_string(
                                 'Database Table',
                                 f'enter database table name',
@@ -649,24 +626,22 @@ class PacketRavenGUI:
                             )
                             if database_table is None or len(database_table) == 0:
                                 raise ConnectionError('missing database table name')
-                            database_kwargs['table'] = database_table
+                            database_credentials['table'] = database_table
 
-                        self.database = APRSDatabaseTable(
-                            **database_kwargs, **ssh_tunnel_kwargs, callsigns=self.callsigns
-                        )
+                        self.database = database_credentials.packet_source(callsigns=callsigns)
                         LOGGER.info(f'connected to {self.database.location}')
                         self.__connections.append(self.database)
-                        self.__configuration['database'].update(database_kwargs)
-                        self.__configuration['ssh_tunnel'].update(ssh_tunnel_kwargs)
                     except ConnectionError as error:
                         connection_errors.append(f'database - {error}')
                         self.database = None
                 else:
                     self.database = None
 
-                if self.igate:
+                if self.__configuration['packets']['aprs_fi'] is not None:
                     try:
-                        self.aprs_is = APRSis(self.callsigns)
+                        self.aprs_is = self.__configuration['packets'][
+                            'aprs_is'
+                        ].packet_source(callsigns=self.callsigns)
                     except ConnectionError as error:
                         connection_errors.append(f'igate - {error}')
                         self.aprs_is = None
@@ -679,7 +654,7 @@ class PacketRavenGUI:
                         raise ConnectionError(f'no connections started\n{connection_errors}')
 
                 LOGGER.info(
-                    f'listening for packets every {self.interval_seconds}s from {len(self.__connections)} '
+                    f'listening for packets every {self.interval} from {len(self.__connections)} '
                     f'connection(s): {", ".join([connection.location for connection in self.__connections])}'
                 )
 
@@ -736,11 +711,11 @@ class PacketRavenGUI:
                 set_child_states(self.__windows[callsign], 'disabled')
             set_child_states(self.__frames['configuration'], 'normal')
 
-            if not self.toggles['log_file']:
+            if not self.toggles['log_to_file']:
                 set_child_states(self.__elements['log_file_box'], 'disabled')
-            if not self.toggles['output_file']:
+            if not self.toggles['output_to_file']:
                 set_child_states(self.__elements['output_file_box'], 'disabled')
-            if not self.toggles['prediction_file']:
+            if not self.toggles['run_prediction']:
                 set_child_states(self.__elements['prediction_file_box'], 'disabled')
 
             self.__toggle_text.set('Start')
@@ -770,18 +745,11 @@ class PacketRavenGUI:
                 if output_filename_index is not None:
                     self.__connections.pop(output_filename_index)
 
-                if self.toggles['prediction_file']:
+                if self.toggles['run_prediction']:
                     try:
                         self.__predictions.update(
                             packet_track_predictions(
-                                self.packet_tracks,
-                                **{
-                                    key.replace('prediction_', ''): value
-                                    for key, value in self.__configuration[
-                                        'prediction'
-                                    ].items()
-                                    if 'prediction_' in key
-                                },
+                                self.packet_tracks, self.__configuration['prediction'],
                             )
                         )
                         if self.prediction_filename is not None:
@@ -837,7 +805,7 @@ class PacketRavenGUI:
 
                 if self.running:
                     self.__timeout = teek.after(
-                        ms=int(self.interval_seconds * 1000),
+                        ms=int(self.interval / timedelta(seconds=1)) * 1000,
                         callback=asyncio.run,
                         kwargs={'main': self.retrieve_packets()},
                     )
@@ -901,7 +869,7 @@ class PacketRavenGUI:
         )
 
     def __toggle_log_file(self, value: bool = None):
-        if (value is not None and value) or self.toggles['log_file']:
+        if (value is not None and value) or self.toggles['log_to_file']:
             set_child_states(self.__elements['log_file_box'], state='normal')
             get_logger(LOGGER.name, log_filename=self.log_filename)
         else:
@@ -912,13 +880,13 @@ class PacketRavenGUI:
                 LOGGER.removeHandler(existing_file_handler)
 
     def __toggle_output_file(self, value: bool = None):
-        if (value is not None and value) or self.toggles['output_file']:
+        if (value is not None and value) or self.toggles['output_to_file']:
             set_child_states(self.__elements['output_file_box'], state='normal')
         else:
             set_child_states(self.__elements['output_file_box'], state='disabled')
 
     def __toggle_prediction_file(self, value: bool = None):
-        if (value is not None and value) or self.toggles['prediction_file']:
+        if (value is not None and value) or self.toggles['run_prediction']:
             set_child_states(self.__elements['prediction_file_box'], state='normal')
         else:
             set_child_states(self.__elements['prediction_file_box'], state='disabled')

@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+from copy import copy
 from datetime import datetime, timedelta
 from getpass import getpass
 from logging import Logger
@@ -9,14 +10,10 @@ from typing import Dict, List
 
 import humanize as humanize
 import numpy
-from tablecrow.utilities import parse_hostname
-from typepigeon import convert_value
 
-from packetraven.configuration.credentials import CredentialsYAML
+from packetraven.configuration.prediction import PredictionConfiguration
+from packetraven.configuration.run import RunConfiguration
 from packetraven.connections import (
-    APRSDatabaseTable,
-    APRSfi,
-    APRSis,
     PacketDatabaseTable,
     PacketGeoJSON,
     RawAPRSTextFile,
@@ -25,71 +22,20 @@ from packetraven.connections import (
 )
 from packetraven.connections.base import PacketSource
 from packetraven.packets import APRSPacket
-from packetraven.packets.tracks import APRSTrack, LocationPacketTrack
+from packetraven.packets.tracks import APRSTrack, LocationPacketTrack, PredictedTrajectory
 from packetraven.packets.writer import write_packet_tracks
-from packetraven.predicts import packet_track_predictions, PredictionAPIURL, PredictionError
-from packetraven.utilities import ensure_datetime_timezone, get_logger, repository_root
+from packetraven.predicts import CUSFBalloonPredictionQuery, LOGGER, PredictionError
+from packetraven.utilities import ensure_datetime_timezone, get_logger
 
 LOGGER = get_logger('packetraven', log_format='%(asctime)s | %(levelname)-8s | %(message)s')
 
-CREDENTIALS_FILENAME = repository_root() / 'credentials.yaml'
 DEFAULT_INTERVAL_SECONDS = 20
 
 
 def main():
     args_parser = ArgumentParser()
-    args_parser.add_argument('--callsigns', help='comma-separated list of callsigns to track')
     args_parser.add_argument(
-        '--aprsfi-key', help='APRS.fi API key (from https://aprs.fi/page/api)'
-    )
-    args_parser.add_argument(
-        '--tnc',
-        help='comma-separated list of serial ports / text files of a TNC parsing APRS packets from analog audio to ASCII'
-        ' (set to `auto` to use the first open serial port)',
-    )
-    args_parser.add_argument(
-        '--database', help='PostGres database table `user@hostname:port/database/table`'
-    )
-    args_parser.add_argument('--tunnel', help='SSH tunnel `user@hostname:port`')
-    args_parser.add_argument(
-        '--igate', action='store_true', help='send new packets to APRS-IS'
-    )
-    args_parser.add_argument('--start', help='start date / time, in any common date format')
-    args_parser.add_argument('--end', help='end date / time, in any common date format')
-    args_parser.add_argument('--log', help='path to log file to save log messages')
-    args_parser.add_argument('--output', help='path to output file to save packets')
-    args_parser.add_argument(
-        '--prediction-output',
-        help='path to output file to save most up-to-date predicted trajectory',
-    )
-    args_parser.add_argument(
-        '--prediction-start-location', help='start location to use for prediction (x,y,z)'
-    )
-    args_parser.add_argument(
-        '--prediction-start-time', help='start time to use for prediction'
-    )
-    args_parser.add_argument(
-        '--prediction-ascent-rate', help='ascent rate to use for prediction (m/s)'
-    )
-    args_parser.add_argument(
-        '--prediction-burst-altitude', help='burst altitude to use for prediction (m)'
-    )
-    args_parser.add_argument(
-        '--prediction-descent-rate', help='descent rate to use for prediction (m/s)'
-    )
-    args_parser.add_argument(
-        '--prediction-float-altitude', help='float altitude to use for prediction (m)'
-    )
-    args_parser.add_argument('--prediction-float-duration', help='duration of float (s)')
-    args_parser.add_argument(
-        '--prediction-api',
-        help=f'API URL to use for prediction (one of {[entry.value for entry in PredictionAPIURL]})',
-    )
-    args_parser.add_argument(
-        '--interval',
-        default=DEFAULT_INTERVAL_SECONDS,
-        type=float,
-        help=f'seconds between each main loop (default: {DEFAULT_INTERVAL_SECONDS})',
+        'configuration', nargs='?', help='YAML file containing configuration'
     )
     args_parser.add_argument(
         '--gui', action='store_true', help='start the graphical interface'
@@ -97,287 +43,111 @@ def main():
 
     args = args_parser.parse_args()
 
-    using_gui = args.gui
-    using_igate = args.igate
-
-    if args.callsigns is not None:
-        callsigns = [callsign.upper() for callsign in args.callsigns.strip('"').split(',')]
-    else:
-        callsigns = None
-
-    kwargs = {}
-
-    if args.aprsfi_key is not None:
-        kwargs['aprs_fi_key'] = args.aprsfi_key
-
-    if args.tnc is not None:
-        kwargs['tnc'] = [tnc.strip() for tnc in args.tnc.split(',')]
-
-    if args.database is not None:
-        database = parse_hostname(args.database)
-
-        hostname = database['hostname']
-        port = database['port']
-        username = database['username']
-        password = database['password']
-
-        if port is not None:
-            hostname = f'{hostname}:{port}'
-
-        if hostname.count('/') != 2:
-            LOGGER.error(
-                f'unable to parse hostname, database name, and table name from input "{database}"'
-            )
-        else:
-            (
-                kwargs['database_hostname'],
-                kwargs['database_database'],
-                kwargs['database_table'],
-            ) = hostname.split('/')
-            kwargs['database_username'] = username
-            kwargs['database_password'] = password
-
-    if args.tunnel is not None:
-        tunnel = parse_hostname(args.tunnel)
-
-        hostname = tunnel['hostname']
-        port = tunnel['port']
-        username = tunnel['username']
-        password = tunnel['password']
-
-        if port is not None:
-            hostname = f'{hostname}:{port}'
-
-        kwargs['ssh_hostname'] = hostname
-        kwargs['ssh_username'] = username
-        kwargs['ssh_password'] = password
-
-    start_date = (
-        convert_value(args.start.strip('"'), datetime) if args.start is not None else None
-    )
-    end_date = convert_value(args.end.strip('"'), datetime) if args.end is not None else None
-
-    if start_date is not None and end_date is not None:
-        if start_date > end_date:
-            temp_start_date = start_date
-            start_date = end_date
-            end_date = temp_start_date
-            del temp_start_date
-
-    if args.log is not None:
-        log_filename = Path(args.log).expanduser()
-        if log_filename.is_dir() or (not log_filename.exists() and log_filename.suffix == ''):
-            log_filename = log_filename / f'packetraven_log_{datetime.now():%Y%m%dT%H%M%S}.txt'
-        if not log_filename.parent.exists():
-            log_filename.parent.mkdir(parents=True, exist_ok=True)
-        get_logger(LOGGER.name, log_filename)
-    else:
-        log_filename = None
-
-    if args.output is not None:
-        output_filename = Path(args.output).expanduser()
-        if output_filename.is_dir() or (
-            not output_filename.exists() and output_filename.suffix == ''
-        ):
-            output_filename = (
-                output_filename / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson'
-            )
-        if not output_filename.parent.exists():
-            output_filename.parent.mkdir(parents=True, exist_ok=True)
-    else:
-        output_filename = None
-
-    if args.prediction_output is not None:
-        prediction_filename = Path(args.prediction_output).expanduser()
-        if prediction_filename.is_dir() or (
-            not prediction_filename.exists() and prediction_filename.suffix == ''
-        ):
-            prediction_filename = (
-                prediction_filename
-                / f'packetraven_predict_{datetime.now():%Y%m%dT%H%M%S}.geojson'
-            )
-        if not prediction_filename.parent.exists():
-            prediction_filename.parent.mkdir(parents=True, exist_ok=True)
-
-        if args.prediction_start_location is not None:
-            kwargs['prediction_start_location'] = [
-                float(value) for value in args.prediction_start_location.split(',')
-            ]
-
-        if args.prediction_start_time is not None:
-            kwargs['prediction_start_time'] = convert_value(
-                args.prediction_start_time, datetime
-            )
-
-        if args.prediction_ascent_rate is not None:
-            kwargs['prediction_ascent_rate'] = float(args.prediction_ascent_rate)
-
-        if args.prediction_burst_altitude is not None:
-            kwargs['prediction_burst_altitude'] = float(args.prediction_burst_altitude)
-
-        if args.prediction_descent_rate is not None:
-            kwargs['prediction_sea_level_descent_rate'] = float(args.prediction_descent_rate)
-
-        if args.prediction_float_altitude is not None:
-            kwargs['prediction_float_altitude'] = float(args.prediction_float_altitude)
-
-        if args.prediction_float_duration is not None:
-            kwargs['prediction_float_duration'] = convert_value(
-                args.prediction_float_duration, timedelta
-            )
-
-        if args.prediction_api is not None:
-            kwargs['prediction_api_url'] = args.prediction_api
-    else:
-        prediction_filename = None
-
-    interval_seconds = convert_value(args.interval, timedelta) / timedelta(seconds=1)
-    if interval_seconds < 1:
-        interval_seconds = 1
-
-    if CREDENTIALS_FILENAME.exists():
-        credentials = kwargs.copy()
-        file_credentials = CredentialsYAML.from_file(CREDENTIALS_FILENAME)
-        for section in read_configuration(CREDENTIALS_FILENAME).values():
-            credentials.update(section)
-        kwargs = {
-            key: value if key not in kwargs or kwargs[key] is None else kwargs[key]
-            for key, value in credentials.items()
-        }
+    configuration = RunConfiguration.from_file(args.configuration)
+    if configuration['log'] is not None:
+        get_logger(LOGGER.name, log_filename=configuration['log']['filename'])
 
     filter_message = 'retrieving packets'
-    if start_date is not None and end_date is None:
-        filter_message += f' sent after {start_date:%Y-%m-%d %H:%M:%S}'
-    elif start_date is None and end_date is not None:
-        filter_message += f' sent before {end_date:%Y-%m-%d %H:%M:%S}'
-    elif start_date is not None and end_date is not None:
+    if configuration['time']['start'] is not None and configuration['time']['end'] is None:
+        filter_message += f' sent after {configuration["time"]["start"]:%Y-%m-%d %H:%M:%S}'
+    elif configuration['time']['start'] is None and configuration['time']['end'] is not None:
+        filter_message += f' sent before {configuration["time"]["end"]:%Y-%m-%d %H:%M:%S}'
+    elif (
+        configuration['time']['start'] is not None and configuration['time']['end'] is not None
+    ):
         filter_message += (
-            f' sent between {start_date:%Y-%m-%d %H:%M:%S} and {end_date:%Y-%m-%d %H:%M:%S}'
+            f' sent between {configuration["time"]["start"]:%Y-%m-%d %H:%M:%S}'
+            f' and {configuration["time"]["end"]:%Y-%m-%d %H:%M:%S}'
         )
-    if callsigns is not None:
-        filter_message += f' from {len(callsigns)} callsigns: {callsigns}'
+    if configuration['callsigns'] is not None:
+        filter_message += (
+            f' from {len(configuration["callsigns"])} callsigns: {configuration["callsigns"]}'
+        )
     LOGGER.info(filter_message)
 
-    if callsigns is not None:
-        aprsfi_url = f'https://aprs.fi/#!call=a%2F{"%2Ca%2F".join(callsigns)}'
-        if start_date is not None:
-            aprsfi_url += f'&ts={start_date:%s}'
-        if end_date is not None:
-            aprsfi_url += f'&te={end_date:%s}'
+    if configuration['callsigns'] is not None:
+        aprsfi_url = f'https://aprs.fi/#!call=a%2F{"%2Ca%2F".join(configuration["callsigns"])}'
+        if configuration['time']['start'] is not None:
+            aprsfi_url += f'&ts={configuration["time"]["start"]:%s}'
+        if configuration['time']['end'] is not None:
+            aprsfi_url += f'&te={configuration["time"]["end"]:%s}'
         LOGGER.info(f'tracking URL: {aprsfi_url}')
 
-    if using_gui:
+    if args.gui:
         from packetraven.gui import PacketRavenGUI
 
-        PacketRavenGUI(
-            callsigns,
-            start_date,
-            end_date,
-            log_filename,
-            output_filename,
-            prediction_filename,
-            interval_seconds,
-            using_igate,
-            **kwargs,
-        )
+        PacketRavenGUI(configuration)
     else:
         connections = []
-        if 'tnc' in kwargs:
-            for tnc_location in kwargs['tnc']:
-                tnc_location = tnc_location.strip()
+        if 'text' in configuration['packets']:
+            for location in configuration['packets']['text']['locations']:
+                location = location.strip()
                 try:
-                    if Path(tnc_location).suffix in ['.txt', '.log']:
-                        tnc_location = RawAPRSTextFile(tnc_location, callsigns)
-                        LOGGER.info(f'reading file {tnc_location.location}')
-                        connections.append(tnc_location)
+                    if Path(location).suffix in ['.txt', '.log']:
+                        connection = RawAPRSTextFile(location, configuration['callsigns'])
+                        LOGGER.info(f'reading text file {connection.location}')
+                    elif Path(location).suffix in ['.json', '.geojson']:
+                        connection = PacketGeoJSON(
+                            location, callsigns=configuration['callsigns']
+                        )
+                        LOGGER.info(f'reading GeoJSON file {connection.location}')
                     else:
-                        tnc_location = SerialTNC(tnc_location, callsigns)
-                        LOGGER.info(f'opened port {tnc_location.location}')
-                        connections.append(tnc_location)
+                        connection = SerialTNC(location, configuration['callsigns'])
+                        LOGGER.info(f'opened port {connection.location} for APRS parsing')
+                    connections.append(connection)
                 except ConnectionError as error:
                     LOGGER.warning(f'{error.__class__.__name__} - {error}')
 
-        if 'aprs_fi_key' in kwargs:
-            aprs_fi_kwargs = {key: kwargs[key] for key in ['aprs_fi_key'] if key in kwargs}
+        if 'aprs_fi' in configuration['packets']:
             try:
-                aprs_api = APRSfi(callsigns=callsigns, api_key=aprs_fi_kwargs['aprs_fi_key'])
+                aprs_api = configuration['packets']['aprs_fi'].packet_source(
+                    callsigns=configuration['callsigns']
+                )
                 LOGGER.info(f'connected to {aprs_api.location}')
                 connections.append(aprs_api)
             except ConnectionError as error:
                 LOGGER.warning(f'{error.__class__.__name__} - {error}')
 
-        if 'database_hostname' in kwargs:
-            database_kwargs = {
-                key: kwargs[key]
-                for key in [
-                    'database_hostname',
-                    'database_database',
-                    'database_table',
-                    'database_username',
-                    'database_password',
-                ]
-                if key in kwargs
-            }
-            ssh_tunnel_kwargs = {
-                key: kwargs[key]
-                for key in ['ssh_hostname', 'ssh_username', 'ssh_password']
-                if key in kwargs
-            }
-
+        if 'database' in configuration['packets']:
+            database_credentials = configuration['packets']['database']
+            ssh_tunnel_credentials = database_credentials['tunnel']
             try:
-                if 'ssh_hostname' in ssh_tunnel_kwargs:
-                    if (
-                        'ssh_username' not in ssh_tunnel_kwargs
-                        or ssh_tunnel_kwargs['ssh_username'] is None
-                    ):
+                if ssh_tunnel_credentials is not None:
+                    if ssh_tunnel_credentials['username'] is None:
                         ssh_username = input(
-                            f'enter username for SSH host "{ssh_tunnel_kwargs["ssh_hostname"]}": '
+                            f'enter username for SSH host "{ssh_tunnel_credentials["hostname"]}": '
                         )
                         if ssh_username is None or len(ssh_username) == 0:
                             raise ConnectionError('missing SSH username')
-                        ssh_tunnel_kwargs['ssh_username'] = ssh_username
+                        ssh_tunnel_credentials['username'] = ssh_username
 
-                    if (
-                        'ssh_password' not in ssh_tunnel_kwargs
-                        or ssh_tunnel_kwargs['ssh_password'] is None
-                    ):
+                    if ssh_tunnel_credentials['password'] is None:
                         ssh_password = getpass(
-                            f'enter password for SSH user "{ssh_tunnel_kwargs["ssh_username"]}": '
+                            f'enter password for SSH user "{ssh_tunnel_credentials["username"]}": '
                         )
                         if ssh_password is None or len(ssh_password) == 0:
                             raise ConnectionError('missing SSH password')
-                        ssh_tunnel_kwargs['ssh_password'] = ssh_password
+                        ssh_tunnel_credentials['password'] = ssh_password
 
-                if (
-                    'database_username' not in database_kwargs
-                    or database_kwargs['database_username'] is None
-                ):
+                if database_credentials['username'] is None:
                     database_username = input(
                         f'enter username for database '
-                        f'"{database_kwargs["database_hostname"]}/{database_kwargs["database_database"]}": '
+                        f'"{database_credentials["hostname"]}/{database_credentials["database"]}": '
                     )
                     if database_username is None or len(database_username) == 0:
                         raise ConnectionError('missing database username')
-                    database_kwargs['database_username'] = database_username
+                    database_credentials['username'] = database_username
 
-                if (
-                    'database_password' not in database_kwargs
-                    or database_kwargs['database_password'] is None
-                ):
+                if database_credentials['password'] is None:
                     database_password = getpass(
-                        f'enter password for database user "{database_kwargs["database_username"]}": '
+                        f'enter password for database user "{database_credentials["username"]}": '
                     )
                     if database_password is None or len(database_password) == 0:
                         raise ConnectionError('missing database password')
-                    database_kwargs['database_password'] = database_password
+                    database_credentials['password'] = database_password
 
-                database = APRSDatabaseTable(
-                    **{
-                        key.replace('database_', ''): value
-                        for key, value in database_kwargs.items()
-                    },
-                    **ssh_tunnel_kwargs,
-                    callsigns=callsigns,
+                database = database_credentials.packet_source(
+                    callsigns=configuration['callsigns']
                 )
                 LOGGER.info(f'connected to {database.location}')
                 connections.append(database)
@@ -387,22 +157,27 @@ def main():
             database = None
 
         if len(connections) == 0:
-            if output_filename is not None and output_filename.exists():
-                connections.append(PacketGeoJSON(output_filename))
+            if (
+                configuration['output']['filename'] is not None
+                and configuration['output']['filename'].exists()
+            ):
+                connections.append(PacketGeoJSON(configuration['output']['filename']))
             else:
                 LOGGER.error(f'no connections started')
                 sys.exit(1)
 
-        if using_igate:
+        if 'aprs_is' in configuration['packets']:
             try:
-                aprs_is = APRSis(callsigns)
+                aprs_is = configuration['packets']['aprs_is'].packet_source(
+                    callsigns=configuration['callsigns']
+                )
             except ConnectionError:
                 aprs_is = None
         else:
             aprs_is = None
 
         LOGGER.info(
-            f'listening for packets every {interval_seconds}s from {len(connections)} connection(s): '
+            f'listening for packets every {configuration["time"]["interval"]}s from {len(connections)} connection(s): '
             f'{", ".join([connection.location for connection in connections])}'
         )
 
@@ -415,8 +190,8 @@ def main():
                         connections,
                         packet_tracks,
                         database,
-                        start_date=start_date,
-                        end_date=end_date,
+                        start_date=configuration['time']['start'],
+                        end_date=configuration['time']['end'],
                         logger=LOGGER,
                     )
 
@@ -427,40 +202,37 @@ def main():
                     if output_filename_index is not None:
                         connections.pop(output_filename_index)
 
-                    if prediction_filename is not None:
+                    if configuration['prediction'] is not None:
                         try:
                             predictions.update(
                                 packet_track_predictions(
-                                    packet_tracks,
-                                    **{
-                                        key.replace('prediction_', ''): value
-                                        for key, value in kwargs.items()
-                                        if 'prediction_' in key
-                                    },
+                                    packet_tracks, configuration['prediction'],
                                 )
                             )
-                            write_packet_tracks(predictions.values(), prediction_filename)
+                            write_packet_tracks(
+                                predictions.values(),
+                                configuration['prediction']['output']['filename'],
+                            )
                         except PredictionError as error:
                             LOGGER.warning(f'{error.__class__.__name__} - {error}')
                         except Exception as error:
                             LOGGER.warning(
                                 f'error retrieving prediction trajectory - {error.__class__.__name__} - {error}'
                             )
-
                 except Exception as error:
                     LOGGER.exception(f'{error.__class__.__name__} - {error}')
                     new_packets = {}
 
                 if len(new_packets) > 0:
-                    if output_filename is not None:
+                    if configuration['output']['filename'] is not None:
                         write_packet_tracks(
                             [packet_tracks[callsign] for callsign in packet_tracks],
-                            output_filename,
+                            configuration['output']['filename'],
                         )
                     if aprs_is is not None:
                         for packets in new_packets.values():
                             aprs_is.send(packets)
-                time.sleep(interval_seconds)
+                time.sleep(configuration['time']['interval'] / timedelta(seconds=1))
         except KeyboardInterrupt:
             for connection in connections:
                 connection.close()
@@ -613,6 +385,140 @@ def retrieve_packets(
                 logger.exception(f'{error.__class__.__name__} - {error}')
 
     return new_packets
+
+
+def packet_track_predictions(
+    packet_tracks: Dict[str, LocationPacketTrack], configuration=PredictionConfiguration,
+) -> Dict[str, PredictedTrajectory]:
+    """
+    retrieve location tracks detailing predicted trajectory of balloon flight(s) from the current track location
+
+    :param packet_tracks: location packet tracks
+    :param configuration: prediction configuration
+    """
+
+    prediction_tracks = {}
+    for name, packet_track in packet_tracks.items():
+        track_configuration = copy(configuration)
+
+        ascent_rates = packet_track.ascent_rates[packet_track.ascent_rates > 0]
+        if len(ascent_rates) > 0:
+            average_ascent_rate = numpy.mean(ascent_rates)
+            if average_ascent_rate > 0:
+                track_configuration['profile']['ascent_rate'] = average_ascent_rate
+
+            # if packet track is descending, override given burst altitude
+            if len(ascent_rates) > 2 and all(ascent_rates[-2:] < 0):
+                track_configuration['profile']['burst_altitude'] = (
+                    packet_track.altitudes[-1] + 1
+                )
+
+        last_packet = packet_track[-1]
+
+        track_configuration['start']['time'] = last_packet.time
+
+        track_configuration['start']['location'] = last_packet.coordinates
+        if len(track_configuration['start']['location'].shape) > 1:
+            track_configuration['start']['location'] = track_configuration['start'][
+                'location'
+            ][0, :]
+
+        if track_configuration['float']['altitude'] is not None and not packet_track.falling:
+            packets_at_float_altitude = packet_track[
+                numpy.abs(track_configuration['float']['altitude'] - packet_track.altitudes)
+                < track_configuration['float']['uncertainty']
+            ]
+            if (
+                len(packets_at_float_altitude) > 0
+                and packets_at_float_altitude[-1].time == packet_track.times[-1]
+            ):
+                track_configuration['float']['start_time'] = packets_at_float_altitude[0].time
+                track_configuration['profile']['descent_only'] = False
+            elif packet_track.ascent_rates[-1] >= 0:
+                track_configuration['float']['start_time'] = track_configuration['start'][
+                    'time'
+                ] + timedelta(
+                    seconds=(
+                        track_configuration['float']['altitude']
+                        - track_configuration['start']['location'][2]
+                    )
+                    / track_configuration['profile']['ascent_rate']
+                )
+                track_configuration['profile']['descent_only'] = False
+            else:
+                track_configuration['float']['start_time'] = None
+                track_configuration['profile']['descent_only'] = True
+                track_configuration['profile'][
+                    'sea_level_descent_rate'
+                ] = packet_track.ascent_rates[-1]
+        else:
+            track_configuration['profile']['descent_only'] = packet_track.falling or numpy.any(
+                packet_track.ascent_rates[-2:] < 0
+            )
+
+        try:
+            prediction_query = CUSFBalloonPredictionQuery(
+                start_location=track_configuration['start']['location'],
+                start_time=track_configuration['start']['time'],
+                ascent_rate=track_configuration['profile']['ascent_rate'],
+                burst_altitude=track_configuration['profile']['burst_altitude'],
+                sea_level_descent_rate=track_configuration['profile'][
+                    'sea_level_descent_rate'
+                ],
+                float_altitude=track_configuration['float']['altitude'],
+                float_duration=track_configuration['float']['duration'],
+                api_url=track_configuration['api_url'],
+                name=name,
+                descent_only=track_configuration['profile']['descent_only'],
+            )
+
+            prediction = prediction_query.predict
+
+            if packet_track.time_to_ground >= timedelta(seconds=0):
+                LOGGER.info(
+                    f'{packet_track.name:<9} - predicted landing location: {prediction.coordinates[-1]} - https://www.google.com/maps/place/{prediction.coordinates[-1][1]},{prediction.coordinates[-1][0]}'
+                )
+
+            prediction_tracks[name] = prediction
+        except Exception as error:
+            LOGGER.warning(
+                f'error retrieving prediction trajectory - {error.__class__.__name__} - {error}'
+            )
+
+    if all(
+        value is not None
+        for value in [
+            configuration['start']['location'],
+            configuration['start']['time'],
+            configuration['profile']['ascent_rate'],
+            configuration['profile']['burst_altitude'],
+            configuration['profile']['sea_level_descent_rate'],
+        ]
+    ):
+        name = 'flight'
+
+        try:
+            prediction_query = CUSFBalloonPredictionQuery(
+                start_location=configuration['start']['location'],
+                start_time=configuration['start']['time'],
+                ascent_rate=configuration['profile']['ascent_rate'],
+                burst_altitude=configuration['profile']['burst_altitude'],
+                sea_level_descent_rate=configuration['profile']['sea_level_descent_rate'],
+                float_altitude=configuration['float']['altitude'],
+                float_duration=configuration['float']['duration'],
+                api_url=configuration['api_url'],
+                name=name,
+                descent_only=configuration['profile']['descent_only'],
+            )
+
+            prediction = prediction_query.predict
+            prediction_tracks[name] = prediction
+        except Exception as error:
+            LOGGER.warning(
+                f'error retrieving prediction trajectory - {error.__class__.__name__} - {error}'
+            )
+
+    return prediction_tracks
 
 
 if __name__ == '__main__':
