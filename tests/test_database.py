@@ -12,11 +12,11 @@ from packetraven.packets import APRSPacket
 
 @pytest.fixture
 def credentials() -> DatabaseCredentials:
-    hostname = os.environ['POSTGRES_HOSTNAME']
-    database = os.environ['POSTGRES_DATABASE']
-    username = os.environ['POSTGRES_USERNAME']
-    password = os.environ['POSTGRES_PASSWORD']
-    port = os.environ['POSTGRES_PORT']
+    hostname = os.environ.get('POSTGRES_HOSTNAME')
+    database = os.environ.get('POSTGRES_DATABASE')
+    username = os.environ.get('POSTGRES_USERNAME')
+    password = os.environ.get('POSTGRES_PASSWORD')
+    port = os.environ.get('POSTGRES_PORT')
 
     return DatabaseCredentials(
         hostname=hostname, database=database, username=username, password=password, port=port,
@@ -34,6 +34,10 @@ def connection(credentials) -> psycopg2.connect:
     )
 
 
+@pytest.mark.skipif(
+    'POSTGRES_HOSTNAME' not in os.environ,
+    reason='no environment variables set for connection information',
+)
 def test_packet_database(connection, credentials):
     table_name = 'test_table'
 
@@ -60,15 +64,19 @@ def test_packet_database(connection, credentials):
             if database_has_table(cursor, table_name):
                 cursor.execute(f'DROP TABLE {table_name};')
 
+    ssh_kwargs = {}
+    if credentials['tunnel'] is not None:
+        ssh_kwargs['hostname'] = (credentials['tunnel']['hostname'],)
+        ssh_kwargs['username'] = (credentials['tunnel']['username'],)
+        ssh_kwargs['password'] = (credentials['tunnel']['password'],)
+
     packet_table = APRSDatabaseTable(
-        hostname=credentials['database']['hostname'],
-        database=credentials['database']['database'],
+        hostname=credentials['hostname'],
+        database=credentials['database'],
         table=table_name,
-        username=credentials['database']['username'],
-        password=credentials['database']['password'],
-        ssh_hostname=credentials['database']['ssh_hostname'],
-        ssh_username=credentials['database']['ssh_username'],
-        ssh_password=credentials['database']['ssh_password'],
+        username=credentials['username'],
+        password=credentials['password'],
+        **ssh_kwargs,
     )
     packet_table.insert(input_packets)
 
