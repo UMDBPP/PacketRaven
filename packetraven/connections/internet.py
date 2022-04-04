@@ -6,12 +6,11 @@ import aprslib
 import requests
 from shapely.geometry import Point
 from tablecrow import PostGresTable
-from tablecrow.utilities import split_hostname_port
+from tablecrow.utilities import repository_root, split_hostname_port
 
 from packetraven.connections.base import (
     APRSPacketSink,
     APRSPacketSource,
-    CREDENTIALS_FILENAME,
     LOGGER,
     NetworkConnection,
     PacketSink,
@@ -20,7 +19,8 @@ from packetraven.connections.base import (
 )
 from packetraven.packets import APRSPacket, LocationPacket
 from packetraven.packets.parsing import InvalidPacketError
-from packetraven.utilities import read_configuration
+
+CREDENTIALS_FILENAME = repository_root() / 'credentials.yaml'
 
 
 class APRSfi(APRSPacketSource, NetworkConnection):
@@ -46,12 +46,7 @@ class APRSfi(APRSPacketSource, NetworkConnection):
         super().__init__(url, callsigns)
 
         if api_key is None or api_key == '':
-            configuration = read_configuration(CREDENTIALS_FILENAME)
-
-            if 'APRS_FI' in configuration:
-                api_key = configuration['APRS_FI']['api_key']
-            else:
-                raise ConnectionError(f'no APRS.fi API key specified')
+            raise ConnectionError(f'no APRS.fi API key specified')
 
         if not self.connected:
             raise ConnectionError(f'no network connection')
@@ -133,7 +128,9 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
         'point': Point,
     }
 
-    def __init__(self, hostname: str, database: str, table: str, **kwargs):
+    def __init__(
+        self, hostname: str, database: str, table: str, callsigns: [str] = None, **kwargs
+    ):
         if 'primary_key' not in kwargs:
             kwargs['primary_key'] = 'time'
         if 'fields' not in kwargs:
@@ -143,7 +140,9 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
             self, hostname=hostname, database=database, table_name=table, **kwargs
         )
         PacketSource.__init__(
-            self, f'postgresql://{self.hostname}:{self.port}/{self.database}/{self.name}'
+            self,
+            f'postgresql://{self.hostname}:{self.port}/{self.database}/{self.name}',
+            callsigns,
         )
 
         if not self.connected:

@@ -79,9 +79,7 @@ def test_float_prediction():
         ascent_rate,
         burst_altitude,
         descent_rate,
-        float_end_time=datetime.now()
-        + timedelta(seconds=burst_altitude / ascent_rate)
-        + timedelta(hours=1),
+        float_duration=timedelta(seconds=burst_altitude / ascent_rate) + timedelta(hours=1),
     )
 
     response_json = cusf_api.get()

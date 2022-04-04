@@ -4,6 +4,12 @@ from pathlib import Path
 import re
 from typing import Dict, List
 
+DATA_DIRECTORY = Path(__file__).parent / 'data'
+
+INPUT_DIRECTORY = DATA_DIRECTORY / 'input'
+REFERENCE_DIRECTORY = DATA_DIRECTORY / 'reference'
+OUTPUT_DIRECTORY = DATA_DIRECTORY / 'output'
+
 
 def check_reference_directory(
     test_directory: PathLike,
@@ -24,6 +30,16 @@ def check_reference_directory(
             )
         else:
             test_filename = test_directory / reference_filename.name
+
+            if reference_filename.suffix in ['.h5', '.nc']:
+                reference_filesize = Path(reference_filename).stat().st_size
+                test_filesize = Path(test_filename).stat().st_size
+
+                diff = test_filesize - reference_filesize
+                message = f'"{test_filesize}" != "{reference_filesize}"\n{diff}'
+
+                assert reference_filesize == test_filesize, message
+                continue
 
             with open(test_filename) as test_file, open(reference_filename) as reference_file:
                 test_lines = list(test_file.readlines())

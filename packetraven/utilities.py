@@ -1,10 +1,8 @@
-import configparser
 from datetime import datetime
 import logging
 from os import PathLike
 from pathlib import Path
 import sys
-from typing import Dict
 
 from dateutil.tz import tzlocal
 
@@ -22,16 +20,6 @@ def repository_root(path: PathLike = None) -> Path:
         return path
     else:
         return repository_root(path.parent)
-
-
-def read_configuration(filename: PathLike) -> Dict[str, str]:
-    configuration_file = configparser.ConfigParser()
-    configuration_file.read(filename)
-    return {
-        section_name: {key: value for key, value in section.items()}
-        for section_name, section in configuration_file.items()
-        if section_name.upper() != 'DEFAULT'
-    }
 
 
 def ensure_datetime_timezone(value: datetime) -> datetime:

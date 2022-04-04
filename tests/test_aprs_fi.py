@@ -1,20 +1,27 @@
 import os
 
+import pytest
+
 from packetraven import APRSfi
+from packetraven.configuration.credentials import APRSfiCredentials
 from packetraven.packets import APRSPacket
-from packetraven.utilities import read_configuration, repository_root
-
-CREDENTIALS_FILENAME = repository_root() / 'credentials.config'
 
 
-def test_aprs_fi():
+@pytest.fixture
+def credentials() -> APRSfiCredentials:
+    api_key = os.environ.get('APRS_FI_API_KEY')
+
+    return APRSfiCredentials(api_key=api_key)
+
+
+@pytest.mark.skipif(
+    'APRS_FI_API_KEY' not in os.environ,
+    reason='no environment variables set for connection information',
+)
+def test_aprs_fi(credentials):
     balloon_callsigns = ['W3EAX-10', 'W3EAX-11', 'W3EAX-13', 'W3EAX-14']
 
-    credentials = read_configuration(CREDENTIALS_FILENAME)
-    if 'aprs_fi' not in credentials:
-        credentials['aprs_fi'] = {'api_key': os.getenv('APRS_FI_API_KEY', None)}
-
-    aprs_api = APRSfi(balloon_callsigns, credentials['aprs_fi']['api_key'])
+    aprs_api = APRSfi(balloon_callsigns, api_key=credentials['api_key'])
 
     packets = aprs_api.packets
 
