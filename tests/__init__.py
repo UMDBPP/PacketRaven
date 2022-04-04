@@ -2,22 +2,13 @@ import os
 from os import PathLike
 from pathlib import Path
 import re
-from typing import Any, Dict, List
-
-import pytest
-
-from packetraven.configuration.credentials import CredentialsYAML
+from typing import Dict, List
 
 DATA_DIRECTORY = Path(__file__).parent / 'data'
 
 INPUT_DIRECTORY = DATA_DIRECTORY / 'input'
 REFERENCE_DIRECTORY = DATA_DIRECTORY / 'reference'
 OUTPUT_DIRECTORY = DATA_DIRECTORY / 'output'
-
-
-@pytest.fixture
-def credentials() -> Dict[str, Any]:
-    return CredentialsYAML.from_file(DATA_DIRECTORY.parent.parent / 'credentials.yaml')
 
 
 def check_reference_directory(

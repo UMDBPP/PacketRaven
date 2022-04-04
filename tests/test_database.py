@@ -1,80 +1,37 @@
 from datetime import datetime
-from functools import partial
+import os
 
 import psycopg2
 import pytest
-from sshtunnel import SSHTunnelForwarder
-from tablecrow.tables.base import random_open_tcp_port
-from tablecrow.tables.postgres import database_has_table, PostGresTable, SSH_DEFAULT_PORT
-from tablecrow.utilities import split_hostname_port
+from tablecrow.tables.postgres import database_has_table
 
 from packetraven import APRSDatabaseTable
+from packetraven.configuration.credentials import DatabaseCredentials
 from packetraven.packets import APRSPacket
 
-# noinspection PyUnresolvedReferences
-from tests import credentials
-
 
 @pytest.fixture
-def tunnel(credentials) -> SSHTunnelForwarder:
-    if (
-        'ssh_hostname' in credentials['database']
-        and credentials['database']['ssh_hostname'] is not None
-    ):
-        hostname, port = split_hostname_port(credentials['database']['hostname'])
-        if port is None:
-            port = PostGresTable.DEFAULT_PORT
+def credentials() -> DatabaseCredentials:
+    hostname = os.environ['POSTGRES_HOSTNAME']
+    database = os.environ['POSTGRES_DATABASE']
+    username = os.environ['POSTGRES_USERNAME']
+    password = os.environ['POSTGRES_PASSWORD']
+    port = os.environ['POSTGRES_PORT']
 
-        ssh_hostname, ssh_port = split_hostname_port(credentials['database']['ssh_hostname'])
-        if ssh_port is None:
-            ssh_port = SSH_DEFAULT_PORT
-
-        if '@' in ssh_hostname:
-            ssh_username, ssh_hostname = ssh_hostname.split('@', 1)
-
-        ssh_username = credentials['database']['ssh_username']
-
-        if ssh_username is not None and ':' in ssh_username:
-            ssh_username, ssh_password = ssh_hostname.split(':', 1)
-
-        ssh_password = credentials['database']['ssh_password']
-
-        tunnel = SSHTunnelForwarder(
-            (ssh_hostname, ssh_port),
-            ssh_username=ssh_username,
-            ssh_password=ssh_password,
-            remote_bind_address=('localhost', port),
-            local_bind_address=('localhost', random_open_tcp_port()),
-        )
-        tunnel.start()
-    else:
-        tunnel = None
-
-    return tunnel
-
-
-@pytest.fixture
-def connection(credentials, tunnel) -> psycopg2.connect:
-    hostname, port = split_hostname_port(credentials['database']['hostname'])
-    if port is None:
-        port = PostGresTable.DEFAULT_PORT
-
-    connector = partial(
-        psycopg2.connect,
-        database=credentials['database']['database'],
-        user=credentials['database']['username'],
-        password=credentials['database']['password'],
+    return DatabaseCredentials(
+        hostname=hostname, database=database, username=username, password=password, port=port,
     )
-    if tunnel is not None:
-        try:
-            tunnel.start()
-        except Exception as error:
-            raise ConnectionError(error)
-        connection = connector(host=tunnel.local_bind_host, port=tunnel.local_bind_port)
-    else:
-        connection = connector(host=hostname, port=port)
 
-    return connection
+
+@pytest.fixture
+def connection(credentials) -> psycopg2.connect:
+    return psycopg2.connect(
+        host=credentials['hostname'],
+        port=credentials['port'],
+        database=credentials['database'],
+        user=credentials['username'],
+        password=credentials['password'],
+    )
 
 
 def test_packet_database(connection, credentials):
