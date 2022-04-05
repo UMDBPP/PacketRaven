@@ -46,6 +46,8 @@ packetraven /path/to/config.yaml
 The configuration is in YAML format. Here is an example configuration:
 
 ```yaml
+# config.yaml
+
 callsigns:
     - W3EAX-9
     - W3EAX-11
@@ -113,6 +115,7 @@ you can set this to `auto` to try the first open USB port
 
 ```yaml
 # config.yaml
+
 packets:
     text:
         locations:
@@ -125,6 +128,7 @@ you need an API key to connect to APRS.fi; you can get one from https://aprs.fi/
 
 ```yaml
 # config.yaml
+
 callsigns:
     - W3EAX-8
     - W3EAX-14
@@ -138,6 +142,7 @@ packets:
 
 ```yaml
 # config.yaml
+
 callsigns:
     - W3EAX-8
     - W3EAX-14
@@ -156,6 +161,7 @@ packets:
 
 ```yaml
 # config.yaml
+
 packets:
     text:
         locations:
@@ -166,6 +172,7 @@ packets:
 
 ```yaml
 # config.yaml
+
 callsigns:
     - W3EAX-8
     - W3EAX-14
