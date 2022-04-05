@@ -4,7 +4,7 @@
 #  3. log messages to a text file at `./example_4.log`
 #  4. plot altitude using `matplotlib`
 #
-# you can run this configuration with the following: `packetraven examples/example_2.yaml`
+# you can run this configuration with the following: `packetraven examples/example_4.yaml`
 
 callsigns:
   - W3EAX-11
