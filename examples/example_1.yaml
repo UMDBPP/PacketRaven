@@ -1,5 +1,6 @@
-# this configuration tells PacketRaven to read several text files containing APRS packets
-# and output information on the flight track to the console (per-callsign)
+# this configuration tells PacketRaven to perform the following functions:
+#  1. read several text files containing APRS packets
+#  2. output information to the console
 #
 # you can run this configuration with the following: `packetraven examples/example_1.yaml`
 

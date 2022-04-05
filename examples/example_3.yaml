@@ -4,10 +4,10 @@
 #    - a USB port at `/dev/ttyUSB0`
 #    - a text file at `~/packets.txt`
 #    - a PostGreSQL database at `bpp.umd.edu`
-#  2. filter to specific callsigns and constrain to a specific time range
+#  2. filter by specific callsigns and constrain to a specific time range
 #  3. provide CUSF prediction information with the given parameters
 #  4. output packets to a GeoJSON file at `./example_3.geojson`
-#  5. log messages to a text file at `./example_3.log`
+#  3. output information to the console and to `./example_3.log`
 #
 # you can run this configuration with the following: `packetraven examples/example_2.yaml`
 

@@ -1,12 +1,9 @@
 # this configuration tells PacketRaven to perform the following functions:
-#  1. read packet information from https://aprs.fi
-#  2. log messages to a text file at `./example_4.log`
-#  3. plot altitude using `matplotlib`
+#  1. read several text files containing APRS packets
+#  2. output information to the console
+#  3. plot altitude with `matplotlib`
 #
 # you can run this configuration with the following: `packetraven examples/example_4.yaml`
-
-log:
-  filename: 'example_4.log'
 
 packets:
   text:
