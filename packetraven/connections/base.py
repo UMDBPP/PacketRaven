@@ -8,7 +8,6 @@ import requests
 from serial.tools import list_ports
 
 from packetraven.packets import APRSPacket, LocationPacket
-from packetraven.utilities import get_logger
 
 
 class TimeIntervalError(Exception):

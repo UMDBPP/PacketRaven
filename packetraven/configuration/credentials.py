@@ -1,5 +1,5 @@
+import logging
 import os
-import warnings
 
 from tablecrow.utilities import parse_hostname
 
@@ -64,7 +64,7 @@ class DatabaseCredentials(ConfigurationYAML, ConfigurationSection, PacketSourceC
             password = parsed['password']
 
             if hostname.count('/') != 2:
-                warnings.warn(f'unable to parse connection information from "{parsed}"')
+                logging.warning(f'unable to parse connection information from "{parsed}"')
 
             (
                 configuration['hostname'],

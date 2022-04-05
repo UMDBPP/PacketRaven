@@ -174,7 +174,7 @@ packets:
 packets:
     text:
         locations:
-            - 'http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-11/W3EAX-10_raw_NS95.txt'
+            - 'http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-10/W3EAX-10_raw_NS95.txt'
             - 'http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-11/W3EAX-11_raw_NS95.txt'
 ```
 

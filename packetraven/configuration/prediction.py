@@ -58,7 +58,7 @@ class PredictionConfiguration(ConfigurationYAML, ConfigurationSection):
         super().__setitem__(key, value)
 
         if key == 'output':
-            if self['output'] is not None:
+            if self['output'] is not None and self['output']['filename'] is not None:
                 output_filename = Path(self['output']['filename']).expanduser()
                 if (
                     output_filename.is_dir()

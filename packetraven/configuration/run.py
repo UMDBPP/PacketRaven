@@ -17,7 +17,7 @@ DEFAULT_INTERVAL_SECONDS = 20
 class RunConfiguration(ConfigurationYAML):
     fields = {
         'callsigns': [str],
-        'time': {'start': datetime, 'end': datetime, 'interval': timedelta,},
+        'time': {'start': datetime, 'end': datetime, 'interval': timedelta},
         'output': {'filename': Path,},
         'log': {'filename': Path,},
         'packets': {
@@ -27,14 +27,20 @@ class RunConfiguration(ConfigurationYAML):
             'aprs_is': APRSisCredentials,
         },
         'prediction': PredictionConfiguration,
+        'plots': {'altitude': bool, 'ascent_rate': bool, 'ground_speed': bool,},
     }
 
     defaults = {
         'callsigns': [],
-        'time': {'start': None, 'end': None, 'interval': DEFAULT_INTERVAL_SECONDS},
+        'time': {
+            'start': None,
+            'end': None,
+            'interval': timedelta(seconds=DEFAULT_INTERVAL_SECONDS),
+        },
         'output': {'filename': None},
         'log': {'filename': None},
         'packets': {},
+        'plots': {'altitude': False, 'ascent_rate': False, 'ground_speed': False,},
     }
 
     def __setitem__(self, key: str, value: Any):
