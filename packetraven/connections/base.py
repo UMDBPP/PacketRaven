@@ -1,14 +1,11 @@
 from abc import ABC, abstractmethod
 from datetime import timedelta
-import logging
 from typing import List
-import warnings
 
 import requests
 from serial.tools import list_ports
 
 from packetraven.packets import APRSPacket, LocationPacket
-from packetraven.utilities import get_logger
 
 
 class TimeIntervalError(Exception):
@@ -29,24 +26,6 @@ class Connection(ABC):
     @abstractmethod
     def close(self):
         raise NotImplementedError
-
-    @property
-    def logger(self) -> logging.Logger:
-        return self.__logger
-
-    @logger.setter
-    def logger(self, logger: logging.Logger):
-        if isinstance(logger, str):
-            logger = get_logger(logger)
-        self.__logger = logger
-
-    def log(self, message: str, level: int = None):
-        if level is None:
-            level = logging.INFO
-        if self.logger is not None:
-            self.logger.log(level, message)
-        elif level >= logging.WARNING:
-            warnings.warn(message)
 
 
 class NetworkConnection(Connection, ABC):

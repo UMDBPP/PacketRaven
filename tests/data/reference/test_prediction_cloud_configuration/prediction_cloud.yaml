@@ -3,8 +3,6 @@ default:
   ascent_rate: 6.5
   burst_altitude: 25000
   descent_rate: 9
-  file:
-    output: null
   float:
     altitude: null
     duration: null
@@ -13,8 +11,9 @@ default:
   - -78.4987
   - 40.0157
   launch_time: '2022-03-05 10:36:00'
-  name: null
-  output: null
+  name: prediction
+  output:
+    filename: null
   profile:
     descent_only: false
     sea_level_descent_rate: -6.001

@@ -2,12 +2,13 @@ from argparse import ArgumentParser
 from copy import copy
 from datetime import datetime, timedelta
 from getpass import getpass
-from logging import Logger
+import logging
 from pathlib import Path
 import sys
 import time
 from typing import Dict, List
 
+from dateutil.tz import tzlocal
 import humanize as humanize
 import numpy
 
@@ -25,9 +26,10 @@ from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import APRSTrack, LocationPacketTrack, PredictedTrajectory
 from packetraven.packets.writer import write_packet_tracks
 from packetraven.predicts import CUSFBalloonPredictionQuery, PredictionError
-from packetraven.utilities import ensure_datetime_timezone, get_logger
 
-LOGGER = get_logger('packetraven', log_format='%(asctime)s | %(levelname)-8s | %(message)s')
+logging.basicConfig(
+    stream=sys.stdout, level=logging.INFO, format='%(asctime)s | %(levelname)-8s | %(message)s'
+)
 
 DEFAULT_INTERVAL_SECONDS = 20
 
@@ -52,7 +54,7 @@ def main():
 
     if configuration is not None:
         if configuration['log'] is not None:
-            get_logger(LOGGER.name, log_filename=configuration['log']['filename'])
+            logging.basicConfig(filename=configuration['log']['filename'])
 
         filter_message = 'retrieving packets'
         if configuration['time']['start'] is not None and configuration['time']['end'] is None:
@@ -71,7 +73,7 @@ def main():
             )
         if configuration['callsigns'] is not None:
             filter_message += f' from {len(configuration["callsigns"])} callsigns: {configuration["callsigns"]}'
-        LOGGER.info(filter_message)
+        logging.info(filter_message)
 
         if configuration['callsigns'] is not None:
             aprsfi_url = (
@@ -81,7 +83,7 @@ def main():
                 aprsfi_url += f'&ts={configuration["time"]["start"]:%s}'
             if configuration['time']['end'] is not None:
                 aprsfi_url += f'&te={configuration["time"]["end"]:%s}'
-            LOGGER.info(f'tracking URL: {aprsfi_url}')
+            logging.info(f'tracking URL: {aprsfi_url}')
 
     if arguments.gui:
         from packetraven.gui import PacketRavenGUI
@@ -95,28 +97,28 @@ def main():
                 try:
                     if Path(location).suffix in ['.txt', '.log']:
                         connection = RawAPRSTextFile(location, configuration['callsigns'])
-                        LOGGER.info(f'reading text file {connection.location}')
+                        logging.info(f'reading text file {connection.location}')
                     elif Path(location).suffix in ['.json', '.geojson']:
                         connection = PacketGeoJSON(
                             location, callsigns=configuration['callsigns']
                         )
-                        LOGGER.info(f'reading GeoJSON file {connection.location}')
+                        logging.info(f'reading GeoJSON file {connection.location}')
                     else:
                         connection = SerialTNC(location, configuration['callsigns'])
-                        LOGGER.info(f'opened port {connection.location} for APRS parsing')
+                        logging.info(f'opened port {connection.location} for APRS parsing')
                     connections.append(connection)
                 except ConnectionError as error:
-                    LOGGER.warning(f'{error.__class__.__name__} - {error}')
+                    logging.warning(f'{error.__class__.__name__} - {error}')
 
         if 'aprs_fi' in configuration['packets']:
             try:
                 aprs_api = configuration['packets']['aprs_fi'].packet_source(
                     callsigns=configuration['callsigns']
                 )
-                LOGGER.info(f'connected to {aprs_api.location}')
+                logging.info(f'connected to {aprs_api.location}')
                 connections.append(aprs_api)
             except ConnectionError as error:
-                LOGGER.warning(f'{error.__class__.__name__} - {error}')
+                logging.warning(f'{error.__class__.__name__} - {error}')
 
         if 'database' in configuration['packets']:
             database_credentials = configuration['packets']['database']
@@ -159,7 +161,7 @@ def main():
                 database = database_credentials.packet_source(
                     callsigns=configuration['callsigns']
                 )
-                LOGGER.info(f'connected to {database.location}')
+                logging.info(f'connected to {database.location}')
                 connections.append(database)
             except ConnectionError:
                 database = None
@@ -173,7 +175,7 @@ def main():
             ):
                 connections.append(PacketGeoJSON(configuration['output']['filename']))
             else:
-                LOGGER.error(f'no connections started')
+                logging.error(f'no connections started')
                 sys.exit(1)
 
         if 'aprs_is' in configuration['packets']:
@@ -186,13 +188,25 @@ def main():
         else:
             aprs_is = None
 
-        LOGGER.info(
+        logging.info(
             f'listening for packets every {configuration["time"]["interval"]}s from {len(connections)} connection(s): '
             f'{", ".join([connection.location for connection in connections])}'
         )
 
         packet_tracks = {}
         predictions = {}
+        plots = {}
+
+        if any(configuration['plots'].values()):
+            from packetraven.gui.plotting import LiveTrackPlot
+
+            for variable, enabled in configuration['plots'].items():
+                if enabled and variable not in plots:
+                    plots[variable] = LiveTrackPlot(packet_tracks, variable, predictions)
+                elif not enabled and variable in plots:
+                    plots[variable].close()
+                    del plots[variable]
+
         try:
             while len(connections) > 0:
                 try:
@@ -202,7 +216,6 @@ def main():
                         database,
                         start_date=configuration['time']['start'],
                         end_date=configuration['time']['end'],
-                        logger=LOGGER,
                     )
 
                     output_filename_index = None
@@ -224,13 +237,13 @@ def main():
                                 configuration['prediction']['output']['filename'],
                             )
                         except PredictionError as error:
-                            LOGGER.warning(f'{error.__class__.__name__} - {error}')
+                            logging.warning(f'{error.__class__.__name__} - {error}')
                         except Exception as error:
-                            LOGGER.warning(
+                            logging.warning(
                                 f'error retrieving prediction trajectory - {error.__class__.__name__} - {error}'
                             )
                 except Exception as error:
-                    LOGGER.exception(f'{error.__class__.__name__} - {error}')
+                    logging.exception(f'{error.__class__.__name__} - {error}')
                     new_packets = {}
 
                 if len(new_packets) > 0:
@@ -242,6 +255,10 @@ def main():
                     if aprs_is is not None:
                         for packets in new_packets.values():
                             aprs_is.send(packets)
+
+                    for plot in plots.values():
+                        plot.update(packet_tracks, predictions)
+
                 time.sleep(configuration['time']['interval'] / timedelta(seconds=1))
         except KeyboardInterrupt:
             for connection in connections:
@@ -259,12 +276,8 @@ def retrieve_packets(
     database: PacketDatabaseTable = None,
     start_date: datetime = None,
     end_date: datetime = None,
-    logger: Logger = None,
 ) -> Dict[str, APRSPacket]:
-    if logger is None:
-        logger = LOGGER
-
-    logger.debug(f'receiving packets from {len(connections)} source(s)')
+    logging.debug(f'receiving packets from {len(connections)} source(s)')
     current_time = datetime.now()
 
     parsed_packets = []
@@ -273,11 +286,11 @@ def retrieve_packets(
             connection_packets = connection.packets
             parsed_packets.extend(connection_packets)
         except ConnectionError as error:
-            LOGGER.error(f'{connection.__class__.__name__} - {error}')
+            logging.error(f'{connection.__class__.__name__} - {error}')
         except TimeIntervalError:
             pass
 
-    logger.debug(f'received {len(parsed_packets)} packets')
+    logging.debug(f'received {len(parsed_packets)} packets')
 
     new_packets = {}
     if len(parsed_packets) > 0:
@@ -296,14 +309,14 @@ def retrieve_packets(
 
             if callsign not in packet_tracks:
                 packet_tracks[callsign] = APRSTrack(packets=[parsed_packet], callsign=callsign)
-                logger.debug(f'started tracking callsign {callsign:8}')
+                logging.debug(f'started tracking callsign {callsign:8}')
             else:
                 packet_track = packet_tracks[callsign]
                 if parsed_packet not in packet_track:
                     packet_track.append(parsed_packet)
                 else:
                     if database is None or parsed_packet.source != database.location:
-                        logger.debug(f'skipping duplicate packet: {parsed_packet}')
+                        logging.debug(f'skipping duplicate packet: {parsed_packet}')
                     continue
 
             if parsed_packet.source not in new_packets:
@@ -316,7 +329,7 @@ def retrieve_packets(
             new_packets[source] = list(sorted(new_packets[source]))
 
         for source, packets in new_packets.items():
-            logger.info(f'received {len(packets)} new packet(s) from {source}')
+            logging.info(f'received {len(packets)} new packet(s) from {source}')
 
         if database is not None:
             for packets in new_packets.values():
@@ -336,14 +349,14 @@ def retrieve_packets(
                 coordinate_string = ', '.join(
                     f'{coordinate:.3f}°' for coordinate in packet_track.coordinates[-1, :2]
                 )
-                logger.info(
+                logging.info(
                     f'{callsign:9} - packet #{len(packet_track):<3} - ({coordinate_string}, {packet_track.coordinates[-1, 2]:9.2f}m)'
                     f'; packet time is {packet_time} ({humanize.naturaltime(current_time - packet_time)}, {packet_track.intervals[-1] / numpy.timedelta64(1, "s"):6.1f} s interval)'
                     f'; traveled {packet_track.overground_distances[-1]:6.1f} m ({packet_track.ground_speeds[-1]:5.1f} m/s) over the ground'
                     f', and {packet_track.ascents[-1]:6.1f} m ({packet_track.ascent_rates[-1]:5.1f} m/s) vertically, since the previous packet'
                 )
             except Exception as error:
-                logger.exception(f'{error.__class__.__name__} - {error}')
+                logging.exception(f'{error.__class__.__name__} - {error}')
 
         for callsign in updated_callsigns:
             packet_track = packet_tracks[callsign]
@@ -393,10 +406,10 @@ def retrieve_packets(
                         f'; max altitude: {packet_track.coordinates[:, 2].max():.2f} m'
                     )
 
-                logger.info(message)
+                logging.info(message)
 
             except Exception as error:
-                logger.exception(f'{error.__class__.__name__} - {error}')
+                logging.exception(f'{error.__class__.__name__} - {error}')
 
     return new_packets
 
@@ -489,13 +502,13 @@ def packet_track_predictions(
             prediction = prediction_query.predict
 
             if packet_track.time_to_ground >= timedelta(seconds=0):
-                LOGGER.info(
+                logging.info(
                     f'{packet_track.name:<9} - predicted landing location: {prediction.coordinates[-1]} - https://www.google.com/maps/place/{prediction.coordinates[-1][1]},{prediction.coordinates[-1][0]}'
                 )
 
             prediction_tracks[name] = prediction
         except Exception as error:
-            LOGGER.warning(
+            logging.warning(
                 f'error retrieving prediction trajectory - {error.__class__.__name__} - {error}'
             )
 
@@ -528,11 +541,17 @@ def packet_track_predictions(
             prediction = prediction_query.predict
             prediction_tracks[name] = prediction
         except Exception as error:
-            LOGGER.warning(
+            logging.warning(
                 f'error retrieving prediction trajectory - {error.__class__.__name__} - {error}'
             )
 
     return prediction_tracks
+
+
+def ensure_datetime_timezone(value: datetime) -> datetime:
+    if value is not None and (value.tzinfo is None or value.tzinfo.utcoffset(value) is None):
+        value = value.replace(tzinfo=tzlocal())
+    return value
 
 
 if __name__ == '__main__':

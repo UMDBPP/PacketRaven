@@ -4,6 +4,8 @@ from typing import Dict
 import matplotlib
 
 matplotlib.use('TkAgg')
+matplotlib.interactive(True)
+
 from matplotlib import pyplot
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
@@ -38,9 +40,6 @@ class LiveTrackPlot:
         variable: str,
         predictions: Dict[str, PredictedTrajectory] = None,
     ):
-        pyplot.ion()
-        pyplot.show()
-
         if variable not in VARIABLES:
             raise NotImplementedError(f'unsupported plotting variable "{variable}"')
 
@@ -74,18 +73,16 @@ class LiveTrackPlot:
             except AttributeError:
                 pass
 
-            while len(self.axis.lines) > 0:
-                self.axis.lines.pop(-1)
+            axis = self.axis
+
+            while len(axis.lines) > 0:
+                axis.lines.pop(-1)
 
             packet_track_lines = {}
             for name, packet_track in self.packet_tracks.items():
-                lines = self.axis.plot(
-                    getattr(packet_track, VARIABLES[self.variable]['x']),
-                    getattr(packet_track, VARIABLES[self.variable]['y']),
-                    linewidth=2,
-                    marker='o',
-                    label=packet_track.name,
-                )
+                x = getattr(packet_track, VARIABLES[self.variable]['x'])
+                y = getattr(packet_track, VARIABLES[self.variable]['y'])
+                lines = axis.plot(x, y, linewidth=2, marker='o', label=packet_track.name,)
 
                 packet_track_lines[name] = lines[0]
 
@@ -96,7 +93,7 @@ class LiveTrackPlot:
                     else None
                 )
 
-                self.axis.plot(
+                axis.plot(
                     getattr(packet_track, VARIABLES[self.variable]['x']),
                     getattr(packet_track, VARIABLES[self.variable]['y']),
                     '--',
@@ -105,9 +102,7 @@ class LiveTrackPlot:
                     label=f'{packet_track.name} prediction',
                 )
 
-            self.axis.legend()
-            pyplot.draw()
-            pyplot.pause(0.001)
+            axis.legend()
 
     @property
     def window(self) -> Toplevel:
@@ -115,27 +110,15 @@ class LiveTrackPlot:
 
     @property
     def figure(self) -> Figure:
-        try:
-            figure = self.__figure
-            if not pyplot.fignum_exists(figure.number):
-                raise RuntimeError
-        except (AttributeError, RuntimeError):
-            figure = self.__new_figure()
-        self.__figure = figure
-        pyplot.show()
-        return figure
+        if not hasattr(self, '__figure') or not pyplot.fignum_exists(self.__figure.number):
+            self.__figure = self.__new_figure()
+        return self.__figure
 
     @property
     def axis(self) -> Axes:
-        try:
-            axis = self.__axis
-            figure = axis.figure
-            if figure is not self.figure:
-                raise RuntimeError
-        except (AttributeError, RuntimeError):
-            axis = self.__new_axis()
-        self.__axis = axis
-        return axis
+        if not hasattr(self, '__axis') or self.__axis.figure is not self.figure:
+            self.__axis = self.__new_axis()
+        return self.__axis
 
     def __new_figure(self) -> Figure:
         x_label = VARIABLES[self.variable]['xlabel']

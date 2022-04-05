@@ -25,15 +25,17 @@ packets:
     locations:
     - /dev/ttyUSB0
     - ~/packets.txt
+plots:
+  altitude: false
+  ascent_rate: false
+  ground_speed: false
 prediction:
   api_url: https://predict.cusf.co.uk/api/v1/
-  file:
-    output: null
   float:
     altitude: null
     duration: null
     uncertainty: 500
-  name: null
+  name: prediction
   output:
     filename: ns110_prediction.geojson
   profile:

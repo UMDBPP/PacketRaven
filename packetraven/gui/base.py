@@ -13,7 +13,7 @@ import teek
 from teek.extras import more_dialogs
 
 from packetraven import APRSfi, RawAPRSTextFile, SerialTNC
-from packetraven.__main__ import LOGGER, packet_track_predictions, retrieve_packets
+from packetraven.__main__ import packet_track_predictions, retrieve_packets
 from packetraven.configuration.credentials import APRSfiCredentials
 from packetraven.configuration.prediction import PredictionConfiguration
 from packetraven.configuration.run import RunConfiguration
@@ -25,7 +25,6 @@ from packetraven.packets import APRSPacket, LocationPacket
 from packetraven.packets.tracks import LocationPacketTrack, PredictedTrajectory
 from packetraven.packets.writer import write_packet_tracks
 from packetraven.predicts import PredictionError
-from packetraven.utilities import get_logger
 
 
 class PacketRavenGUI:
@@ -227,7 +226,7 @@ class PacketRavenGUI:
         self.__plot_toggles = {}
         for plot_index, plot in enumerate(plot_variables):
             boolean_var = teek.BooleanVar()
-            boolean_var.set(False)
+            boolean_var.set(self.__configuration['plots'][plot])
             plot_checkbox = teek.Checkbutton(
                 plot_checkbox_frame, text=plot, variable=boolean_var
             )
@@ -328,7 +327,7 @@ class PacketRavenGUI:
                     try:
                         stream = next_open_serial_port()
                     except OSError:
-                        LOGGER.warning(f'no open serial ports')
+                        logging.warning(f'no open serial ports')
                         stream = None
                 streams.append(stream)
         return streams
@@ -506,7 +505,7 @@ class PacketRavenGUI:
             self.__toggle_text.set('Stop')
 
             if self.log_filename is not None:
-                get_logger(LOGGER.name, self.log_filename)
+                logging.basicConfig(filename=self.log_filename)
 
             if self.toggles['log_to_file']:
                 set_child_states(self.__elements['log_file_box'], 'disabled')
@@ -529,7 +528,7 @@ class PacketRavenGUI:
                 filter_message += f' sent between {start_date:%Y-%m-%d %H:%M:%S} and {end_date:%Y-%m-%d %H:%M:%S}'
             if callsigns is not None:
                 filter_message += f' from {len(callsigns)} callsigns: {callsigns}'
-            LOGGER.info(filter_message)
+            logging.info(filter_message)
 
             connection_errors = []
             try:
@@ -539,10 +538,10 @@ class PacketRavenGUI:
                     try:
                         if Path(stream).suffix in ['.txt', '.log']:
                             stream = RawAPRSTextFile(stream, self.callsigns)
-                            LOGGER.info(f'reading file {stream.location}')
+                            logging.info(f'reading file {stream.location}')
                         else:
                             stream = SerialTNC(stream, self.callsigns)
-                            LOGGER.info(f'opened port {stream.location}')
+                            logging.info(f'opened port {stream.location}')
                         self.__connections.append(stream)
                     except Exception as error:
                         connection_errors.append(f'text stream - {error}')
@@ -569,7 +568,7 @@ class PacketRavenGUI:
                     )
                 try:
                     aprs_api = APRSfi(self.callsigns, api_key=api_key)
-                    LOGGER.info(f'established connection to {aprs_api.location}')
+                    logging.info(f'established connection to {aprs_api.location}')
                     self.__connections.append(aprs_api)
                     if self.__configuration['packets']['aprs_fi'] is None:
                         self.__configuration['packets']['aprs_fi'] = APRSfiCredentials(
@@ -650,7 +649,7 @@ class PacketRavenGUI:
                             database_credentials['table'] = database_table
 
                         self.database = database_credentials.packet_source(callsigns=callsigns)
-                        LOGGER.info(f'connected to {self.database.location}')
+                        logging.info(f'connected to {self.database.location}')
                         self.__connections.append(self.database)
                     except ConnectionError as error:
                         connection_errors.append(f'database - {error}')
@@ -677,7 +676,7 @@ class PacketRavenGUI:
                         connection_errors = '\n'.join(connection_errors)
                         raise ConnectionError(f'no connections started\n{connection_errors}')
 
-                LOGGER.info(
+                logging.info(
                     f'listening for packets every {self.interval} from {len(self.__connections)} '
                     f'connection(s): {", ".join([connection.location for connection in self.__connections])}'
                 )
@@ -702,9 +701,9 @@ class PacketRavenGUI:
                 error_message = f'{error.__class__.__name__} - {error}'
                 if '\n' in error_message:
                     for error_line in error_message.split('\n'):
-                        LOGGER.error(error_line)
+                        logging.error(error_line)
                 else:
-                    LOGGER.exception(error)
+                    logging.exception(error)
                 _, error, error_traceback = sys.exc_info()
                 filename = error_traceback.tb_frame.f_code.co_filename
                 line_number = error_traceback.tb_lineno
@@ -727,9 +726,9 @@ class PacketRavenGUI:
                 connection.close()
 
                 if type(connection) is SerialTNC:
-                    LOGGER.info(f'closing port {connection.location}')
+                    logging.info(f'closing port {connection.location}')
 
-            LOGGER.info(f'closed {len(self.__connections)} connections')
+            logging.info(f'closed {len(self.__connections)} connections')
 
             for callsign in self.packet_tracks:
                 set_child_states(self.__windows[callsign], 'disabled')
@@ -759,7 +758,6 @@ class PacketRavenGUI:
                     self.database,
                     self.start_date,
                     self.end_date,
-                    logger=LOGGER,
                 )
 
                 output_filename_index = None
@@ -781,14 +779,11 @@ class PacketRavenGUI:
                                 self.__predictions.values(), self.prediction_filename
                             )
                     except PredictionError as error:
-                        LOGGER.warning(f'{error.__class__.__name__} - {error}')
+                        logging.warning(f'{error.__class__.__name__} - {error}')
                     except Exception as error:
-                        LOGGER.exception(
+                        logging.exception(
                             f'error retrieving prediction trajectory - {error.__class__.__name__} - {error}'
                         )
-
-                for variable, plot in self.__plots.items():
-                    plot.update(self.packet_tracks, self.predictions)
 
                 if len(new_packets) > 0:
                     if self.output_filename is not None:
@@ -805,6 +800,9 @@ class PacketRavenGUI:
                     if self.aprs_is is not None:
                         for packets in new_packets.values():
                             self.aprs_is.send(packets)
+
+                    for plot in self.__plots.values():
+                        plot.update(self.packet_tracks, self.predictions)
 
                     updated_callsigns = {
                         packet.from_callsign
@@ -836,7 +834,7 @@ class PacketRavenGUI:
             except KeyboardInterrupt:
                 self.close()
             except Exception as error:
-                LOGGER.exception(f'{error.__class__.__name__} - {error}')
+                logging.exception(f'{error.__class__.__name__} - {error}')
 
     def close(self):
         try:
@@ -846,7 +844,7 @@ class PacketRavenGUI:
                 plot.close()
             teek.quit()
         except Exception as error:
-            LOGGER.exception(f'{error.__class__.__name__} - {error}')
+            logging.exception(f'{error.__class__.__name__} - {error}')
         sys.exit()
 
     def __select_text_stream(self):
@@ -895,13 +893,10 @@ class PacketRavenGUI:
     def __toggle_log_file(self, value: bool = None):
         if (value is not None and value) or self.toggles['log_to_file']:
             set_child_states(self.__elements['log_file_box'], state='normal')
-            get_logger(LOGGER.name, log_filename=self.log_filename)
+            logging.basicConfig(filename=self.log_filename)
         else:
             set_child_states(self.__elements['log_file_box'], state='disabled')
-            for existing_file_handler in [
-                handler for handler in LOGGER.handlers if type(handler) is logging.FileHandler
-            ]:
-                LOGGER.removeHandler(existing_file_handler)
+            logging.basicConfig(filename=None)
 
     def __toggle_output_file(self, value: bool = None):
         if (value is not None and value) or self.toggles['output_to_file']:

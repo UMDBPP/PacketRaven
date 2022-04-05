@@ -61,7 +61,7 @@ class SerialTNC(APRSPacketSource):
                 packet = APRSPacket.from_frame(line, source=self.location)
                 packets.append(packet)
             except Exception as error:
-                self.log(f'{error.__class__.__name__} - {error}', logging.ERROR)
+                logging.error(f'{error.__class__.__name__} - {error}')
         if self.callsigns is not None:
             packets = [packet for packet in packets if packet.from_callsign in self.callsigns]
         self.__last_access_time = datetime.now()
