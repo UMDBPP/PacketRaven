@@ -61,7 +61,7 @@ The program can read a YAML configuration file in the following format:
         output:
             filename: 'ns110_prediction.geojson'
 
-For instance, to listen to a Kenwood TNC plugged into USB COM3, listen to the APRS-IS via https://aprs.fi, and also filter to the callsigns "W3EAX-8" and "W3EAX-14", you can run the following command:
+For instance, to listen to a Kenwood TNC plugged into USB COM3, listen to APRS-IS via https://aprs.fi, and also filter to the callsigns "W3EAX-8" and "W3EAX-14", use the following configuration:
 
 .. code-block:: yaml
 
