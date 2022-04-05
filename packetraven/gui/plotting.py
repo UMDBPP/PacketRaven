@@ -80,13 +80,9 @@ class LiveTrackPlot:
 
             packet_track_lines = {}
             for name, packet_track in self.packet_tracks.items():
-                lines = axis.plot(
-                    getattr(packet_track, VARIABLES[self.variable]['x']),
-                    getattr(packet_track, VARIABLES[self.variable]['y']),
-                    linewidth=2,
-                    marker='o',
-                    label=packet_track.name,
-                )
+                x = getattr(packet_track, VARIABLES[self.variable]['x'])
+                y = getattr(packet_track, VARIABLES[self.variable]['y'])
+                lines = axis.plot(x, y, linewidth=2, marker='o', label=packet_track.name,)
 
                 packet_track_lines[name] = lines[0]
 
@@ -107,8 +103,6 @@ class LiveTrackPlot:
                 )
 
             axis.legend()
-            pyplot.draw()
-            pyplot.pause(0.001)
 
     @property
     def window(self) -> Toplevel:
