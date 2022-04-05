@@ -49,7 +49,7 @@ class PacketSource(Connection, ABC):
     """
 
     def __init__(self, location: str, callsigns: [str] = None):
-        if len(callsigns) == 0:
+        if callsigns is not None and len(callsigns) == 0:
             callsigns = None
         self.callsigns = callsigns
         super().__init__(location)
