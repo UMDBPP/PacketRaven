@@ -104,6 +104,10 @@ class LiveTrackPlot:
 
             axis.legend()
 
+            # NOTE: this `pyplot.pause(0.1)` NEEDS to be here, and it NEEDS to be `0.1` seconds;
+            # otherwise the plot does not render correctly upon update
+            pyplot.pause(0.1)
+
     @property
     def window(self) -> Toplevel:
         return self.figure.canvas.manager.window
