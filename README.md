@@ -111,8 +111,6 @@ packetraven config.yaml --gui
 
 #### listen to a TNC sending raw APRS strings over USB port COM4
 
-you can set this to `auto` to try the first open USB port
-
 ```yaml
 # config.yaml
 
@@ -120,6 +118,17 @@ packets:
     text:
         locations:
             - 'COM4'
+```
+
+you can also set the location to `auto` to try the first open USB port
+
+```yaml
+# config.yaml
+
+packets:
+    text:
+        locations:
+            - 'auto'
 ```
 
 #### listen to APRS.fi, watching specific callsigns
