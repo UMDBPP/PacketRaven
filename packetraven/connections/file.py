@@ -70,7 +70,7 @@ class RawAPRSTextFile(APRSPacketSource):
                             APRSPacket.from_frame(raw_aprs, packet_time, source=self.location)
                         )
                     except Exception as error:
-                        self.log(f'{error.__class__.__name__} - {error}', logging.DEBUG)
+                        logging.debug(f'{error.__class__.__name__} - {error}')
 
         file_connection.close()
 

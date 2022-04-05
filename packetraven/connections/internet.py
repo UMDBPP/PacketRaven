@@ -96,12 +96,9 @@ class APRSfi(APRSPacketSource, NetworkConnection):
                     packet = APRSPacket.from_frame(packet_candidate, source=self.location)
                     packets.append(packet)
                 except Exception as error:
-                    self.log(f'{error.__class__.__name__} - {error}', logging.ERROR)
+                    logging.error(f'{error.__class__.__name__} - {error}')
         else:
-            self.log(
-                f'query failure "{response["code"]}: {response["description"]}"',
-                logging.WARNING,
-            )
+            logging.warning(f'query failure "{response["code"]}: {response["description"]}"',)
             packets = []
 
         self.__last_access_time = datetime.now()
@@ -197,13 +194,12 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
             new_packets.extend(self.__send_buffer)
             self.__send_buffer.clear()
         if len(new_packets) > 0:
-            self.log(f'sending {len(new_packets)} packet(s) to {self.location}', logging.INFO)
+            logging.info(f'sending {len(new_packets)} packet(s) to {self.location}')
             try:
                 self.insert(new_packets)
             except ConnectionError as error:
-                self.log(
+                logging.info(
                     f'could not send packet(s) ({error}); reattempting on next iteration',
-                    logging.INFO,
                 )
                 self.__send_buffer.extend(new_packets)
 
@@ -415,9 +411,7 @@ class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
         }
 
         if len(packets) > 0:
-            self.log(
-                f'sending {len(packets)} packet(s) to {self.location}: {packets}', logging.INFO
-            )
+            logging.info(f'sending {len(packets)} packet(s) to {self.location}: {packets}')
             for callsign, callsign_packets in packets.items():
                 try:
                     frames = [packet.frame for packet in callsign_packets]
@@ -429,9 +423,8 @@ class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
                         aprs_is.sendall(r'\rn'.join(frames))
                     aprs_is.close()
                 except ConnectionError as error:
-                    self.log(
+                    logging.info(
                         f'could not send packet(s) ({error}); reattempting on next iteration',
-                        logging.INFO,
                     )
                     self.__send_buffer.extend(packets)
 

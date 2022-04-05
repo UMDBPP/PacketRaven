@@ -327,7 +327,7 @@ class PacketRavenGUI:
                     try:
                         stream = next_open_serial_port()
                     except OSError:
-                        LOGGER.warning(f'no open serial ports')
+                        logging.warning(f'no open serial ports')
                         stream = None
                 streams.append(stream)
         return streams
