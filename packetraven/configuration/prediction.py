@@ -19,15 +19,15 @@ from packetraven.predicts import (
 class PredictionConfiguration(ConfigurationYAML, ConfigurationSection):
     name = 'prediction'
     fields = {
-        'start': {'location': [float], 'time': datetime,},
+        'start': {'location': [float], 'time': datetime},
         'profile': {
             'ascent_rate': float,
             'burst_altitude': float,
             'sea_level_descent_rate': float,
             'descent_only': bool,
         },
-        'float': {'altitude': float, 'uncertainty': float, 'duration': timedelta,},
-        'output': {'filename': Path,},
+        'float': {'altitude': float, 'uncertainty': float, 'duration': timedelta},
+        'output': {'filename': Path},
         'api_url': str,
         'name': str,
     }
@@ -41,8 +41,9 @@ class PredictionConfiguration(ConfigurationYAML, ConfigurationSection):
             'uncertainty': DEFAULT_FLOAT_ALTITUDE_UNCERTAINTY,
             'duration': None,
         },
-        'file': {'output': None},
+        'output': {'filename': None},
         'api_url': PredictionAPIURL.cusf.value,
+        'name': 'prediction',
     }
 
     def __init__(self, **configuration):

@@ -24,7 +24,7 @@ from packetraven.connections.base import PacketSource
 from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import APRSTrack, LocationPacketTrack, PredictedTrajectory
 from packetraven.packets.writer import write_packet_tracks
-from packetraven.predicts import CUSFBalloonPredictionQuery, LOGGER, PredictionError
+from packetraven.predicts import CUSFBalloonPredictionQuery, PredictionError
 from packetraven.utilities import ensure_datetime_timezone, get_logger
 
 LOGGER = get_logger('packetraven', log_format='%(asctime)s | %(levelname)-8s | %(message)s')
@@ -35,49 +35,59 @@ DEFAULT_INTERVAL_SECONDS = 20
 def main():
     args_parser = ArgumentParser()
     args_parser.add_argument(
-        'configuration', nargs='?', help='YAML file containing configuration'
+        'configuration',
+        nargs='?',
+        help='configuration file in YAML format - see `examples` directory for examples',
     )
     args_parser.add_argument(
         '--gui', action='store_true', help='start the graphical interface'
     )
 
-    args = args_parser.parse_args()
+    arguments = args_parser.parse_args()
 
-    configuration = RunConfiguration.from_file(args.configuration)
-    if configuration['log'] is not None:
-        get_logger(LOGGER.name, log_filename=configuration['log']['filename'])
+    if arguments.configuration is not None and arguments.configuration != '':
+        configuration = RunConfiguration.from_file(arguments.configuration)
+    else:
+        configuration = None
 
-    filter_message = 'retrieving packets'
-    if configuration['time']['start'] is not None and configuration['time']['end'] is None:
-        filter_message += f' sent after {configuration["time"]["start"]:%Y-%m-%d %H:%M:%S}'
-    elif configuration['time']['start'] is None and configuration['time']['end'] is not None:
-        filter_message += f' sent before {configuration["time"]["end"]:%Y-%m-%d %H:%M:%S}'
-    elif (
-        configuration['time']['start'] is not None and configuration['time']['end'] is not None
-    ):
-        filter_message += (
-            f' sent between {configuration["time"]["start"]:%Y-%m-%d %H:%M:%S}'
-            f' and {configuration["time"]["end"]:%Y-%m-%d %H:%M:%S}'
-        )
-    if configuration['callsigns'] is not None:
-        filter_message += (
-            f' from {len(configuration["callsigns"])} callsigns: {configuration["callsigns"]}'
-        )
-    LOGGER.info(filter_message)
+    if configuration is not None:
+        if configuration['log'] is not None:
+            get_logger(LOGGER.name, log_filename=configuration['log']['filename'])
 
-    if configuration['callsigns'] is not None:
-        aprsfi_url = f'https://aprs.fi/#!call=a%2F{"%2Ca%2F".join(configuration["callsigns"])}'
-        if configuration['time']['start'] is not None:
-            aprsfi_url += f'&ts={configuration["time"]["start"]:%s}'
-        if configuration['time']['end'] is not None:
-            aprsfi_url += f'&te={configuration["time"]["end"]:%s}'
-        LOGGER.info(f'tracking URL: {aprsfi_url}')
+        filter_message = 'retrieving packets'
+        if configuration['time']['start'] is not None and configuration['time']['end'] is None:
+            filter_message += f' sent after {configuration["time"]["start"]:%Y-%m-%d %H:%M:%S}'
+        elif (
+            configuration['time']['start'] is None and configuration['time']['end'] is not None
+        ):
+            filter_message += f' sent before {configuration["time"]["end"]:%Y-%m-%d %H:%M:%S}'
+        elif (
+            configuration['time']['start'] is not None
+            and configuration['time']['end'] is not None
+        ):
+            filter_message += (
+                f' sent between {configuration["time"]["start"]:%Y-%m-%d %H:%M:%S}'
+                f' and {configuration["time"]["end"]:%Y-%m-%d %H:%M:%S}'
+            )
+        if configuration['callsigns'] is not None:
+            filter_message += f' from {len(configuration["callsigns"])} callsigns: {configuration["callsigns"]}'
+        LOGGER.info(filter_message)
 
-    if args.gui:
+        if configuration['callsigns'] is not None:
+            aprsfi_url = (
+                f'https://aprs.fi/#!call=a%2F{"%2Ca%2F".join(configuration["callsigns"])}'
+            )
+            if configuration['time']['start'] is not None:
+                aprsfi_url += f'&ts={configuration["time"]["start"]:%s}'
+            if configuration['time']['end'] is not None:
+                aprsfi_url += f'&te={configuration["time"]["end"]:%s}'
+            LOGGER.info(f'tracking URL: {aprsfi_url}')
+
+    if arguments.gui:
         from packetraven.gui import PacketRavenGUI
 
         PacketRavenGUI(configuration)
-    else:
+    elif configuration is not None:
         connections = []
         if 'text' in configuration['packets']:
             for location in configuration['packets']['text']['locations']:
@@ -237,6 +247,10 @@ def main():
             for connection in connections:
                 connection.close()
             sys.exit(0)
+    else:
+        raise ValueError(
+            'no configuration given; to use the graphical interface try `packetraven --gui`'
+        )
 
 
 def retrieve_packets(

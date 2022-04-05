@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import logging
 from time import sleep
 from typing import Any, Dict, List, Sequence
 
@@ -11,7 +12,6 @@ from tablecrow.utilities import repository_root, split_hostname_port
 from packetraven.connections.base import (
     APRSPacketSink,
     APRSPacketSource,
-    LOGGER,
     NetworkConnection,
     PacketSink,
     PacketSource,
@@ -96,9 +96,12 @@ class APRSfi(APRSPacketSource, NetworkConnection):
                     packet = APRSPacket.from_frame(packet_candidate, source=self.location)
                     packets.append(packet)
                 except Exception as error:
-                    LOGGER.error(f'{error.__class__.__name__} - {error}')
+                    self.log(f'{error.__class__.__name__} - {error}', logging.ERROR)
         else:
-            LOGGER.warning(f'query failure "{response["code"]}: {response["description"]}"')
+            self.log(
+                f'query failure "{response["code"]}: {response["description"]}"',
+                logging.WARNING,
+            )
             packets = []
 
         self.__last_access_time = datetime.now()
@@ -194,12 +197,13 @@ class PacketDatabaseTable(PostGresTable, PacketSource, PacketSink):
             new_packets.extend(self.__send_buffer)
             self.__send_buffer.clear()
         if len(new_packets) > 0:
-            LOGGER.info(f'sending {len(new_packets)} packet(s) to {self.location}')
+            self.log(f'sending {len(new_packets)} packet(s) to {self.location}', logging.INFO)
             try:
                 self.insert(new_packets)
             except ConnectionError as error:
-                LOGGER.info(
-                    f'could not send packet(s) ({error}); reattempting on next iteration'
+                self.log(
+                    f'could not send packet(s) ({error}); reattempting on next iteration',
+                    logging.INFO,
                 )
                 self.__send_buffer.extend(new_packets)
 
@@ -411,7 +415,9 @@ class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
         }
 
         if len(packets) > 0:
-            LOGGER.info(f'sending {len(packets)} packet(s) to {self.location}: {packets}')
+            self.log(
+                f'sending {len(packets)} packet(s) to {self.location}: {packets}', logging.INFO
+            )
             for callsign, callsign_packets in packets.items():
                 try:
                     frames = [packet.frame for packet in callsign_packets]
@@ -423,8 +429,9 @@ class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
                         aprs_is.sendall(r'\rn'.join(frames))
                     aprs_is.close()
                 except ConnectionError as error:
-                    LOGGER.info(
-                        f'could not send packet(s) ({error}); reattempting on next iteration'
+                    self.log(
+                        f'could not send packet(s) ({error}); reattempting on next iteration',
+                        logging.INFO,
                     )
                     self.__send_buffer.extend(packets)
 

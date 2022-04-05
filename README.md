@@ -13,63 +13,87 @@ PacketRaven is a dashboard built to track high-altitude balloon flights from the
 pip install packetraven
 ```
 
-## installation
+## Installation
 
-0. install Python
+1. install Python - https://www.python.org/downloads/
 
-   https://www.python.org/downloads/
-
-1. install with `pip`
+2. install `packetraven` with `pip`:
     ```
     pip install packetraven
     ```
 
-### from source
+---
+**NOTE**
 
-1. download the source code
-    ```
-    git clone https://github.com/UMDBPP/PacketRaven.git
-    ```
-3. install from source
-    ```
-    cd packetraven
-    pip install .
-    ```
-
-## examples
-
-#### listen to a TNC sending raw APRS strings over USB port COM4
-
-you can set this to `auto` to try the first open USB port
+Alternatively, you may download the source code and build from source:
 
 ```shell
-packetraven --tnc COM4
+git clone https://github.com/UMDBPP/PacketRaven.git
+cd packetraven
+pip install .
 ```
 
-#### listen to APRS.fi, watching specific callsigns
+---
 
-you need an API key to connect to APRS.fi; you can get one from https://aprs.fi/page/api
+## Usage
 
-```shell
-packetraven --aprsfi-key <api_key> --callsigns W3EAX-8,W3EAX-14
+PacketRaven reads a configuration file to determine which connections to set up, how to parse your packets, which callsigns to filter, etc.
+
+```bash
+packetraven /path/to/config.yaml
 ```
 
-#### listen to a PostGIS database table
+The configuration is in YAML format. Here is an example configuration:
 
-```shell
-packetraven --database <username>@<hostname>:5432/<database_name>/<table_name>
-```
+```yaml
+callsigns:
+    - W3EAX-9
+    - W3EAX-11
+    - W3EAX-12
 
-#### watch a text file for new lines containing raw APRS strings
+time:
+    start: '2022-03-05'
+    end: '2022-03-06'
+    interval: 30
 
-```shell
-packetraven --tnc http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-11/W3EAX-11_raw_NS95.txt
-```
+output:
+    filename: 'ns110.geojson'
 
-#### listen to a TNC on COM3, watching specific callsigns, and synchronize new packets with a database table via SSH tunnel
+log:
+    filename: 'ns110.log'
 
-```shell
-packetraven --tnc COM3 --callsigns W3EAX-8,W3EAX-14 --database <username>@<hostname>:5432/<database_name>/<table_name> --tunnel <ssh_username>@<hostname>:22
+packets:
+    aprs_fi:
+        api_key: '123456.abcdefhijklmnop'
+    text:
+        locations:
+            - '/dev/ttyUSB0'
+            - '~/packets.txt'
+    database:
+        hostname: 'localhost'
+        port: 5432
+        database: 'nearspace'
+        table: 'ns110'
+        username: 'user1'
+        password: 'password1'
+        tunnel:
+            hostname: 'bpp.umd.edu'
+            port: 22
+            username: 'user1'
+            password: 'password2'
+
+prediction:
+    start:
+        location:
+            - -78.4987
+            - 40.0157
+        time: '2022-03-05 10:36:00'
+    profile:
+        ascent_rate: 6.5
+        burst_altitude: 25000
+        sea_level_descent_rate: 9
+    output:
+        filename: 'ns110_prediction.geojson'
 ```
 
 ### start the graphical user interface (GUI)
@@ -78,8 +102,91 @@ to start the GUI, add `--gui` to any `packetraven` command
 
 ```shell
 packetraven --gui
+packetraven config.yaml --gui
 ```
 
-```shell
-packetraven --callsigns W3EAX-8,W3EAX-14 --aprsfi-key <api_key> --gui
+## Examples
+
+#### listen to a TNC sending raw APRS strings over USB port COM4
+
+you can set this to `auto` to try the first open USB port
+
+```yaml
+# config.yaml
+packets:
+    text:
+        locations:
+            - 'COM4'
 ```
+
+#### listen to APRS.fi, watching specific callsigns
+
+you need an API key to connect to APRS.fi; you can get one from https://aprs.fi/page/api
+
+```yaml
+# config.yaml
+callsigns:
+    - W3EAX-8
+    - W3EAX-14
+
+packets:
+    aprs_fi:
+        api_key: '123456.abcdefhijklmnop'
+```
+
+#### listen to a PostGIS database table
+
+```yaml
+# config.yaml
+callsigns:
+    - W3EAX-8
+    - W3EAX-14
+
+packets:
+    database:
+        hostname: 'bpp.umd.edu'
+        port: 5432
+        database: 'nearspace'
+        table: 'ns110'
+        username: 'user1'
+        password: 'password1'
+```
+
+#### watch a text file for new lines containing raw APRS strings
+
+```yaml
+# config.yaml
+packets:
+    text:
+        locations:
+            - 'http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-11/W3EAX-11_raw_NS95.txt'
+```
+
+#### listen to a TNC on COM3, watching specific callsigns, and synchronize new packets with a database table via SSH tunnel
+
+```yaml
+# config.yaml
+callsigns:
+    - W3EAX-8
+    - W3EAX-14
+
+packets:
+    text:
+        locations:
+            - 'COM3'
+    database:
+        hostname: 'localhost'
+        port: 5432
+        database: 'nearspace'
+        table: 'ns110'
+        username: 'user1'
+        password: 'password1'
+        tunnel:
+            hostname: 'bpp.umd.edu'
+            port: 22
+            username: 'user1'
+            password: 'password2'
+```
+
+
+

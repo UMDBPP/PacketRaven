@@ -1,11 +1,11 @@
 from datetime import datetime
+import logging
 from typing import List
 
 from serial import Serial
 
 from packetraven.connections.base import (
     APRSPacketSource,
-    LOGGER,
     next_open_serial_port,
     TimeIntervalError,
 )
@@ -61,7 +61,7 @@ class SerialTNC(APRSPacketSource):
                 packet = APRSPacket.from_frame(line, source=self.location)
                 packets.append(packet)
             except Exception as error:
-                LOGGER.error(f'{error.__class__.__name__} - {error}')
+                self.log(f'{error.__class__.__name__} - {error}', logging.ERROR)
         if self.callsigns is not None:
             packets = [packet for packet in packets if packet.from_callsign in self.callsigns]
         self.__last_access_time = datetime.now()

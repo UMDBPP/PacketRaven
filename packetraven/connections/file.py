@@ -1,4 +1,5 @@
 from datetime import datetime
+import logging
 from os import PathLike
 from pathlib import Path
 from typing import List
@@ -8,12 +9,7 @@ import geojson
 import requests
 import typepigeon
 
-from packetraven.connections.base import (
-    APRSPacketSource,
-    LOGGER,
-    PacketSource,
-    TimeIntervalError,
-)
+from packetraven.connections.base import APRSPacketSource, PacketSource, TimeIntervalError
 from packetraven.packets import APRSPacket, LocationPacket
 
 
@@ -35,7 +31,7 @@ class RawAPRSTextFile(APRSPacketSource):
                 filename = Path(filename)
             filename = str(filename)
 
-        super().__init__(filename, callsigns)
+        super().__init__(filename, callsigns=callsigns)
         self.__last_access_time = None
         self.__parsed_lines = []
 
@@ -74,7 +70,7 @@ class RawAPRSTextFile(APRSPacketSource):
                             APRSPacket.from_frame(raw_aprs, packet_time, source=self.location)
                         )
                     except Exception as error:
-                        LOGGER.error(f'{error.__class__.__name__} - {error}')
+                        self.log(f'{error.__class__.__name__} - {error}', logging.ERROR)
 
         file_connection.close()
 

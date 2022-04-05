@@ -10,12 +10,9 @@ import typepigeon
 
 from packetraven.packets import LocationPacket
 from packetraven.packets.tracks import PredictedTrajectory
-from packetraven.utilities import get_logger
 
 DEFAULT_FLOAT_ALTITUDE_UNCERTAINTY = 500
 UTC_TIMEZONE = pytz.utc
-
-LOGGER = get_logger('predicts')
 
 
 class PredictionAPIURL(Enum):

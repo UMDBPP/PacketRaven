@@ -17,7 +17,7 @@ from packetraven.__main__ import LOGGER, packet_track_predictions, retrieve_pack
 from packetraven.configuration.credentials import APRSfiCredentials
 from packetraven.configuration.prediction import PredictionConfiguration
 from packetraven.configuration.run import RunConfiguration
-from packetraven.configuration.tnc import TextConfiguration
+from packetraven.configuration.text import TextStreamConfiguration
 from packetraven.connections.base import available_serial_ports, next_open_serial_port
 from packetraven.connections.file import PacketGeoJSON
 from packetraven.gui.plotting import LiveTrackPlot
@@ -29,7 +29,10 @@ from packetraven.utilities import get_logger
 
 
 class PacketRavenGUI:
-    def __init__(self, configuration: RunConfiguration):
+    def __init__(self, configuration: RunConfiguration = None):
+        if configuration is None:
+            configuration = RunConfiguration()
+
         main_window = teek.Window('PacketRaven')
         self.__windows = {'main': main_window}
 
@@ -85,10 +88,10 @@ class PacketRavenGUI:
         self.__file_selection_option = 'select file(s)...'
         self.__add_combo_box(
             configuration_frame,
-            title='tnc',
-            label='TNC',
+            title='text',
+            label='Text',
             options=list(available_serial_ports()) + [self.__file_selection_option],
-            option_select=self.__select_tnc,
+            option_select=self.__select_text_stream,
             width=60,
             columnspan=len(configuration_frame.grid_columns),
             sticky='w',
@@ -248,8 +251,11 @@ class PacketRavenGUI:
 
         self.callsigns = self.__configuration['callsigns']
 
-        if self.__configuration['packets']['tnc'] is not None:
-            self.tncs = self.__configuration['packets']['tnc']['location']
+        if (
+            'text' in self.__configuration['packets']
+            and self.__configuration['packets']['text'] is not None
+        ):
+            self.text_streams = self.__configuration['packets']['text']['locations']
 
         start_date = self.__configuration['time']['start']
         if start_date is not None:
@@ -268,7 +274,11 @@ class PacketRavenGUI:
             self.output_filename = Path('~') / 'Desktop'
         self.__toggle_output_file()
 
-        self.prediction_filename = self.__configuration['prediction']['output']['filename']
+        if (
+            'prediction' in self.__configuration
+            and self.__configuration['prediction'] is not None
+        ):
+            self.prediction_filename = self.__configuration['prediction']['output']['filename']
         if self.prediction_filename is None:
             self.prediction_filename = Path('~') / 'Desktop'
         self.__toggle_prediction_file()
@@ -308,23 +318,23 @@ class PacketRavenGUI:
         self.__replace_text(self.__elements['callsigns'], callsigns)
 
     @property
-    def tncs(self) -> List[str]:
-        """ locations of TNCs parsing APRS audio into ASCII frames """
-        tncs = []
-        for tnc in self.__elements['tnc'].text.split(','):
-            tnc = tnc.strip()
-            if len(tnc) > 0:
-                if tnc.upper() == 'AUTO':
+    def text_streams(self) -> List[str]:
+        """ locations of text streams (for instance a TNC parsing APRS audio into ASCII frames over USB) """
+        streams = []
+        for stream in self.__elements['text'].text.split(','):
+            stream = stream.strip()
+            if len(stream) > 0:
+                if stream.upper() == 'AUTO':
                     try:
-                        tnc = next_open_serial_port()
+                        stream = next_open_serial_port()
                     except OSError:
                         LOGGER.warning(f'no open serial ports')
-                        tnc = None
-                tncs.append(tnc)
-        return tncs
+                        stream = None
+                streams.append(stream)
+        return streams
 
-    @tncs.setter
-    def tncs(self, filenames: List[PathLike]):
+    @text_streams.setter
+    def text_streams(self, filenames: List[PathLike]):
         if filenames is None:
             filenames = []
         elif not isinstance(filenames, Collection) or isinstance(filenames, str):
@@ -332,11 +342,16 @@ class PacketRavenGUI:
 
         filenames = [str(filename) for filename in filenames]
 
-        if self.__configuration['packets']['tnc'] is None:
-            self.__configuration['packets']['tnc'] = TextConfiguration(location=filenames)
+        if (
+            'text' in self.__configuration['packets']
+            and self.__configuration['packets']['text'] is not None
+        ):
+            self.__configuration['packets']['text']['locations'] = filenames
         else:
-            self.__configuration['packets']['tnc']['location'] = filenames
-        self.__replace_text(self.__elements['tnc'], ', '.join(filenames))
+            self.__configuration['packets']['text'] = TextStreamConfiguration(
+                location=filenames
+            )
+        self.__replace_text(self.__elements['text'], ', '.join(filenames))
 
     @property
     def start_date(self) -> datetime:
@@ -518,27 +533,30 @@ class PacketRavenGUI:
 
             connection_errors = []
             try:
-                tncs = self.tncs
-                self.__elements['tnc'].config['state'] = 'disabled'
-                for tnc in tncs:
+                streams = self.text_streams
+                self.__elements['text'].config['state'] = 'disabled'
+                for stream in streams:
                     try:
-                        if Path(tnc).suffix in ['.txt', '.log']:
-                            tnc = RawAPRSTextFile(tnc, self.callsigns)
-                            LOGGER.info(f'reading file {tnc.location}')
+                        if Path(stream).suffix in ['.txt', '.log']:
+                            stream = RawAPRSTextFile(stream, self.callsigns)
+                            LOGGER.info(f'reading file {stream.location}')
                         else:
-                            tnc = SerialTNC(tnc, self.callsigns)
-                            LOGGER.info(f'opened port {tnc.location}')
-                        self.__connections.append(tnc)
+                            stream = SerialTNC(stream, self.callsigns)
+                            LOGGER.info(f'opened port {stream.location}')
+                        self.__connections.append(stream)
                     except Exception as error:
-                        connection_errors.append(f'TNC - {error}')
-                self.tncs = [
+                        connection_errors.append(f'text stream - {error}')
+                self.text_streams = [
                     connection.location
                     for connection in self.__connections
                     if isinstance(connection, SerialTNC)
                     or isinstance(connection, RawAPRSTextFile)
                 ]
 
-                if self.__configuration['packets']['aprs_fi'] is not None:
+                if (
+                    'aprs_fi' in self.__configuration['packets']
+                    and self.__configuration['packets']['aprs_fi'] is not None
+                ):
                     api_key = self.__configuration['packets']['aprs_fi']['api_key']
                 else:
                     api_key = None
@@ -562,7 +580,10 @@ class PacketRavenGUI:
                 except Exception as error:
                     connection_errors.append(f'aprs.fi - {error}')
 
-                if self.__configuration['packets']['database'] is not None:
+                if (
+                    'database' in self.__configuration['packets']
+                    and self.__configuration['packets']['database'] is not None
+                ):
                     try:
                         ssh_tunnel_credentials = self.__configuration['packets']['database'][
                             'tunnel'
@@ -637,7 +658,10 @@ class PacketRavenGUI:
                 else:
                     self.database = None
 
-                if self.__configuration['packets']['aprs_fi'] is not None:
+                if (
+                    'aprs_is' in self.__configuration['packets']
+                    and self.__configuration['packets']['aprs_is'] is not None
+                ):
                     try:
                         self.aprs_is = self.__configuration['packets'][
                             'aprs_is'
@@ -825,12 +849,12 @@ class PacketRavenGUI:
             LOGGER.exception(f'{error.__class__.__name__} - {error}')
         sys.exit()
 
-    def __select_tnc(self):
-        if self.__elements['tnc'].text == self.__file_selection_option:
-            self.tncs = teek.dialog.open_multiple_files(
-                title='Select TNC text file(s)...',
+    def __select_text_stream(self):
+        if self.__elements['stream'].text == self.__file_selection_option:
+            self.text_streams = teek.dialog.open_multiple_files(
+                title='Select text file(s)...',
                 defaultextension='.txt',
-                filetypes=[('Text', '*.txt')],
+                filetypes=[('Text', '*.txt'), ('JSON', '*.json'), ('GeoJSON', '*.geojson')],
             )
 
     def __select_log_file(self):

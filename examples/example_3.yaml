@@ -1,0 +1,60 @@
+# this configuration tells PacketRaven to perform the following functions:
+#  1. read packet information from several sources once every 30 seconds, including
+#    - https://aprs.fi
+#    - a USB port at `/dev/ttyUSB0`
+#    - a text file at `~/packets.txt`
+#    - a PostGreSQL database at `bpp.umd.edu`
+#  2. filter to specific callsigns and constrain to a specific time range
+#  3. provide CUSF prediction information with the given parameters
+#  4. output packets to a GeoJSON file at `./example_3.geojson`
+#  5. log messages to a text file at `./example_3.log`
+#
+# you can run this configuration with the following: `packetraven examples/example_2.yaml`
+
+callsigns:
+  - W3EAX-9
+  - W3EAX-11
+  - W3EAX-12
+
+time:
+  start: '2022-03-05'
+  end: '2022-03-06'
+  interval: 30
+
+output:
+  filename: 'example_3.geojson'
+
+log:
+  filename: 'example_3.log'
+
+packets:
+  aprs_fi:
+    api_key: '123456.abcdefhijklmnop'
+  text:
+    locations:
+      - '/dev/ttyUSB0'
+      - '~/packets.txt'
+  database:
+    hostname: 'localhost'
+    port: 5432
+    database: 'nearspace'
+    table: 'example_3'
+    username: 'user1'
+    password: 'password1'
+    tunnel:
+      hostname: 'bpp.umd.edu:22'
+      username: 'user2'
+      password: 'password2'
+
+prediction:
+  start:
+    location:
+      - -78.4987
+      - 40.0157
+    time: '2022-03-05 10:36:00'
+  profile:
+    ascent_rate: 6.5
+    burst_altitude: 25000
+    sea_level_descent_rate: 9
+  output:
+    filename: 'example_3_prediction.geojson'

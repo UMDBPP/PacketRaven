@@ -30,7 +30,11 @@ class RunConfiguration(ConfigurationYAML):
     }
 
     defaults = {
-        'time': {'interval': DEFAULT_INTERVAL_SECONDS},
+        'callsigns': [],
+        'time': {'start': None, 'end': None, 'interval': DEFAULT_INTERVAL_SECONDS},
+        'output': {'filename': None},
+        'log': {'filename': None},
+        'packets': {},
     }
 
     def __setitem__(self, key: str, value: Any):
