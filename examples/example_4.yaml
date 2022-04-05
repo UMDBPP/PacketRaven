@@ -1,14 +1,9 @@
 # this configuration tells PacketRaven to perform the following functions:
 #  1. read packet information from https://aprs.fi
-#  2. filter to specific callsigns
-#  3. log messages to a text file at `./example_4.log`
-#  4. plot altitude using `matplotlib`
+#  2. log messages to a text file at `./example_4.log`
+#  3. plot altitude using `matplotlib`
 #
 # you can run this configuration with the following: `packetraven examples/example_4.yaml`
-
-callsigns:
-  - W3EAX-11
-  - W3EAX-12
 
 log:
   filename: 'example_4.log'
