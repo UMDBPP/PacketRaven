@@ -19,7 +19,7 @@ jobs:
       - name: download icon
         shell: bash
         run: |
-          wget https://avatars.githubusercontent.com/u/12263236?s=400&u=12de124e37a42cf9e97eb494cb7959d06246c808&v=4
+          wget 'https://avatars.githubusercontent.com/u/12263236?s=400&u=12de124e37a42cf9e97eb494cb7959d06246c808&v=4'
           mv 12263236?s=400&u=12de124e37a42cf9e97eb494cb7959d06246c808&v=4 icon.png
       - name: build executable with Linux options
         if: matrix.os != 'ubuntu-latest'
