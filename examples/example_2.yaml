@@ -10,8 +10,8 @@ callsigns:
   - W3EAX-12
 
 log:
-  filename: 'example_2.log'
+  filename: example_2.log
 
 packets:
   aprs_fi:
-    api_key: '123456.abcdefhijklmnop'
+    api_key: 123456.abcdefhijklmnop
