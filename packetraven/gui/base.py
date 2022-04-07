@@ -42,6 +42,7 @@ class PacketRavenGUI:
         self.__connections = []
 
         self.__timeout = None
+        self.__time_without_packets = timedelta(seconds=0)
         self.__running = False
         self.__toggles = {}
         self.__packet_tracks = {}
@@ -812,6 +813,9 @@ class PacketRavenGUI:
                     }
                 else:
                     updated_callsigns = {}
+                    self.__time_without_packets += self.interval + (
+                        datetime.now() - current_time
+                    )
 
                 if len(self.__packet_tracks) > 0:
                     await asyncio.wait(
@@ -824,6 +828,12 @@ class PacketRavenGUI:
                             for callsign, packet_track in self.__packet_tracks.items()
                         ]
                     )
+
+                if self.__time_without_packets >= self.__configuration['time']['timeout']:
+                    message = f'shutting down - no packets received for {self.__time_without_packets}'
+                    logging.info(message)
+                    teek.dialog.info('timeout', message)
+                    self.close()
 
                 if self.running:
                     self.__timeout = teek.after(

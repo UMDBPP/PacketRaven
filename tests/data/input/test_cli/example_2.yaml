@@ -1,0 +1,14 @@
+callsigns:
+  - W3EAX-11
+  - W3EAX-12
+
+time:
+  interval: 2
+  timeout: 6
+
+log:
+  filename: 'example_2.log'
+
+packets:
+  aprs_fi:
+    api_key: ${{ APRS_FI_API_KEY }}

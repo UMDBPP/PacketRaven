@@ -54,48 +54,48 @@ callsigns:
     - W3EAX-12
 
 time:
-    start: '2022-03-05'
-    end: '2022-03-06'
+    start: 2022-03-05
+    end: 2022-03-06
     interval: 30
 
 output:
-    filename: 'ns110.geojson'
+    filename: ns110.geojson
 
 log:
-    filename: 'ns110.log'
+    filename: ns110.log
 
 packets:
     aprs_fi:
-        api_key: '123456.abcdefhijklmnop'
+        api_key: 123456.abcdefhijklmnop
     text:
         locations:
-            - '/dev/ttyUSB0'
-            - '~/packets.txt'
+            - /dev/ttyUSB0
+            - ~/packets.txt
     database:
-        hostname: 'localhost'
+        hostname: localhost
         port: 5432
-        database: 'nearspace'
-        table: 'ns110'
-        username: 'user1'
-        password: 'password1'
+        database: nearspace
+        table: ns110
+        username: user1
+        password: password1
         tunnel:
-            hostname: 'bpp.umd.edu'
+            hostname: bpp.umd.edu
             port: 22
-            username: 'user1'
-            password: 'password2'
+            username: user1
+            password: password2
 
 prediction:
     start:
         location:
             - -78.4987
             - 40.0157
-        time: '2022-03-05 10:36:00'
+        time: 2022-03-05 10:36:00
     profile:
         ascent_rate: 6.5
         burst_altitude: 25000
         sea_level_descent_rate: 9
     output:
-        filename: 'ns110_prediction.geojson'
+        filename: ns110_prediction.geojson
 ```
 
 ### start the graphical user interface (GUI)
@@ -117,7 +117,7 @@ packetraven config.yaml --gui
 packets:
     text:
         locations:
-            - 'COM4'
+            - COM4
 ```
 
 you can also set the location to `auto` to try the first open USB port
@@ -128,7 +128,7 @@ you can also set the location to `auto` to try the first open USB port
 packets:
     text:
         locations:
-            - 'auto'
+            - auto
 ```
 
 #### listen to APRS.fi, watching specific callsigns
@@ -144,7 +144,7 @@ callsigns:
 
 packets:
     aprs_fi:
-        api_key: '123456.abcdefhijklmnop'
+        api_key: 123456.abcdefhijklmnop
 ```
 
 #### listen to a PostGIS database table
@@ -158,12 +158,12 @@ callsigns:
 
 packets:
     database:
-        hostname: 'bpp.umd.edu'
+        hostname: bpp.umd.edu
         port: 5432
-        database: 'nearspace'
-        table: 'ns110'
-        username: 'user1'
-        password: 'password1'
+        database: nearspace
+        table: ns110
+        username: user1
+        password: password1
 ```
 
 #### watch text file(s) for new lines containing raw APRS strings
@@ -174,8 +174,8 @@ packets:
 packets:
     text:
         locations:
-            - 'http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-10/W3EAX-10_raw_NS95.txt'
-            - 'http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-11/W3EAX-11_raw_NS95.txt'
+            - http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-10/W3EAX-10_raw_NS95.txt
+            - http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-11/W3EAX-11_raw_NS95.txt
 ```
 
 #### listen to a TNC on COM3, watching specific callsigns, and synchronize new packets with a database table via SSH tunnel
@@ -190,19 +190,19 @@ callsigns:
 packets:
     text:
         locations:
-            - 'COM3'
+            - COM3
     database:
-        hostname: 'localhost'
+        hostname: localhost
         port: 5432
-        database: 'nearspace'
-        table: 'ns110'
-        username: 'user1'
-        password: 'password1'
+        database: nearspace
+        table: ns110
+        username: user1
+        password: password1
         tunnel:
-            hostname: 'bpp.umd.edu'
+            hostname: bpp.umd.edu
             port: 22
-            username: 'user1'
-            password: 'password2'
+            username: user1
+            password: password2
 ```
 
 
