@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   build_executables:
-    name: build standalone executable binaries with Nuitka
+    name: build standalone executable binaries with pyinstaller
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -15,11 +15,11 @@ jobs:
       - name: install Python
         uses: actions/setup-python@v2
       - name: install dependencies
-        run: pip install nuitka .
+        run: pip install pyinstaller .
       - name: build executable
-        run: python -m nuitka packetraven/__main__.py --standalone --onefile --enable-plugin=numpy
-      - name: save wheel
+        run: python -m pyinstaller packetraven/packetraven.py --onefile
+      - name: save executable
         uses: actions/upload-artifact@v2
         with:
-          name: build
-          path: ./dist/*.whl
+          name: executable
+          path: ./dist/*
