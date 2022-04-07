@@ -65,6 +65,7 @@ jobs:
           tag: ${{ github.ref }}
           file: dist/*
           file_glob: true
+          repo_token: ${{ secrets.GH_TOKEN }}
   upload_pypi:
     name: publish to PyPI
     needs: [ build_wheels, build_sdist, build_executables ]
