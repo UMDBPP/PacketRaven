@@ -24,12 +24,9 @@ jobs:
       - name: build executable with Linux options
         if: matrix.os == 'ubuntu-latest'
         run: python -m nuitka packetraven/__main__.py --standalone --onefile --enable-plugin=numpy --linux-onefile-icon=icon.png
-      - name: build executable with Mac OSX options
-        if: matrix.os == 'macos-latest'
-        run: python -m nuitka packetraven/__main__.py --standalone --onefile --enable-plugin=numpy --macos-app-icon=icon.png
-      - name: build executable with Windows options
-        if: matrix.os == 'windows-latest'
-        run: python -m nuitka packetraven/__main__.py --standalone --onefile --enable-plugin=numpy --windows-icon-from-ico=icon.png
+      - name: build executable
+        if: matrix.os != 'ubuntu-latest'
+        run: python -m nuitka packetraven/__main__.py --standalone --onefile --enable-plugin=numpy
       - name: save wheel
         uses: actions/upload-artifact@v2
         with:
