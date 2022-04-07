@@ -59,7 +59,8 @@ def test_example_3():
     packetraven_command(filename)
 
 
-def test_example_4():
+def test_example_4(mocker):
     filename = INPUT_DIRECTORY / 'test_cli' / 'example_4.yaml'
 
+    mocker.patch('matplotlib.pyplot.show')
     packetraven_command(filename)
