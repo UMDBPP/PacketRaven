@@ -458,14 +458,14 @@ def packet_track_predictions(
         track_configuration['start']['location'] = last_packet.coordinates
         if len(track_configuration['start']['location'].shape) > 1:
             track_configuration['start']['location'] = track_configuration['start'][
-                'location'
-            ][0, :]
+                                                           'location'
+                                                       ][0, :]
 
         if track_configuration['float']['altitude'] is not None and not packet_track.falling:
             packets_at_float_altitude = packet_track[
                 numpy.abs(track_configuration['float']['altitude'] - packet_track.altitudes)
                 < track_configuration['float']['uncertainty']
-            ]
+                ]
             if (
                 len(packets_at_float_altitude) > 0
                 and packets_at_float_altitude[-1].time == packet_track.times[-1]
@@ -474,13 +474,13 @@ def packet_track_predictions(
                 track_configuration['profile']['descent_only'] = False
             elif packet_track.ascent_rates[-1] >= 0:
                 track_configuration['float']['start_time'] = track_configuration['start'][
-                    'time'
-                ] + timedelta(
+                                                                 'time'
+                                                             ] + timedelta(
                     seconds=(
-                        track_configuration['float']['altitude']
-                        - track_configuration['start']['location'][2]
-                    )
-                    / track_configuration['profile']['ascent_rate']
+                                track_configuration['float']['altitude']
+                                - track_configuration['start']['location'][2]
+                            )
+                            / track_configuration['profile']['ascent_rate']
                 )
                 track_configuration['profile']['descent_only'] = False
             else:
@@ -565,5 +565,9 @@ def ensure_datetime_timezone(value: datetime) -> datetime:
     return value
 
 
-if __name__ == '__main__':
+def main():
     typer.run(packetraven_command)
+
+
+if __name__ == '__main__':
+    main()
