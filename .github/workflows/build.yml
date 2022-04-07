@@ -44,21 +44,6 @@ jobs:
         with:
           name: build
           path: ./dist/*.tar.gz
-  upload_pypi:
-    name: publish to PyPI
-    needs: [ build_wheels, build_sdist ]
-    runs-on: ubuntu-latest
-    steps:
-      - name: retrieve wheel(s) and source
-        uses: actions/download-artifact@v2
-        with:
-          name: build
-          path: dist
-      - name: upload wheel(s) and source
-        uses: pypa/gh-action-pypi-publish@v1.5.0
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
   build_executables:
     name: build standalone executable binaries with pyinstaller
     runs-on: ${{ matrix.os }}
@@ -80,3 +65,18 @@ jobs:
           tag: ${{ github.ref }}
           file: dist/*
           file_glob: true
+  upload_pypi:
+    name: publish to PyPI
+    needs: [ build_wheels, build_sdist, build_executables ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: retrieve wheel(s) and source
+        uses: actions/download-artifact@v2
+        with:
+          name: build
+          path: dist
+      - name: upload wheel(s) and source
+        uses: pypa/gh-action-pypi-publish@v1.5.0
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TOKEN }}
