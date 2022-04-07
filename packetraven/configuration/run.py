@@ -17,7 +17,12 @@ DEFAULT_INTERVAL_SECONDS = 20
 class RunConfiguration(ConfigurationYAML):
     fields = {
         'callsigns': [str],
-        'time': {'start': datetime, 'end': datetime, 'interval': timedelta},
+        'time': {
+            'start': datetime,
+            'end': datetime,
+            'interval': timedelta,
+            'timeout': timedelta,
+        },
         'output': {'filename': Path,},
         'log': {'filename': Path,},
         'packets': {
@@ -54,14 +59,23 @@ class RunConfiguration(ConfigurationYAML):
                         self['callsigns'].insert(index, callsign)
 
         if key == 'time':
-            if self['time']['start'] is not None and self['time']['end'] is not None:
+            if (
+                'start' in self['time']
+                and self['time']['start'] is not None
+                and 'start' in self['time']
+                and self['time']['end'] is not None
+            ):
                 if self['time']['start'] > self['time']['end']:
                     temp_start_date = self['time']['start']
                     self['time']['start'] = self['time']['end']
                     self['time']['end'] = temp_start_date
                     del temp_start_date
 
-            if self['time']['interval'] < timedelta(seconds=1):
+            if (
+                'interval' in self['time']
+                and self['time']['interval'] is not None
+                and self['time']['interval'] < timedelta(seconds=1)
+            ):
                 self['time']['interval'] = timedelta(seconds=1)
 
         if key == 'output':

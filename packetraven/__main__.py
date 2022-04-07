@@ -1,8 +1,8 @@
-from argparse import ArgumentParser
 from copy import copy
 from datetime import datetime, timedelta
 from getpass import getpass
 import logging
+from os import PathLike
 from pathlib import Path
 import sys
 import time
@@ -11,6 +11,7 @@ from typing import Dict, List
 from dateutil.tz import tzlocal
 import humanize as humanize
 import numpy
+import typer
 
 from packetraven.configuration.prediction import PredictionConfiguration
 from packetraven.configuration.run import RunConfiguration
@@ -34,25 +35,17 @@ logging.basicConfig(
 DEFAULT_INTERVAL_SECONDS = 20
 
 
-def main():
-    args_parser = ArgumentParser()
-    args_parser.add_argument(
-        'configuration',
-        nargs='?',
-        help='configuration file in YAML format - see `examples` directory for examples',
-    )
-    args_parser.add_argument(
-        '--gui', action='store_true', help='start the graphical interface'
-    )
+def packetraven_command(configuration_filename: str, gui: bool = False):
+    """
+    start parsing packets
 
-    arguments = args_parser.parse_args()
+    :param configuration_filename: configuration file in YAML format - see `examples` directory for examples
+    :param gui: start the graphical interface
+    """
 
-    if arguments.configuration is not None and arguments.configuration != '':
-        configuration = RunConfiguration.from_file(arguments.configuration)
-    else:
-        configuration = None
+    if configuration_filename is not None:
+        configuration = RunConfiguration.from_file(configuration_filename)
 
-    if configuration is not None:
         if configuration['log'] is not None:
             logging.basicConfig(filename=configuration['log']['filename'])
 
@@ -84,8 +77,10 @@ def main():
             if configuration['time']['end'] is not None:
                 aprsfi_url += f'&te={configuration["time"]["end"]:%s}'
             logging.info(f'tracking URL: {aprsfi_url}')
+    else:
+        configuration = None
 
-    if arguments.gui:
+    if gui:
         from packetraven.gui import PacketRavenGUI
 
         PacketRavenGUI(configuration)
@@ -208,7 +203,10 @@ def main():
                     del plots[variable]
 
         try:
+            time_without_packets = timedelta(seconds=0)
             while len(connections) > 0:
+                current_time = datetime.now()
+
                 try:
                     new_packets = retrieve_packets(
                         connections,
@@ -258,16 +256,27 @@ def main():
 
                     for plot in plots.values():
                         plot.update(packet_tracks, predictions)
+                else:
+                    time_without_packets += configuration['time']['interval'] + (
+                        datetime.now() - current_time
+                    )
 
-                time.sleep(configuration['time']['interval'] / timedelta(seconds=1))
+                if time_without_packets >= configuration['time']['timeout']:
+                    logging.info(
+                        f'shutting down - no packets received for {time_without_packets}'
+                    )
+                    break
+                else:
+                    time.sleep(configuration['time']['interval'] / timedelta(seconds=1))
         except KeyboardInterrupt:
             for connection in connections:
                 connection.close()
             sys.exit(0)
     else:
-        raise ValueError(
+        logging.error(
             'no configuration given; to use the graphical interface try `packetraven --gui`'
         )
+        sys.exit(1)
 
 
 def retrieve_packets(
@@ -555,4 +564,4 @@ def ensure_datetime_timezone(value: datetime) -> datetime:
 
 
 if __name__ == '__main__':
-    main()
+    typer.run(packetraven_command)

@@ -1,0 +1,43 @@
+callsigns:
+  - W3EAX-10
+  - W3EAX-11
+
+time:
+  start: '2022-03-05'
+  end: '2022-03-06'
+  interval: 2
+  timeout: 6
+
+output:
+  filename: 'example_3.geojson'
+
+log:
+  filename: 'example_3.log'
+
+packets:
+  aprs_fi:
+    api_key: ${{ APRS_FI_API_KEY }}
+  text:
+    locations:
+      - 'http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-10/W3EAX-10_raw_NS95.txt'
+      - 'http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-11/W3EAX-11_raw_NS95.txt'
+  database:
+    hostname: ${{ POSTGRES_HOSTNAME }}
+    port: ${{ POSTGRES_PORT }}
+    database: ${{ POSTGRES_DATABASE }}
+    table: ${{ POSTGRES_TABLE }}
+    username: ${{ POSTGRES_USERNAME }}
+    password: ${{ POSTGRES_PASSWORD }}
+
+prediction:
+  start:
+    location:
+      - -78.4987
+      - 40.0157
+    time: '2022-03-05 10:36:00'
+  profile:
+    ascent_rate: 6.5
+    burst_altitude: 25000
+    sea_level_descent_rate: 9
+  output:
+    filename: 'example_3_prediction.geojson'
