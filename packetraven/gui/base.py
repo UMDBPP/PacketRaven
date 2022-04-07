@@ -829,7 +829,10 @@ class PacketRavenGUI:
                         ]
                     )
 
-                if 'timeout' in self.__configuration['time'] and self.__time_without_packets >= self.__configuration['time']['timeout']:
+                if (
+                    'timeout' in self.__configuration['time']
+                    and self.__time_without_packets >= self.__configuration['time']['timeout']
+                ):
                     message = f'shutting down - no packets received for {self.__time_without_packets}'
                     logging.info(message)
                     teek.dialog.info('timeout', message)

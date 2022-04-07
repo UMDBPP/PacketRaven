@@ -2,13 +2,11 @@ import os
 from os import PathLike
 from pathlib import Path
 import re
-import signal
-import subprocess
 from tempfile import NamedTemporaryFile
 
 import pytest
 
-from packetraven.__main__ import packetraven_command
+from packetraven.packetraven import packetraven_command
 from tests import INPUT_DIRECTORY
 
 

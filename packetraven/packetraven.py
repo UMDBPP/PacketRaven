@@ -2,7 +2,6 @@ from copy import copy
 from datetime import datetime, timedelta
 from getpass import getpass
 import logging
-from os import PathLike
 from pathlib import Path
 import sys
 import time
@@ -261,7 +260,10 @@ def packetraven_command(configuration_filename: str, gui: bool = False):
                         datetime.now() - current_time
                     )
 
-                if 'timeout' in configuration['time'] and time_without_packets >= configuration['time']['timeout']:
+                if (
+                    'timeout' in configuration['time']
+                    and time_without_packets >= configuration['time']['timeout']
+                ):
                     logging.info(
                         f'shutting down - no packets received for {time_without_packets}'
                     )

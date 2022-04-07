@@ -96,7 +96,7 @@ class APRSfi(APRSPacketSource, NetworkConnection):
                 except Exception as error:
                     logging.error(f'{error.__class__.__name__} - {error}')
         else:
-            logging.warning(f'query failure "{response["code"]}: {response["description"]}"', )
+            logging.warning(f'query failure "{response["code"]}: {response["description"]}"')
             packets = []
 
         self.__last_access_time = datetime.now()
