@@ -59,6 +59,7 @@ def test_example_3():
     packetraven_command(filename)
 
 
+@pytest.mark.skip()
 def test_example_4(mocker):
     filename = INPUT_DIRECTORY / 'test_cli' / 'example_4.yaml'
 
