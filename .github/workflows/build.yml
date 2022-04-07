@@ -60,7 +60,7 @@ jobs:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
   build_executables:
-    name: build standalone executable binaries with Nuitka
+    name: build standalone executable binaries with pyinstaller
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -71,20 +71,12 @@ jobs:
       - name: install Python
         uses: actions/setup-python@v2
       - name: install dependencies
-        run: pip install nuitka .
-      - name: download icon
-        run: wget https://avatars.githubusercontent.com/u/12263236?s=400&u=12de124e37a42cf9e97eb494cb7959d06246c808&v=4 icon.png
-      - name: build executable with Linux options
-        if: matrix.os != 'ubuntu-latest'
-        run: python -m nuitka packetraven/__main__.py --standalone --onefile --enable-plugin=numpy --linux-onefile-icon=icon.png
-      - name: build executable with Mac OSX options
-        if: matrix.os != 'macos-latest'
-        run: python -m nuitka packetraven/__main__.py --standalone --onefile --enable-plugin=numpy --macos-app-icon=icon.png
-      - name: build executable with Windows options
-        if: matrix.os != 'windows-latest'
-        run: python -m nuitka packetraven/__main__.py --standalone --onefile --enable-plugin=numpy --windows-icon-from-ico=icon.png
-      - name: save wheel
-        uses: actions/upload-artifact@v2
+        run: pip install pyinstaller .
+      - name: build executable
+        run: pyinstaller packetraven/packetraven.py --windowed --onefile
+      - name: Upload files to a GitHub release
+        uses: svenstaro/upload-release-action@2.2.1
         with:
-          name: build
-          path: ./dist/*.whl
+          tag: ${{ github.ref }}
+          file: dist/*
+          file_glob: true

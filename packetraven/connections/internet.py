@@ -7,7 +7,7 @@ import aprslib
 import requests
 from shapely.geometry import Point
 from tablecrow import PostGresTable
-from tablecrow.utilities import repository_root, split_hostname_port
+from tablecrow.utilities import split_hostname_port
 
 from packetraven.connections.base import (
     APRSPacketSink,
@@ -19,8 +19,6 @@ from packetraven.connections.base import (
 )
 from packetraven.packets import APRSPacket, LocationPacket
 from packetraven.packets.parsing import InvalidPacketError
-
-CREDENTIALS_FILENAME = repository_root() / 'credentials.yaml'
 
 
 class APRSfi(APRSPacketSource, NetworkConnection):
@@ -98,7 +96,7 @@ class APRSfi(APRSPacketSource, NetworkConnection):
                 except Exception as error:
                     logging.error(f'{error.__class__.__name__} - {error}')
         else:
-            logging.warning(f'query failure "{response["code"]}: {response["description"]}"',)
+            logging.warning(f'query failure "{response["code"]}: {response["description"]}"', )
             packets = []
 
         self.__last_access_time = datetime.now()
