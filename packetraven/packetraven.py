@@ -261,7 +261,7 @@ def packetraven_command(configuration_filename: str, gui: bool = False):
                         datetime.now() - current_time
                     )
 
-                if time_without_packets >= configuration['time']['timeout']:
+                if 'timeout' in configuration['time'] and time_without_packets >= configuration['time']['timeout']:
                     logging.info(
                         f'shutting down - no packets received for {time_without_packets}'
                     )
