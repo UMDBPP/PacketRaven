@@ -45,23 +45,4 @@ def test_example_2():
     filename = INPUT_DIRECTORY / 'test_cli' / 'example_2.yaml'
     filename = insert_environment_variables(filename)
 
-    process = subprocess.Popen(packetraven_command(filename))
-    process.send_signal(signal.SIGINT)
-
-
-@pytest.mark.skipif(
-    'POSTGRES_HOSTNAME' not in os.environ, reason='environment variables not set'
-)
-def test_example_3():
-    filename = INPUT_DIRECTORY / 'test_cli' / 'example_3.yaml'
-    filename = insert_environment_variables(filename)
-
-    packetraven_command(filename)
-
-
-@pytest.mark.skip()
-def test_example_4(mocker):
-    filename = INPUT_DIRECTORY / 'test_cli' / 'example_4.yaml'
-
-    mocker.patch('matplotlib.pyplot.show')
     packetraven_command(filename)
