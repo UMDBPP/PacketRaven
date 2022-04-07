@@ -8,18 +8,12 @@ on:
 jobs:
   build_wheels:
     name: build wheel
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ ubuntu-latest ]
-        python-version: [ '3.x' ]
+    runs-on: ubuntu-latest
     steps:
       - name: checkout repository
         uses: actions/checkout@v2
       - name: install Python
         uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
       - name: build wheel
         run: pip wheel . -w dist --no-deps
       - name: save wheel
@@ -49,7 +43,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-latest, windows-latest, macos-latest ]
+        os: [ windows-latest, macos-latest ]
     steps:
       - name: checkout repository
         uses: actions/checkout@v2
