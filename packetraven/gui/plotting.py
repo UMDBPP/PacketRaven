@@ -1,16 +1,15 @@
 from tkinter import Toplevel
 from typing import Dict
 
-import matplotlib
-
-matplotlib.use('TkAgg')
-matplotlib.interactive(True)
-
 from matplotlib import pyplot
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from packetraven.packets.tracks import LocationPacketTrack, PredictedTrajectory
+
+# import matplotlib
+# matplotlib.use('TkAgg')
+# matplotlib.interactive(True)
 
 VARIABLES = {
     'altitude': {'x': 'times', 'y': 'altitudes', 'xlabel': 'time', 'ylabel': 'altitude (m)'},
@@ -82,31 +81,31 @@ class LiveTrackPlot:
             for name, packet_track in self.packet_tracks.items():
                 x = getattr(packet_track, VARIABLES[self.variable]['x'])
                 y = getattr(packet_track, VARIABLES[self.variable]['y'])
-                lines = axis.plot(x, y, linewidth=2, marker='o', label=packet_track.name,)
-
+                lines = axis.plot(x, y, linewidth=2, marker='o', label=packet_track.name)
                 packet_track_lines[name] = lines[0]
 
-            for name, packet_track in self.predictions.items():
+            for name, prediction in self.predictions.items():
                 color = (
                     packet_track_lines[name].get_color()
                     if name in packet_track_lines
                     else None
                 )
-
+                x = getattr(prediction, VARIABLES[self.variable]['x'])
+                y = getattr(prediction, VARIABLES[self.variable]['y'])
                 axis.plot(
-                    getattr(packet_track, VARIABLES[self.variable]['x']),
-                    getattr(packet_track, VARIABLES[self.variable]['y']),
+                    x,
+                    y,
                     '--',
                     linewidth=0.5,
                     color=color,
-                    label=f'{packet_track.name} prediction',
+                    label=f'{prediction.name} prediction',
                 )
 
             axis.legend()
 
-            # NOTE: this `pyplot.pause(0.1)` NEEDS to be here, and it NEEDS to be `0.1` seconds;
+            # NOTE: this `pyplot.pause(0.1)` NEEDS to be here, and it NEEDS to be `0.1` seconds per track;
             # otherwise the plot does not render correctly upon update
-            pyplot.pause(0.1)
+            pyplot.pause(0.1 * (len(self.packet_tracks) + len(self.predictions)))
 
     @property
     def window(self) -> Toplevel:

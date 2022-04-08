@@ -55,7 +55,7 @@ def packetraven_command(configuration_filename: str, gui: bool = False):
                 'filename' not in configuration['log']
                 or configuration['log']['filename'] is None
             ):
-                configuration['log']['filename'] = '.'
+                configuration['log']['filename'] = Path('.')
             if configuration['log']['filename'].is_dir():
                 configuration['log'][
                     'filename'
@@ -67,7 +67,7 @@ def packetraven_command(configuration_filename: str, gui: bool = False):
                 'filename' not in configuration['output']
                 or configuration['output']['filename'] is None
             ):
-                configuration['output']['filename'] = '.'
+                configuration['output']['filename'] = Path('.')
             if configuration['output']['filename'].is_dir():
                 configuration['output'][
                     'filename'
@@ -75,7 +75,7 @@ def packetraven_command(configuration_filename: str, gui: bool = False):
 
         if 'prediction' in configuration and configuration['prediction'] is not None:
             if configuration['prediction']['output']['filename'] is None:
-                configuration['prediction']['output']['filename'] = '.'
+                configuration['prediction']['output']['filename'] = Path('.')
             if configuration['prediction']['output']['filename'].is_dir():
                 configuration['prediction']['output'][
                     'filename'
@@ -276,6 +276,9 @@ def packetraven_command(configuration_filename: str, gui: bool = False):
                     logging.exception(f'{error.__class__.__name__} - {error}')
                     new_packets = {}
 
+                for plot in plots.values():
+                    plot.update(packet_tracks, predictions)
+
                 if len(new_packets) > 0:
                     if configuration['output']['filename'] is not None:
                         write_packet_tracks(
@@ -285,9 +288,6 @@ def packetraven_command(configuration_filename: str, gui: bool = False):
                     if aprs_is is not None:
                         for packets in new_packets.values():
                             aprs_is.send(packets)
-
-                    for plot in plots.values():
-                        plot.update(packet_tracks, predictions)
                 else:
                     time_without_packets += configuration['time']['interval'] + (
                         datetime.now() - current_time
