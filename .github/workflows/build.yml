@@ -53,7 +53,7 @@ jobs:
         run: pip install pyinstaller .
       - name: build executable
         run: pyinstaller packetraven/__main__.py --windowed --onefile --name packetraven
-      - name: Upload files to a GitHub release
+      - name: upload files to release
         uses: svenstaro/upload-release-action@2.2.1
         with:
           tag: ${{ github.ref }}
