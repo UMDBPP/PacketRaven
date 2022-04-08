@@ -104,6 +104,9 @@ class ConfigurationSection:
 class ConfigurationYAML(Configuration):
     @classmethod
     def from_file(cls, filename: PathLike) -> 'Configuration':
+        if not isinstance(filename, Path):
+            filename = Path(filename)
+        filename = filename.expanduser()
         with open(filename) as input_file:
             configuration = yaml.safe_load(input_file)
         return cls(**configuration)

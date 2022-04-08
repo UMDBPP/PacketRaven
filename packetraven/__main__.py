@@ -42,11 +42,44 @@ def packetraven_command(configuration_filename: str, gui: bool = False):
     :param gui: start the graphical interface
     """
 
+    program_start_time = datetime.now()
+
+    if not isinstance(configuration_filename, Path):
+        configuration_filename = Path(configuration_filename)
+
     if configuration_filename is not None:
         configuration = RunConfiguration.from_file(configuration_filename)
 
         if configuration['log'] is not None:
+            if (
+                'filename' not in configuration['log']
+                or configuration['log']['filename'] is None
+            ):
+                configuration['log']['filename'] = '.'
+            if configuration['log']['filename'].is_dir():
+                configuration['log'][
+                    'filename'
+                ] /= f'{configuration["name"]}_log_{program_start_time:%Y%m%dT%H%M%S}.txt'
             logging.basicConfig(filename=configuration['log']['filename'])
+
+        if configuration['output'] is not None:
+            if (
+                'filename' not in configuration['output']
+                or configuration['output']['filename'] is None
+            ):
+                configuration['output']['filename'] = '.'
+            if configuration['output']['filename'].is_dir():
+                configuration['output'][
+                    'filename'
+                ] /= f'{configuration["name"]}_{program_start_time:%Y%m%dT%H%M%S}.geojson'
+
+        if 'prediction' in configuration and configuration['prediction'] is not None:
+            if configuration['prediction']['output']['filename'] is None:
+                configuration['prediction']['output']['filename'] = '.'
+            if configuration['prediction']['output']['filename'].is_dir():
+                configuration['prediction']['output'][
+                    'filename'
+                ] /= f'{configuration["name"]}_predict_{program_start_time:%Y%m%dT%H%M%S}.geojson'
 
         filter_message = 'retrieving packets'
         if configuration['time']['start'] is not None and configuration['time']['end'] is None:

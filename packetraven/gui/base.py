@@ -45,6 +45,7 @@ class PacketRavenGUI:
         self.__time_without_packets = timedelta(seconds=0)
         self.__running = False
         self.__toggles = {}
+        self.__toggle_time = datetime.now()
         self.__packet_tracks = {}
 
         self.__frames = {}
@@ -412,7 +413,10 @@ class PacketRavenGUI:
             if not isinstance(filename, Path):
                 filename = Path(filename)
             if filename.expanduser().resolve().is_dir():
-                filename = filename / f'packetraven_log_{datetime.now():%Y%m%dT%H%M%S}.txt'
+                filename = (
+                    filename
+                    / f'{self.__configuration["name"]}_log_{self.__toggle_time:%Y%m%dT%H%M%S}.txt'
+                )
         else:
             filename = ''
         self.__replace_text(self.__elements['log_file'], filename)
@@ -439,7 +443,8 @@ class PacketRavenGUI:
                 filename = Path(filename)
             if filename.expanduser().resolve().is_dir():
                 filename = (
-                    filename / f'packetraven_output_{datetime.now():%Y%m%dT%H%M%S}.geojson'
+                    filename
+                    / f'{self.__configuration["name"]}_{self.__toggle_time:%Y%m%dT%H%M%S}.geojson'
                 )
         else:
             filename = ''
@@ -473,7 +478,8 @@ class PacketRavenGUI:
                 filename = Path(filename)
             if filename.expanduser().resolve().is_dir():
                 filename = (
-                    filename / f'packetraven_predict_{datetime.now():%Y%m%dT%H%M%S}.geojson'
+                    filename
+                    / f'{self.__configuration["name"]}_predict_{self.__toggle_time:%Y%m%dT%H%M%S}.geojson'
                 )
         else:
             filename = ''
@@ -502,6 +508,8 @@ class PacketRavenGUI:
 
     def toggle(self):
         if not self.running:
+            self.__toggle_time = datetime.now()
+
             self.__elements['toggle_button'].busy_hold()
             self.__toggle_text.set('Stop')
 

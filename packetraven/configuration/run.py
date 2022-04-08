@@ -16,6 +16,7 @@ DEFAULT_INTERVAL_SECONDS = 20
 
 class RunConfiguration(ConfigurationYAML):
     fields = {
+        'name': str,
         'callsigns': [str],
         'time': {
             'start': datetime,
@@ -32,10 +33,11 @@ class RunConfiguration(ConfigurationYAML):
             'aprs_is': APRSisCredentials,
         },
         'prediction': PredictionConfiguration,
-        'plots': {'altitude': bool, 'ascent_rate': bool, 'ground_speed': bool,},
+        'plots': {'altitude': bool, 'ascent_rate': bool, 'ground_speed': bool},
     }
 
     defaults = {
+        'name': 'packetraven_flight',
         'callsigns': [],
         'time': {
             'start': None,
@@ -45,7 +47,7 @@ class RunConfiguration(ConfigurationYAML):
         'output': {'filename': None},
         'log': {'filename': None},
         'packets': {},
-        'plots': {'altitude': False, 'ascent_rate': False, 'ground_speed': False,},
+        'plots': {'altitude': False, 'ascent_rate': False, 'ground_speed': False},
     }
 
     def __setitem__(self, key: str, value: Any):
