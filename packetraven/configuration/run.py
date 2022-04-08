@@ -50,6 +50,17 @@ class RunConfiguration(ConfigurationYAML):
         'plots': {'altitude': False, 'ascent_rate': False, 'ground_speed': False},
     }
 
+    def __init__(self, **configuration):
+        if 'prediction' in configuration:
+            if (
+                'name' not in configuration['prediction']
+                or configuration['prediction']['name'] is None
+            ):
+                if 'name' not in configuration or configuration['name'] is None:
+                    configuration['name'] = self.defaults['name']
+                configuration['prediction']['name'] = configuration['name']
+        super().__init__(**configuration)
+
     def __setitem__(self, key: str, value: Any):
         super().__setitem__(key, value)
 
