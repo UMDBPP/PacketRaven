@@ -4,6 +4,7 @@ callsigns:
 - W3EAX-12
 log:
   filename: ns110.log
+name: packetraven_flight
 output:
   filename: ns110.geojson
 packets:
@@ -35,7 +36,7 @@ prediction:
     altitude: null
     duration: null
     uncertainty: 500
-  name: prediction
+  name: packetraven_flight
   output:
     filename: ns110_prediction.geojson
   profile:
