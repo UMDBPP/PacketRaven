@@ -53,6 +53,14 @@ jobs:
         run: pip install pyinstaller .
       - name: build executable
         run: pyinstaller packetraven/packetraven.py --windowed --onefile
+      - name: rename Mac OSX executable
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: mv dist/__main__ dist/packetraven
+      - name: rename Windows executable
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: mv dist/__main__.exe dist/packetraven.exe
       - name: Upload files to a GitHub release
         uses: svenstaro/upload-release-action@2.2.1
         with:
