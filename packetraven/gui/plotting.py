@@ -1,15 +1,15 @@
 from tkinter import Toplevel
 from typing import Dict
 
+import matplotlib
 from matplotlib import pyplot
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from packetraven.packets.tracks import LocationPacketTrack, PredictedTrajectory
 
-# import matplotlib
-# matplotlib.use('TkAgg')
-# matplotlib.interactive(True)
+matplotlib.use('TkAgg')
+matplotlib.interactive(True)
 
 VARIABLES = {
     'altitude': {'x': 'times', 'y': 'altitudes', 'xlabel': 'time', 'ylabel': 'altitude (m)'},
