@@ -6,7 +6,7 @@ from tempfile import NamedTemporaryFile
 
 import pytest
 
-from packetraven.packetraven import packetraven_command
+from packetraven.__main__ import packetraven_command
 from tests import INPUT_DIRECTORY
 
 
