@@ -62,7 +62,7 @@ jobs:
           repo_token: ${{ secrets.GH_TOKEN }}
   upload_pypi:
     name: publish to PyPI
-    needs: [ build_wheels, build_sdist, build_executables ]
+    needs: [ build_wheels, build_sdist ]
     runs-on: ubuntu-latest
     steps:
       - name: retrieve wheel(s) and source
