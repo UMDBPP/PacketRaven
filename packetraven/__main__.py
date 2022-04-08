@@ -105,9 +105,9 @@ def packetraven_command(configuration_filename: str, gui: bool = False):
                 f'https://aprs.fi/#!call=a%2F{"%2Ca%2F".join(configuration["callsigns"])}'
             )
             if configuration['time']['start'] is not None:
-                aprsfi_url += f'&ts={configuration["time"]["start"]:%s}'
+                aprsfi_url += f'&ts={int(configuration["time"]["start"].timestamp())}'
             if configuration['time']['end'] is not None:
-                aprsfi_url += f'&te={configuration["time"]["end"]:%s}'
+                aprsfi_url += f'&te={int(configuration["time"]["end"].timestamp())}'
             logging.info(f'tracking URL: {aprsfi_url}')
     else:
         configuration = None
