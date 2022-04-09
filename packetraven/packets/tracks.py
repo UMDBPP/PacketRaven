@@ -208,7 +208,7 @@ class LocationPacketTrack:
                     return self[closest_time]
                 else:
                     raise IndexError(
-                        f'time index out of range: {min(self.times) - maximum_interval} <\= {index} <\= {max(self.times) + maximum_interval}'
+                        f'time index out of range: {min(self.times) - maximum_interval} <= {index} <= {max(self.times) + maximum_interval}'
                     )
             elif len(matching_packets) == 1:
                 return matching_packets[0]
