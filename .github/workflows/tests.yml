@@ -25,8 +25,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ windows-latest ]
-        python-version: [ '3.8', '3.x' ]
+        os: [ windows-latest, macos-latest ]
+        python-version: [ 3.8, 3.9, 3.x ]
+        exclude:
+          - os: macos-latest
+            python-version: 3.x
     steps:
       - name: clone repository
         uses: actions/checkout@v2
@@ -54,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ '3.8', '3.x' ]
+        python-version: [ 3.8, 3.9, 3.x ]
     services:
       postgres:
         image: postgis/postgis:13-3.1
