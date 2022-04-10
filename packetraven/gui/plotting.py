@@ -1,15 +1,18 @@
+import sys
 from tkinter import Toplevel
 from typing import Dict
 
 import matplotlib
+
+if sys.platform == 'darwin':
+    matplotlib.use('gtk')
+    matplotlib.interactive(True)
+
 from matplotlib import pyplot
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from packetraven.packets.tracks import LocationPacketTrack, PredictedTrajectory
-
-matplotlib.use('TkAgg')
-matplotlib.interactive(True)
 
 VARIABLES = {
     'altitude': {'x': 'times', 'y': 'altitudes', 'xlabel': 'time', 'ylabel': 'altitude (m)'},
