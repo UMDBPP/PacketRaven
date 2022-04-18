@@ -212,6 +212,9 @@ class APRSPacket(LocationPacket):
 
         :param frame: string containing raw packet
         :param packet_time: Time of packet, either as datetime object, seconds since Unix epoch, or ISO format date string.
+
+        >>> APRSPacket.from_frame("W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu")
+        APRSPacket(from_callsign='W3EAX-8', to_callsign='APRS', time=datetime.datetime(2022, 4, 18, 10, 44, 39, 343061), x=-77.90921071284187, y=39.7003564996876, z=8201.8632, crs=CRS.from_epsg(4326), raw="W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu", path=['WIDE1-1', 'WIDE2-1', 'qAR', 'K3DO-11'], via='K3DO-11', messagecapable=False, format='compressed', gpsfixstatus=1, symbol='O', symbol_table='/', comment="|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu")
         """
 
         # parse packet with metric units
