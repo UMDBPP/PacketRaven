@@ -48,7 +48,7 @@ class APRSfi(APRSPacketSource, NetworkConnection):
             raise ConnectionError(f'queries to {url} require a list of callsigns')
         super().__init__(url, callsigns)
 
-        @backoff.on_exception(backoff.expo, ConnectionError, max_time=self.interval * 4 / timedelta(seconds=1))
+        @backoff.on_exception(backoff.expo, ConnectionError, max_time=self.interval / timedelta(seconds=1))
         def request_with_backoff(url: str, *args, **kwargs) -> Dict[str, Any]:
             response = requests.get(url, *args, **kwargs).json()
             if response['result'] == 'fail':

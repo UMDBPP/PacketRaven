@@ -39,6 +39,7 @@ def test_example_1():
 @pytest.mark.skipif(
     'APRS_FI_API_KEY' not in os.environ, reason='environment variables not set'
 )
+@pytest.mark.serial
 def test_example_2():
     filename = INPUT_DIRECTORY / 'test_cli' / 'example_2.yaml'
     filename = insert_environment_variables(filename)
