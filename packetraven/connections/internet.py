@@ -4,6 +4,7 @@ from time import sleep
 from typing import Any, Dict, List, Sequence
 
 import aprslib
+import backoff as backoff
 import requests
 from shapely.geometry import Point
 from tablecrow import PostGresTable
@@ -84,11 +85,15 @@ class APRSfi(APRSPacketSource, NetworkConnection):
             'tail': int(timedelta(days=1) / timedelta(seconds=1)),
         }
 
-        query = '&'.join(f'{key}={value}' for key, value in query.items())
+        @backoff.on_exception(backoff.expo, requests.exceptions.ConnectionError, max_time=self.interval * 2 / timedelta(seconds=1))
+        def request_with_backoff(url: str):
+            return requests.get(url)
 
-        response = requests.get(f'{self.location}?{query}').json()
+        query = '&'.join(f'{key}={value}' for key, value in query.items())
+        response = request_with_backoff(f'{self.location}?{query}').json()
+
+        packets = []
         if response['result'] != 'fail':
-            packets = []
             for packet_candidate in response['entries']:
                 try:
                     packet = APRSPacket.from_frame(packet_candidate, source=self.location)
@@ -97,7 +102,6 @@ class APRSfi(APRSPacketSource, NetworkConnection):
                     logging.error(f'{error.__class__.__name__} - {error}')
         else:
             logging.warning(f'query failure "{response["code"]}: {response["description"]}"')
-            packets = []
 
         self.__last_access_time = datetime.now()
         return packets
@@ -443,7 +447,11 @@ class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
             except InvalidPacketError:
                 pass
 
-        aprs_is = aprslib.IS('NOCALL', '-1', self.hostname, self.port)
+        @backoff.on_exception(backoff.expo, requests.exceptions.ConnectionError, max_time=self.interval * 2 / timedelta(seconds=1))
+        def aprsis_with_backoff(hostname: str, port: int):
+            return aprslib.IS('NOCALL', '-1', hostname, port)
+
+        aprs_is = aprsis_with_backoff(self.hostname, self.port)
 
         aprs_is.connect()
         aprs_is.consumer(callback=add_frames, raw=True, blocking=False)
