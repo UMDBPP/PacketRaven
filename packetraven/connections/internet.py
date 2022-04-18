@@ -56,10 +56,10 @@ class APRSfi(APRSPacketSource, NetworkConnection):
 
         self.request_with_backoff = request_with_backoff
 
+        self.api_key = api_key
+
         if not self.connected:
             raise ConnectionError(f'no network connection')
-
-        self.api_key = api_key
 
         self.__last_access_time = None
 
