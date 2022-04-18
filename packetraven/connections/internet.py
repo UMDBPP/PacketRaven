@@ -60,7 +60,7 @@ class APRSfi(APRSPacketSource, NetworkConnection):
 
     @api_key.setter
     def api_key(self, api_key: str):
-        response = requests.get(
+        response = self.request_with_backoff(
             f'{self.location}?name=OH2TI&what=wx&apikey={api_key}&format=json'
         ).json()
         if response['result'] == 'fail':
