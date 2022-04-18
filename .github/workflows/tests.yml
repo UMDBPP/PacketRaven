@@ -27,9 +27,6 @@ jobs:
       matrix:
         os: [ windows-latest, macos-latest ]
         python-version: [ 3.8, 3.9, 3.x ]
-        exclude:
-          - os: macos-latest
-            python-version: 3.x
     steps:
       - name: clone repository
         uses: actions/checkout@v2
