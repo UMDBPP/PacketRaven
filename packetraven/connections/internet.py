@@ -54,6 +54,8 @@ class APRSfi(APRSPacketSource, NetworkConnection):
                 raise ConnectionError(f'{response["code"]} - {response["description"]}')
             return response
 
+        self.request_with_backoff = request_with_backoff
+
         if not self.connected:
             raise ConnectionError(f'no network connection')
 
