@@ -64,15 +64,14 @@ class APRSfi(APRSPacketSource, NetworkConnection):
         self.__last_access_time = None
 
     @property
-    def api_key(self) -> str:
-        return self.__api_key
-
-    @api_key.setter
-    def api_key(self, api_key: str):
-        self.request_with_backoff(
-            f'{self.location}?name={self.callsigns[0]}&what=loc&apikey={api_key}&format=json'
-        )
-        self.__api_key = api_key
+    def connected(self) -> bool:
+        try:
+            self.request_with_backoff(
+                f'{self.location}?name={self.callsigns[0]}&what=loc&apikey={self.api_key}&format=json', timeout=2
+            )
+            return True
+        except (ConnectionError, requests.ConnectionError, requests.Timeout):
+            return False
 
     @property
     def packets(self) -> List[APRSPacket]:
