@@ -69,9 +69,6 @@ class APRSfi(APRSPacketSource, NetworkConnection):
 
     @api_key.setter
     def api_key(self, api_key: str):
-        self.request_with_backoff(
-            f'{self.location}?name={self.callsigns[0]}&what=loc&apikey={api_key}&format=json'
-        )
         self.__api_key = api_key
 
     @property
