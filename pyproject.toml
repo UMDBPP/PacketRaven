@@ -1,6 +1,60 @@
+[tool.poetry]
+name = 'packetraven'
+version = '0.0.0'
+description = 'Telemetry dashboard for APRS packets from TNC, https://aprs.fi, and PostGIS'
+authors = ['Zach Burnett <zrb@umd.edu>']
+license = 'GPL-3.0-or-later'
+readme = 'README.md'
+repository = 'https://github.com/UMDBPP/packetraven.git'
+documentation = 'https://packetraven.readthedocs.io'
+
 [build-system]
 requires = [
-    "dunamai",
-    "setuptools",
+    'cython',
+    'poetry-core>=1.0.0',
+    'poetry-dynamic-versioning',
 ]
-build-backend = "setuptools.build_meta"
+build-backend = 'poetry.core.masonry.api'
+
+[tool.poetry-dynamic-versioning]
+enable = true
+
+[tool.poetry.dependencies]
+python = '^3.7'
+aprslib = '*'
+humanize = '*'
+numpy = '*'
+pandas = '*'
+pyserial = '*'
+geojson = '*'
+fastkml = '*'
+matplotlib = '*'
+pyproj = '*'
+pyyaml = '*'
+requests = '*'
+shapely = '*'
+sshtunnel = '*'
+tablecrow = '^1.4.3'
+teek = '*'
+typepigeon = '^1.0.13'
+typer = '*'
+
+[tool.poetry.dev-dependencies]
+flake8 = '*'
+isort = '*'
+m2r2 = '*'
+oitnb = '*'
+pytest = '*'
+pytest-cov = '*'
+pytest-mock = '*'
+pytest-xdist = '*'
+sphinx = '*'
+sphinx-rtd-theme = '*'
+sphinxcontrib-programoutput = '*'
+
+[tool.poetry.extras]
+testing = ['pytest', 'pytest-cov', 'pytest-mock', 'pytest-xdist']
+development = ['flake8', 'isort', 'oitnb']
+
+[tool.poetry.scripts]
+packetraven = 'packetraven.__main__:main'
