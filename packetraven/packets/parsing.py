@@ -16,7 +16,7 @@ def parse_raw_aprs(raw_aprs: Union[str, Mapping]) -> Dict[str, Any]:
     {'raw': "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu", 'from': 'W3EAX-8', 'to': 'APRS', 'path': ['WIDE1-1', 'WIDE2-1', 'qAR', 'K3DO-11'], 'via': 'K3DO-11', 'messagecapable': False, 'format': 'compressed', 'gpsfixstatus': 1, 'symbol': 'O', 'symbol_table': '/', 'latitude': 39.7003564996876, 'longitude': -77.90921071284187, 'altitude': 8201.8632, 'comment': "|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu"}
     """
 
-    if not isinstance(raw_aprs, Mapping):
+    if isinstance(raw_aprs, Mapping):
         parsed_packet = {
             'from': raw_aprs['srccall'],
             'to': raw_aprs['dstcall'],
