@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from datetime import timedelta
 from typing import List
 
+import backoff
 import requests
 from serial.tools import list_ports
 
@@ -33,11 +34,20 @@ class NetworkConnection(Connection, ABC):
     abstraction of a generic Internet connection
     """
 
+    def __init__(self, location: str):
+        super().__init__(location)
+
+        @backoff.on_exception(backoff.expo, requests.exceptions.ConnectionError, max_time=self.interval * 2 / timedelta(seconds=1))
+        def request_with_backoff(url: str, *args, **kwargs):
+            return requests.get(url, *args, **kwargs)
+
+        self.request_with_backoff = request_with_backoff
+
     @property
     def connected(self) -> bool:
         """ whether current session has a network connection """
         try:
-            requests.get(self.location, timeout=2)
+            self.request_with_backoff(self.location, timeout=2)
             return True
         except (requests.ConnectionError, requests.Timeout):
             return False

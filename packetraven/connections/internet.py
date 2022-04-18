@@ -85,12 +85,8 @@ class APRSfi(APRSPacketSource, NetworkConnection):
             'tail': int(timedelta(days=1) / timedelta(seconds=1)),
         }
 
-        @backoff.on_exception(backoff.expo, requests.exceptions.ConnectionError, max_time=self.interval * 2 / timedelta(seconds=1))
-        def request_with_backoff(url: str):
-            return requests.get(url)
-
         query = '&'.join(f'{key}={value}' for key, value in query.items())
-        response = request_with_backoff(f'{self.location}?{query}').json()
+        response = self.request_with_backoff(f'{self.location}?{query}').json()
 
         packets = []
         if response['result'] != 'fail':
@@ -381,6 +377,12 @@ class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
         NetworkConnection.__init__(self, f'{self.hostname}:{self.port}')
         APRSPacketSource.__init__(self, f'{self.hostname}:{self.port}', callsigns)
 
+        @backoff.on_exception(backoff.expo, requests.exceptions.ConnectionError, max_time=self.interval * 2 / timedelta(seconds=1))
+        def aprsis_with_backoff(hostname: str, port: int, *args, **kwargs):
+            return aprslib.IS('NOCALL', '-1', hostname, port, *args, **kwargs)
+
+        self.request_with_backoff = aprsis_with_backoff
+
         if not self.connected:
             raise ConnectionError(f'no network connection')
 
@@ -447,11 +449,7 @@ class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
             except InvalidPacketError:
                 pass
 
-        @backoff.on_exception(backoff.expo, requests.exceptions.ConnectionError, max_time=self.interval * 2 / timedelta(seconds=1))
-        def aprsis_with_backoff(hostname: str, port: int):
-            return aprslib.IS('NOCALL', '-1', hostname, port)
-
-        aprs_is = aprsis_with_backoff(self.hostname, self.port)
+        aprs_is = self.request_with_backoff(self.hostname, self.port)
 
         aprs_is.connect()
         aprs_is.consumer(callback=add_frames, raw=True, blocking=False)
