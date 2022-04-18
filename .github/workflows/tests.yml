@@ -105,7 +105,9 @@ jobs:
           POSTGRES_DATABASE: test_database
           POSTGRES_USERNAME: postgres
           POSTGRES_PASSWORD: test_password
-        run: pytest --numprocesses auto --cov . --cov-report xml:coverage.xml
+        run: |
+          pip install pytest-cov
+          pytest --numprocesses auto --cov . --cov-report xml:coverage.xml
       - name: upload coverage to Codecov
         if: matrix.python-version == '3.x' && matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v2.1.0
