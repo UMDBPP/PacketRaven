@@ -22,6 +22,10 @@ from packetraven.packets import APRSPacket, LocationPacket
 from packetraven.packets.parsing import InvalidPacketError
 
 
+class APRSfiError(ConnectionError):
+    pass
+
+
 class APRSfi(APRSPacketSource, NetworkConnection):
     """
     connection to https://aprs.fi
@@ -33,25 +37,22 @@ class APRSfi(APRSPacketSource, NetworkConnection):
 
     interval = timedelta(seconds=10)
 
-    def __init__(self, callsigns: List[str], api_key: str = None):
+    def __init__(self, callsigns: List[str], api_key: str):
         """
         :param callsigns: list of callsigns to return from source
         :param api_key: API key for aprs.fi
         """
 
         url = 'https://api.aprs.fi/api/get'
-        if callsigns is None:
+        if callsigns is None or len(callsigns) == 0:
             raise ConnectionError(f'queries to {url} require a list of callsigns')
         super().__init__(url, callsigns)
-
-        if api_key is None or api_key == '':
-            raise ConnectionError(f'no APRS.fi API key specified')
 
         @backoff.on_exception(backoff.expo, ConnectionError, max_time=self.interval * 2 / timedelta(seconds=1))
         def request_with_backoff(url: str, *args, **kwargs) -> Dict[str, Any]:
             response = requests.get(url, *args, **kwargs).json()
             if response['result'] == 'fail':
-                raise ConnectionError(f'{response["code"]} - {response["description"]} - {url}')
+                raise ConnectionError(f'"{response["code"]}" - {response["description"]} - "{url}"')
             return response
 
         self.request_with_backoff = request_with_backoff
@@ -70,6 +71,8 @@ class APRSfi(APRSPacketSource, NetworkConnection):
                 f'{self.location}?name={self.callsigns[0]}&what=loc&apikey={self.api_key}&format=json', timeout=2
             )
             return True
+        except APRSfiError:
+            raise
         except (ConnectionError, requests.ConnectionError, requests.Timeout):
             return False
 
