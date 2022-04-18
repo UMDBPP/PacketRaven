@@ -1,9 +1,9 @@
-from typing import Union
+from typing import Any, Dict, Mapping, Union
 
 import aprslib
 
 
-def parse_raw_aprs(raw_aprs: Union[str, dict]) -> dict:
+def parse_raw_aprs(raw_aprs: Union[str, Mapping]) -> Dict[str, Any]:
     """
     parse APRS fields from raw packet string
 
@@ -13,14 +13,10 @@ def parse_raw_aprs(raw_aprs: Union[str, dict]) -> dict:
     :return: dictionary of APRS fields
 
     >>> parsed_packet = parse_raw_aprs("W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu")
+    {'raw': "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu", 'from': 'W3EAX-8', 'to': 'APRS', 'path': ['WIDE1-1', 'WIDE2-1', 'qAR', 'K3DO-11'], 'via': 'K3DO-11', 'messagecapable': False, 'format': 'compressed', 'gpsfixstatus': 1, 'symbol': 'O', 'symbol_table': '/', 'latitude': 39.7003564996876, 'longitude': -77.90921071284187, 'altitude': 8201.8632, 'comment': "|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu"}
     """
 
-    if not isinstance(raw_aprs, dict):
-        try:
-            parsed_packet = aprslib.parse(raw_aprs)
-        except aprslib.ParseError as error:
-            raise InvalidPacketError(str(error))
-    else:
+    if isinstance(raw_aprs, Mapping):
         parsed_packet = {
             'from': raw_aprs['srccall'],
             'to': raw_aprs['dstcall'],
@@ -33,6 +29,11 @@ def parse_raw_aprs(raw_aprs: Union[str, dict]) -> dict:
             'altitude': float(raw_aprs['altitude']) if 'altitude' in raw_aprs else None,
             'comment': raw_aprs['comment'] if 'comment' in raw_aprs else 'comment',
         }
+    else:
+        try:
+            parsed_packet = aprslib.parse(raw_aprs)
+        except aprslib.ParseError as error:
+            raise InvalidPacketError(str(error))
 
     # parsed_packet = {'raw': str(raw_aprs)}
     #

@@ -30,6 +30,8 @@ jobs:
         exclude:
           - os: macos-latest
             python-version: 3.x
+          - os: windows-latest
+            python-version: 3.9
     steps:
       - name: clone repository
         uses: actions/checkout@v2
@@ -50,14 +52,17 @@ jobs:
         env:
           APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
           APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
-        run: pytest --numprocesses auto
+        run: |
+          pytest -m "not serial" --numprocesses auto
+          pytest -m "serial"
   test_with_postgres:
-    needs: lint
+    needs: [ lint, test_without_postgres ]
     name: test with PostGres
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ 3.8, 3.9, 3.x ]
+        os: [ ubuntu-latest ]
+        python-version: [ 3.8, 3.x ]
     services:
       postgres:
         image: postgis/postgis:13-3.1
@@ -93,7 +98,9 @@ jobs:
           POSTGRES_DATABASE: test_database
           POSTGRES_USERNAME: postgres
           POSTGRES_PASSWORD: test_password
-        run: pytest --numprocesses auto
+        run: |
+          pytest -m "not serial" --numprocesses auto
+          pytest -m "serial"
       - name: run tests with coverage
         if: matrix.python-version == '3.x' && matrix.os == 'ubuntu-latest'
         env:
@@ -104,7 +111,9 @@ jobs:
           POSTGRES_DATABASE: test_database
           POSTGRES_USERNAME: postgres
           POSTGRES_PASSWORD: test_password
-        run: pytest --numprocesses auto --cov . --cov-report xml:coverage.xml
+        run: |
+          pip install pytest-cov
+          pytest --numprocesses auto --cov . --cov-report xml:coverage.xml
       - name: upload coverage to Codecov
         if: matrix.python-version == '3.x' && matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v2.1.0

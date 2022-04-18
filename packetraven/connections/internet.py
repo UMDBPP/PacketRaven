@@ -4,6 +4,7 @@ from time import sleep
 from typing import Any, Dict, List, Sequence
 
 import aprslib
+import backoff as backoff
 import requests
 from shapely.geometry import Point
 from tablecrow import PostGresTable
@@ -21,6 +22,10 @@ from packetraven.packets import APRSPacket, LocationPacket
 from packetraven.packets.parsing import InvalidPacketError
 
 
+class APRSfiError(ConnectionError):
+    pass
+
+
 class APRSfi(APRSPacketSource, NetworkConnection):
     """
     connection to https://aprs.fi
@@ -32,39 +37,44 @@ class APRSfi(APRSPacketSource, NetworkConnection):
 
     interval = timedelta(seconds=10)
 
-    def __init__(self, callsigns: List[str], api_key: str = None):
+    def __init__(self, callsigns: List[str], api_key: str):
         """
         :param callsigns: list of callsigns to return from source
         :param api_key: API key for aprs.fi
         """
 
         url = 'https://api.aprs.fi/api/get'
-        if callsigns is None:
+        if callsigns is None or len(callsigns) == 0:
             raise ConnectionError(f'queries to {url} require a list of callsigns')
         super().__init__(url, callsigns)
 
-        if api_key is None or api_key == '':
-            raise ConnectionError(f'no APRS.fi API key specified')
+        @backoff.on_exception(backoff.expo, ConnectionError, max_time=self.interval / timedelta(seconds=1))
+        def request_with_backoff(url: str, *args, **kwargs) -> Dict[str, Any]:
+            response = requests.get(url, *args, **kwargs).json()
+            if response['result'] == 'fail':
+                raise ConnectionError(f'"{response["code"]}" - {response["description"]} - "{url}"')
+            return response
+
+        self.request_with_backoff = request_with_backoff
+
+        self.api_key = api_key
 
         if not self.connected:
             raise ConnectionError(f'no network connection')
 
-        self.api_key = api_key
-
         self.__last_access_time = None
 
     @property
-    def api_key(self) -> str:
-        return self.__api_key
-
-    @api_key.setter
-    def api_key(self, api_key: str):
-        response = requests.get(
-            f'{self.location}?name=OH2TI&what=wx&apikey={api_key}&format=json'
-        ).json()
-        if response['result'] == 'fail':
-            raise ConnectionError(response['description'])
-        self.__api_key = api_key
+    def connected(self) -> bool:
+        try:
+            self.request_with_backoff(
+                f'{self.location}?name={self.callsigns[0]}&what=loc&apikey={self.api_key}&format=json', timeout=2
+            )
+            return True
+        except APRSfiError:
+            raise
+        except (ConnectionError, requests.ConnectionError, requests.Timeout):
+            return False
 
     @property
     def packets(self) -> List[APRSPacket]:
@@ -85,10 +95,10 @@ class APRSfi(APRSPacketSource, NetworkConnection):
         }
 
         query = '&'.join(f'{key}={value}' for key, value in query.items())
+        response = self.request_with_backoff(f'{self.location}?{query}')
 
-        response = requests.get(f'{self.location}?{query}').json()
-        if response['result'] != 'fail':
-            packets = []
+        packets = []
+        if response['result'] == 'ok':
             for packet_candidate in response['entries']:
                 try:
                     packet = APRSPacket.from_frame(packet_candidate, source=self.location)
@@ -97,7 +107,6 @@ class APRSfi(APRSPacketSource, NetworkConnection):
                     logging.error(f'{error.__class__.__name__} - {error}')
         else:
             logging.warning(f'query failure "{response["code"]}: {response["description"]}"')
-            packets = []
 
         self.__last_access_time = datetime.now()
         return packets
@@ -377,6 +386,12 @@ class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
         NetworkConnection.__init__(self, f'{self.hostname}:{self.port}')
         APRSPacketSource.__init__(self, f'{self.hostname}:{self.port}', callsigns)
 
+        @backoff.on_exception(backoff.expo, requests.exceptions.ConnectionError, max_time=self.interval * 2 / timedelta(seconds=1))
+        def aprsis_with_backoff(hostname: str, port: int, *args, **kwargs):
+            return aprslib.IS('NOCALL', '-1', hostname, port, *args, **kwargs)
+
+        self.request_with_backoff = aprsis_with_backoff
+
         if not self.connected:
             raise ConnectionError(f'no network connection')
 
@@ -443,7 +458,7 @@ class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
             except InvalidPacketError:
                 pass
 
-        aprs_is = aprslib.IS('NOCALL', '-1', self.hostname, self.port)
+        aprs_is = self.request_with_backoff(self.hostname, self.port)
 
         aprs_is.connect()
         aprs_is.consumer(callback=add_frames, raw=True, blocking=False)

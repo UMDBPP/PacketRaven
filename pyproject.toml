@@ -22,6 +22,7 @@ enable = true
 [tool.poetry.dependencies]
 python = '^3.7'
 aprslib = '*'
+backoff = '*'
 humanize = '*'
 numpy = '*'
 pandas = '*'

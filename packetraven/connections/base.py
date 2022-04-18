@@ -33,11 +33,13 @@ class NetworkConnection(Connection, ABC):
     abstraction of a generic Internet connection
     """
 
+    request_with_backoff: requests.get
+
     @property
     def connected(self) -> bool:
         """ whether current session has a network connection """
         try:
-            requests.get(self.location, timeout=2)
+            self.request_with_backoff(self.location, timeout=2)
             return True
         except (requests.ConnectionError, requests.Timeout):
             return False
