@@ -145,8 +145,7 @@ def packetraven_command(configuration_filename: str, gui: bool = False):
                 logging.info(f'connected to {aprs_api.location}')
                 connections.append(aprs_api)
             except ConnectionError as error:
-                raise
-                # logging.warning(f'{error.__class__.__name__} - {error}')
+                logging.warning(f'{error.__class__.__name__} - {error}')
 
         if 'database' in configuration['packets']:
             database_credentials = configuration['packets']['database']
