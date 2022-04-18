@@ -52,7 +52,7 @@ jobs:
           APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
         run: pytest --numprocesses auto
   test_with_postgres:
-    needs: lint
+    needs: [ lint, test_without_postgres ]
     name: test with PostGres
     runs-on: ubuntu-latest
     strategy:
