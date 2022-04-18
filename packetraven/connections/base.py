@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
-from builtins import function
 from datetime import timedelta
 from typing import List
 
-import backoff
 import requests
 from serial.tools import list_ports
 
@@ -35,7 +33,7 @@ class NetworkConnection(Connection, ABC):
     abstraction of a generic Internet connection
     """
 
-    request_with_backoff: function
+    request_with_backoff: requests.get
 
     @property
     def connected(self) -> bool:
