@@ -53,8 +53,8 @@ jobs:
           APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
           APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
         run: |
-          pytest --numprocesses auto -m "not serial"
-          pytest --numprocesses auto -m "serial"
+          pytest -m "not serial" --numprocesses auto
+          pytest -m "serial"
   test_with_postgres:
     needs: [ lint, test_without_postgres ]
     name: test with PostGres
@@ -99,8 +99,8 @@ jobs:
           POSTGRES_USERNAME: postgres
           POSTGRES_PASSWORD: test_password
         run: |
-          pytest --numprocesses auto -m "not serial"
-          pytest --numprocesses auto -m "serial"
+          pytest -m "not serial" --numprocesses auto
+          pytest -m "serial"
       - name: run tests with coverage
         if: matrix.python-version == '3.x' && matrix.os == 'ubuntu-latest'
         env:
