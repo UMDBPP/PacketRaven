@@ -8,6 +8,16 @@ readme = 'README.md'
 repository = 'https://github.com/UMDBPP/packetraven.git'
 documentation = 'https://packetraven.readthedocs.io'
 
+[build-system]
+requires = [
+    'poetry-core>=1.0.0',
+    'poetry-dynamic-versioning',
+]
+build-backend = 'poetry.core.masonry.api'
+
+[tool.poetry-dynamic-versioning]
+enable = true
+
 [tool.poetry.dependencies]
 python = '^3.7'
 aprslib = '*'
@@ -44,16 +54,6 @@ sphinxcontrib-programoutput = '*'
 [tool.poetry.extras]
 testing = ['pytest', 'pytest-cov', 'pytest-mock', 'pytest-xdist']
 development = ['flake8', 'isort', 'oitnb']
-
-[tool.poetry-dynamic-versioning]
-enable = true
-
-[build-system]
-requires = [
-    'poetry-core>=1.0.0',
-    'poetry-dynamic-versioning',
-]
-build-backend = 'poetry.core.masonry.api'
 
 [tool.poetry.scripts]
 packetraven = 'packetraven.__main__:main'
