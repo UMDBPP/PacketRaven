@@ -47,6 +47,13 @@ class APRSfi(APRSPacketSource, NetworkConnection):
         if api_key is None or api_key == '':
             raise ConnectionError(f'no APRS.fi API key specified')
 
+        @backoff.on_exception(backoff.expo, ConnectionError, max_time=self.interval * 2 / timedelta(seconds=1))
+        def request_with_backoff(url: str, *args, **kwargs) -> Dict[str, Any]:
+            response = requests.get(url, *args, **kwargs).json()
+            if response['result'] == 'fail':
+                raise ConnectionError(response['description'])
+            return response
+
         if not self.connected:
             raise ConnectionError(f'no network connection')
 
@@ -60,11 +67,9 @@ class APRSfi(APRSPacketSource, NetworkConnection):
 
     @api_key.setter
     def api_key(self, api_key: str):
-        response = self.request_with_backoff(
+        self.request_with_backoff(
             f'{self.location}?name=OH2TI&what=wx&apikey={api_key}&format=json'
-        ).json()
-        if response['result'] == 'fail':
-            raise ConnectionError(response['description'])
+        )
         self.__api_key = api_key
 
     @property
@@ -86,7 +91,7 @@ class APRSfi(APRSPacketSource, NetworkConnection):
         }
 
         query = '&'.join(f'{key}={value}' for key, value in query.items())
-        response = self.request_with_backoff(f'{self.location}?{query}').json()
+        response = self.request_with_backoff(f'{self.location}?{query}')
 
         packets = []
         if response['result'] != 'fail':

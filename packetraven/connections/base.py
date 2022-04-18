@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from builtins import function
 from datetime import timedelta
 from typing import List
 
@@ -34,14 +35,7 @@ class NetworkConnection(Connection, ABC):
     abstraction of a generic Internet connection
     """
 
-    def __init__(self, location: str):
-        super().__init__(location)
-
-        @backoff.on_exception(backoff.expo, requests.exceptions.ConnectionError, max_time=self.interval * 2 / timedelta(seconds=1))
-        def request_with_backoff(url: str, *args, **kwargs):
-            return requests.get(url, *args, **kwargs)
-
-        self.request_with_backoff = request_with_backoff
+    request_with_backoff: function
 
     @property
     def connected(self) -> bool:
