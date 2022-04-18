@@ -51,7 +51,7 @@ class APRSfi(APRSPacketSource, NetworkConnection):
         def request_with_backoff(url: str, *args, **kwargs) -> Dict[str, Any]:
             response = requests.get(url, *args, **kwargs).json()
             if response['result'] == 'fail':
-                raise ConnectionError(f'{response["code"]} - {response["description"]}')
+                raise ConnectionError(f'{response["code"]} - {response["description"]} - {url}')
             return response
 
         self.request_with_backoff = request_with_backoff
@@ -69,6 +69,9 @@ class APRSfi(APRSPacketSource, NetworkConnection):
 
     @api_key.setter
     def api_key(self, api_key: str):
+        self.request_with_backoff(
+            f'{self.location}?name={self.callsigns[0]}&what=loc&apikey={api_key}&format=json'
+        )
         self.__api_key = api_key
 
     @property
