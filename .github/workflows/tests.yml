@@ -45,7 +45,7 @@ jobs:
           key: test-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml', 'setup.*') }}
       - name: install dependencies
         if: steps.cache.outputs.cache-hit != 'true'
-        run: pip install ".[testing]"
+        run: pip install . pytest pytest-xdist
       - name: run tests
         env:
           APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
@@ -82,7 +82,7 @@ jobs:
           key: test-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml', 'setup.*') }}
       - name: install dependencies
         if: steps.cache.outputs.cache-hit != 'true'
-        run: pip install ".[testing]"
+        run: pip install . pytest pytest-xdist
       - name: run tests
         if: matrix.python-version != '3.x' || matrix.os != 'ubuntu-latest'
         env:
