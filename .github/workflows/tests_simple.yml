@@ -4,6 +4,9 @@ on:
   push:
     branches-ignore:
       - main
+    paths:
+      - '**.py'
+      - '.github/workflows/tests_simple.yml'
 
 jobs:
   lint:
@@ -30,9 +33,9 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: lint with oitnb
         run: oitnb . --check
-  test_nonspatial:
+  test:
     needs: lint
-    name: test non-spatial conversions
+    name: test
     runs-on: ubuntu-latest
     steps:
       - name: clone repository
@@ -48,23 +51,4 @@ jobs:
       - name: install dependencies
         run: pip install ".[testing]"
       - name: run tests
-        run: pytest --numprocesses auto -m "not spatial"
-  test_spatial:
-    needs: lint
-    name: test spatial conversions
-    runs-on: ubuntu-latest
-    steps:
-      - name: clone repository
-        uses: actions/checkout@v2
-      - name: install Python
-        uses: actions/setup-python@v2
-      - name: load cached Python installation
-        id: cache
-        uses: actions/cache@v2
-        with:
-          path: ${{ env.pythonLocation }}
-          key: test-spatial-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml') }}
-      - name: install dependencies
-        run: pip install ".[testing,spatial]"
-      - name: run tests
-        run: pytest --numprocesses auto -m "spatial"
+        run: pytest --numprocesses auto

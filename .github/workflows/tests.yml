@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - '**.py'
+      - '.github/workflows/tests.yml'
   pull_request:
     branches:
       - main
@@ -33,14 +36,21 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: lint with oitnb
         run: oitnb . --check
-  test_nonspatial:
+  test:
     needs: lint
-    name: test non-spatial conversions
+    name: test
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest, macos-latest ]
         python-version: [ '3.6', '3.7', '3.8', '3.9', '3.x' ]
+        exclude:
+          - os: macos-latest
+            python-version: '3.x'
+          - os: windows-latest
+            python-version: '3.9'
+          - os: windows-latest
+            python-version: '3.x'
     steps:
       - name: clone repository
         uses: actions/checkout@v2
@@ -57,37 +67,9 @@ jobs:
       - name: install dependencies
         run: pip install ".[testing]"
       - name: run tests
-        run: pytest --numprocesses auto -m "not spatial"
-  test_spatial:
-    needs: lint
-    name: test spatial conversions
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
-        python-version: [ '3.6', '3.7', '3.8', '3.9', '3.x' ]
-        exclude:
-          - os: macos-latest
-            python-version: '3.x'
-    steps:
-      - name: clone repository
-        uses: actions/checkout@v2
-      - name: install Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: load cached Python installation
-        id: cache
-        uses: actions/cache@v2
-        with:
-          path: ${{ env.pythonLocation }}
-          key: test-spatial-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml') }}
-      - name: install dependencies
-        run: pip install ".[testing,spatial]"
-      - name: run tests
-        run: pytest --numprocesses auto -m "spatial"
+        run: pytest --numprocesses auto
   test_with_coverage:
-    needs: [ lint, test_nonspatial, test_spatial ]
+    needs: [ lint, test ]
     name: test with coverage
     runs-on: ubuntu-latest
     steps:
@@ -100,9 +82,9 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ env.pythonLocation }}
-          key: test-spatial-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml') }}
+          key: test-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml') }}
       - name: install dependencies
-        run: pip install ".[testing,spatial]"
+        run: pip install ".[testing]"
       - name: run tests with coverage
         run: pytest --numprocesses auto --cov . --cov-report xml:coverage.xml
       - name: show coverage report
