@@ -39,8 +39,6 @@ tablecrow = '>=1.4.3'
 teek = '*'
 typepigeon = '>=1.0.13'
 typer = '*'
-pyproj = { version = '*', optional = true }
-shapely = { version = '*', optional = true }
 isort = { version = '*', optional = true }
 oitnb = { version = '*', optional = true }
 pytest = { version = '*', optional = true }
@@ -54,7 +52,8 @@ sphinxcontrib-programoutput = { version = '*', optional = true }
 
 [tool.poetry.extras]
 testing = ['pytest', 'pytest-cov', 'pytest-mock', 'pytest-xdist']
-development = ['flake8', 'isort', 'oitnb']
+development = ['isort', 'oitnb']
+documentation = ['m2r2', 'sphinx', 'sphinx-rtd-theme', 'sphinxcontrib-programoutput']
 
 [tool.poetry.scripts]
 packetraven = 'packetraven.__main__:main'
