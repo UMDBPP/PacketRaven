@@ -48,11 +48,15 @@ class APRSfi(APRSPacketSource, NetworkConnection):
             raise ConnectionError(f'queries to {url} require a list of callsigns')
         super().__init__(url, callsigns)
 
-        @backoff.on_exception(backoff.expo, ConnectionError, max_time=self.interval / timedelta(seconds=1))
+        @backoff.on_exception(
+            backoff.expo, ConnectionError, max_time=self.interval / timedelta(seconds=1)
+        )
         def request_with_backoff(url: str, *args, **kwargs) -> Dict[str, Any]:
             response = requests.get(url, *args, **kwargs).json()
             if response['result'] == 'fail':
-                raise ConnectionError(f'"{response["code"]}" - {response["description"]} - "{url}"')
+                raise ConnectionError(
+                    f'"{response["code"]}" - {response["description"]} - "{url}"'
+                )
             return response
 
         self.request_with_backoff = request_with_backoff
@@ -68,7 +72,8 @@ class APRSfi(APRSPacketSource, NetworkConnection):
     def connected(self) -> bool:
         try:
             self.request_with_backoff(
-                f'{self.location}?name={self.callsigns[0]}&what=loc&apikey={self.api_key}&format=json', timeout=2
+                f'{self.location}?name={self.callsigns[0]}&what=loc&apikey={self.api_key}&format=json',
+                timeout=2,
             )
             return True
         except APRSfiError:
@@ -386,7 +391,11 @@ class APRSis(APRSPacketSink, APRSPacketSource, NetworkConnection):
         NetworkConnection.__init__(self, f'{self.hostname}:{self.port}')
         APRSPacketSource.__init__(self, f'{self.hostname}:{self.port}', callsigns)
 
-        @backoff.on_exception(backoff.expo, requests.exceptions.ConnectionError, max_time=self.interval * 2 / timedelta(seconds=1))
+        @backoff.on_exception(
+            backoff.expo,
+            requests.exceptions.ConnectionError,
+            max_time=self.interval * 2 / timedelta(seconds=1),
+        )
         def aprsis_with_backoff(hostname: str, port: int, *args, **kwargs):
             return aprslib.IS('NOCALL', '-1', hostname, port, *args, **kwargs)
 
