@@ -20,7 +20,7 @@ build-backend = 'poetry.core.masonry.api'
 enable = true
 
 [tool.poetry.dependencies]
-python = '^3.7'
+python = '^3.8'
 aprslib = '*'
 backoff = '*'
 humanize = '*'
