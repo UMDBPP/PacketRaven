@@ -37,14 +37,13 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: lint with oitnb
         run: oitnb . --check
-  test:
+  test_without_postgres:
     needs: lint
-    name: test
+    name: test without PostGreSQL database
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
-        os: [ ubuntu-latest, macos-latest ]
+        os: [ macos-latest, windows-latest ]
         python-version: [ '3.8', '3.9', '3.x' ]
         exclude:
           - os: macos-latest
@@ -69,11 +68,64 @@ jobs:
       - name: install dependencies
         run: pip install ".[testing]"
       - name: run tests
+        env:
+          APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
+          APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
+        run: pytest --numprocesses auto
+  test_with_postgres:
+    needs: lint
+    name: test with PostGreSQL database
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest ]
+    services:
+      postgres:
+        image: postgis/postgis:13-3.1
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_database
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - name: clone repository
+        uses: actions/checkout@v2
+      - name: install Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: load cached Python installation
+        id: cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.pythonLocation }}
+          key: test-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml') }}
+      - name: install dependencies
+        run: pip install ".[testing]"
+      - name: run tests
+        env:
+          APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
+          APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
+          POSTGRES_HOSTNAME: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DATABASE: test_database
+          POSTGRES_USERNAME: postgres
+          POSTGRES_PASSWORD: test_password
         run: pytest --numprocesses auto
   test_with_coverage:
-    needs: [ lint, test ]
+    needs: [ lint, test_without_postgres, test_with_postgres ]
     name: test with coverage
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:13-3.1
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_database
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
       - name: clone repository
         uses: actions/checkout@v2
@@ -88,6 +140,14 @@ jobs:
       - name: install dependencies
         run: pip install ".[testing]"
       - name: run tests with coverage
+        env:
+          APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
+          APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
+          POSTGRES_HOSTNAME: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DATABASE: test_database
+          POSTGRES_USERNAME: postgres
+          POSTGRES_PASSWORD: test_password
         run: pytest --numprocesses auto --cov . --cov-report xml:coverage.xml
       - name: show coverage report
         run: coverage report
