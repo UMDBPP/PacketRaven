@@ -57,3 +57,6 @@ documentation = ['m2r2', 'sphinx', 'sphinx-rtd-theme', 'sphinxcontrib-programout
 
 [tool.poetry.scripts]
 packetraven = 'packetraven.__main__:main'
+
+[tool.pytest.ini_options]
+markers = ['serial']

@@ -71,7 +71,9 @@ jobs:
         env:
           APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
           APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
-        run: pytest --numprocesses auto
+        run: |
+          pytest -m "serial"
+          pytest -m "not serial" --numprocesses auto
   test_with_postgres:
     needs: lint
     name: test with PostGreSQL database
@@ -113,7 +115,9 @@ jobs:
           POSTGRES_DATABASE: test_database
           POSTGRES_USERNAME: postgres
           POSTGRES_PASSWORD: test_password
-        run: pytest --numprocesses auto
+        run: |
+          pytest -m "serial"
+          pytest -m "not serial" --numprocesses auto
   test_with_coverage:
     needs: [ lint, test_without_postgres, test_with_postgres ]
     name: test with coverage
@@ -149,7 +153,7 @@ jobs:
           POSTGRES_DATABASE: test_database
           POSTGRES_USERNAME: postgres
           POSTGRES_PASSWORD: test_password
-        run: pytest --numprocesses auto --cov . --cov-report xml:coverage.xml
+        run: pytest --cov . --cov-report xml:coverage.xml
       - name: show coverage report
         run: coverage report
       - name: upload coverage to Codecov
