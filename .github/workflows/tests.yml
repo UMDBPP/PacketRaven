@@ -58,7 +58,7 @@ jobs:
         with:
           path: ${{ env.pythonLocation }}
           key: test-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml') }}
-      - run: pip install ".[testing]"
+      - run: pip install ".[test]"
       - run: pytest -m "serial"
         env:
           APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
@@ -94,7 +94,7 @@ jobs:
         with:
           path: ${{ env.pythonLocation }}
           key: test-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml') }}
-      - run: pip install ".[testing]"
+      - run: pip install ".[test]"
       - run: pytest -m "serial"
         env:
           APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
@@ -136,7 +136,7 @@ jobs:
         with:
           path: ${{ env.pythonLocation }}
           key: test-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml') }}
-      - run: pip install ".[testing]"
+      - run: pip install ".[test]"
       - run: pytest --cov . --cov-report xml:coverage.xml
         env:
           APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}

@@ -28,9 +28,8 @@ dependencies = [
 dynamic = ['version']
 
 [project.optional-dependencies]
-testing = ['pytest', 'pytest-cov', 'pytest-mock', 'pytest-xdist']
-development = ['isort', 'black']
-documentation = ['m2r2', 'sphinx', 'sphinx-rtd-theme', 'sphinxcontrib-programoutput']
+test = ['pytest', 'pytest-cov', 'pytest-mock', 'pytest-xdist']
+docs = ['m2r2', 'sphinx', 'sphinx-rtd-theme', 'sphinxcontrib-programoutput']
 
 [project.urls]
 repository = 'https://github.com/UMDBPP/packetraven'
