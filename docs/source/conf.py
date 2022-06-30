@@ -25,7 +25,7 @@ def repository_root(path: PathLike = None) -> Path:
         path = Path(path)
     if path.is_file():
         path = path.parent
-    if '.git' in (child.name for child in path.iterdir()) or path == path.parent:
+    if ".git" in (child.name for child in path.iterdir()) or path == path.parent:
         return path
     else:
         return repository_root(path.parent)
@@ -34,28 +34,28 @@ def repository_root(path: PathLike = None) -> Path:
 sys.path.insert(0, str(repository_root()))
 
 # -- Project information -----------------------------------------------------
-metadata = config.read_configuration('../../setup.cfg')['metadata']
+metadata = config.read_configuration("../../setup.cfg")["metadata"]
 
-project = metadata['name']
-author = metadata['author']
-copyright = f'2021, {author}'
+project = metadata["name"]
+author = metadata["author"]
+copyright = f"2021, {author}"
 
 # The full version, including alpha/beta/rc tags
 try:
     release = Version.from_any_vcs().serialize()
 except RuntimeError:
-    release = os.environ.get('VERSION')
+    release = os.environ.get("VERSION")
 
 # -- General configuration ---------------------------------------------------
 
-autoclass_content = 'both'  # include both class docstring and __init__
+autoclass_content = "both"  # include both class docstring and __init__
 autodoc_default_options = {
     # Make sure that any autodoc declarations show the right members
-    'members': True,
-    'inherited-members': True,
-    'private-members': True,
-    'member-order': 'bysource',
-    'exclude-members': '__weakref__',
+    "members": True,
+    "inherited-members": True,
+    "private-members": True,
+    "member-order": "bysource",
+    "exclude-members": "__weakref__",
 }
 autosummary_generate = True  # Make _autosummary files and include them
 napoleon_numpy_docstring = False  # Force consistency, leave only Google
@@ -65,17 +65,17 @@ napoleon_use_rtype = False  # More legible
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinxcontrib.programoutput',
+    "sphinxcontrib.programoutput",
     # Need the autodoc and autosummary packages to generate our docs.
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
     # The Napoleon extension allows for nicer argument formatting.
-    'sphinx.ext.napoleon',
-    'm2r2',
+    "sphinx.ext.napoleon",
+    "m2r2",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -87,12 +87,12 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
+html_theme = "sphinx_rtd_theme"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 # -- Extension configuration -------------------------------------------------
-source_suffix = ['.rst', '.md']
+source_suffix = [".rst", ".md"]

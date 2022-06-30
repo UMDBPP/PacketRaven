@@ -12,7 +12,7 @@ from packetraven.connections import PacketGeoJSON
 
 
 class TextStreamConfiguration(ConfigurationYAML, ConfigurationSection):
-    name = 'text'
+    name = "text"
     fields = {
-        'locations': [str],
+        "locations": [str],
     }

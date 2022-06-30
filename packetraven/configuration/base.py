@@ -15,7 +15,7 @@ class Configuration(ABC, Mapping):
     defaults: Dict[str, Any] = None
 
     def __init__(self, **configuration):
-        if not hasattr(self, 'configuration'):
+        if not hasattr(self, "configuration"):
             self.__configuration = {field: None for field in self.fields}
         if len(configuration) > 0:
             self.update(configuration)
@@ -23,17 +23,19 @@ class Configuration(ABC, Mapping):
         if self.defaults is not None:
             update_none(self.__configuration, self.defaults)
 
-        missing_fields = [field for field in self.fields if field not in self.__configuration]
+        missing_fields = [
+            field for field in self.fields if field not in self.__configuration
+        ]
         if len(missing_fields) > 0:
             raise ValueError(
                 f'missing {len(missing_fields)} fields required by "{self.__class__.__name__}" - {list(missing_fields)}'
             )
 
     @classmethod
-    def from_file(cls, filename: PathLike) -> 'Configuration':
+    def from_file(cls, filename: PathLike) -> "Configuration":
         raise NotImplementedError()
 
-    def __copy__(self) -> 'Configuration':
+    def __copy__(self) -> "Configuration":
         return self.__class__(**deepcopy(self.__configuration))
 
     def __contains__(self, key: str) -> bool:
@@ -74,14 +76,14 @@ class Configuration(ABC, Mapping):
                         value = converted_value
             self[key] = value
 
-    def __eq__(self, other: 'Configuration') -> bool:
+    def __eq__(self, other: "Configuration") -> bool:
         return other.__configuration == self.__configuration
 
     def __repr__(self):
-        configuration = ', '.join(
-            [f'{key}={repr(value)}' for key, value in self.__configuration.items()]
+        configuration = ", ".join(
+            [f"{key}={repr(value)}" for key, value in self.__configuration.items()]
         )
-        return f'{self.__class__.__name__}({configuration})'
+        return f"{self.__class__.__name__}({configuration})"
 
     def __len__(self) -> int:
         return len(self.__configuration)
@@ -103,7 +105,7 @@ class ConfigurationSection:
 
 class ConfigurationYAML(Configuration):
     @classmethod
-    def from_file(cls, filename: PathLike) -> 'Configuration':
+    def from_file(cls, filename: PathLike) -> "Configuration":
         if not isinstance(filename, Path):
             filename = Path(filename)
         filename = filename.expanduser()
@@ -116,7 +118,7 @@ class ConfigurationYAML(Configuration):
             filename = Path(filename)
         if overwrite or not filename.exists():
             content = typepigeon.convert_to_json(self._Configuration__configuration)
-            with open(filename, 'w') as input_file:
+            with open(filename, "w") as input_file:
                 yaml.safe_dump(content, input_file)
 
 
@@ -125,7 +127,9 @@ class PacketSourceConfiguration(ABC):
         raise NotImplementedError()
 
 
-def convert_key_pairs(value_mapping: Mapping, type_mapping: Mapping[str, type]) -> Mapping:
+def convert_key_pairs(
+    value_mapping: Mapping, type_mapping: Mapping[str, type]
+) -> Mapping:
     value_mapping = dict(**value_mapping)
     keys = list(value_mapping)
     for key in keys:

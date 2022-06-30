@@ -4,11 +4,11 @@ from pathlib import Path
 import re
 from typing import Dict, List
 
-DATA_DIRECTORY = Path(__file__).parent / 'data'
+DATA_DIRECTORY = Path(__file__).parent / "data"
 
-INPUT_DIRECTORY = DATA_DIRECTORY / 'input'
-REFERENCE_DIRECTORY = DATA_DIRECTORY / 'reference'
-OUTPUT_DIRECTORY = DATA_DIRECTORY / 'output'
+INPUT_DIRECTORY = DATA_DIRECTORY / "input"
+REFERENCE_DIRECTORY = DATA_DIRECTORY / "reference"
+OUTPUT_DIRECTORY = DATA_DIRECTORY / "output"
 
 
 def check_reference_directory(
@@ -31,7 +31,7 @@ def check_reference_directory(
         else:
             test_filename = test_directory / reference_filename.name
 
-            if reference_filename.suffix in ['.h5', '.nc']:
+            if reference_filename.suffix in [".h5", ".nc"]:
                 reference_filesize = Path(reference_filename).stat().st_size
                 test_filesize = Path(test_filename).stat().st_size
 
@@ -41,7 +41,9 @@ def check_reference_directory(
                 assert reference_filesize == test_filesize, message
                 continue
 
-            with open(test_filename) as test_file, open(reference_filename) as reference_file:
+            with open(test_filename) as test_file, open(
+                reference_filename
+            ) as reference_file:
                 test_lines = list(test_file.readlines())
                 reference_lines = list(reference_file.readlines())
 
@@ -54,7 +56,8 @@ def check_reference_directory(
                     ):
                         try:
                             lines_to_skip.update(
-                                line_index % len(test_lines) for line_index in line_indices
+                                line_index % len(test_lines)
+                                for line_index in line_indices
                             )
                         except ZeroDivisionError:
                             continue
@@ -63,6 +66,6 @@ def check_reference_directory(
                     del test_lines[line_index], reference_lines[line_index]
 
                 cwd = Path.cwd()
-                assert '\n'.join(test_lines) == '\n'.join(
+                assert "\n".join(test_lines) == "\n".join(
                     reference_lines
                 ), f'"{os.path.relpath(test_filename, cwd)}" != "{os.path.relpath(reference_filename, cwd)}"'

@@ -9,7 +9,11 @@ import geojson
 import requests
 import typepigeon
 
-from packetraven.connections.base import APRSPacketSource, PacketSource, TimeIntervalError
+from packetraven.connections.base import (
+    APRSPacketSource,
+    PacketSource,
+    TimeIntervalError,
+)
 from packetraven.packets import APRSPacket, LocationPacket
 
 
@@ -24,7 +28,7 @@ class RawAPRSTextFile(APRSPacketSource):
         :param callsigns: list of callsigns to return from source
         """
 
-        if not urlparse(str(filename)).scheme in ['http', 'https', 'ftp', 'sftp']:
+        if not urlparse(str(filename)).scheme in ["http", "https", "ftp", "sftp"]:
             if not isinstance(filename, Path):
                 if isinstance(filename, str):
                     filename = filename.strip('"')
@@ -41,7 +45,7 @@ class RawAPRSTextFile(APRSPacketSource):
             interval = datetime.now() - self.__last_access_time
             if interval < self.interval:
                 raise TimeIntervalError(
-                    f'interval {interval} less than minimum interval {self.interval}'
+                    f"interval {interval} less than minimum interval {self.interval}"
                 )
 
         if Path(self.location).exists():
@@ -59,7 +63,7 @@ class RawAPRSTextFile(APRSPacketSource):
                 if line not in self.__parsed_lines:
                     self.__parsed_lines.append(line)
                     try:
-                        packet_time, raw_aprs = line.split(': ', 1)
+                        packet_time, raw_aprs = line.split(": ", 1)
                         packet_time = typepigeon.convert_value(packet_time, datetime)
                     except:
                         raw_aprs = line
@@ -67,15 +71,19 @@ class RawAPRSTextFile(APRSPacketSource):
                     raw_aprs = raw_aprs.strip()
                     try:
                         packets.append(
-                            APRSPacket.from_frame(raw_aprs, packet_time, source=self.location)
+                            APRSPacket.from_frame(
+                                raw_aprs, packet_time, source=self.location
+                            )
                         )
                     except Exception as error:
-                        logging.debug(f'{error.__class__.__name__} - {error}')
+                        logging.debug(f"{error.__class__.__name__} - {error}")
 
         file_connection.close()
 
         if self.callsigns is not None:
-            packets = [packet for packet in packets if packet.from_callsign in self.callsigns]
+            packets = [
+                packet for packet in packets if packet.from_callsign in self.callsigns
+            ]
         self.__last_access_time = datetime.now()
 
         return packets
@@ -84,7 +92,9 @@ class RawAPRSTextFile(APRSPacketSource):
         pass
 
     def __repr__(self):
-        return f'{self.__class__.__name__}({repr(self.location)}, {repr(self.callsigns)})'
+        return (
+            f"{self.__class__.__name__}({repr(self.location)}, {repr(self.callsigns)})"
+        )
 
 
 class PacketGeoJSON(PacketSource):
@@ -98,7 +108,7 @@ class PacketGeoJSON(PacketSource):
         :param callsigns: list of callsigns to return from source
         """
 
-        if not urlparse(str(filename)).scheme in ['http', 'https', 'ftp', 'sftp']:
+        if not urlparse(str(filename)).scheme in ["http", "https", "ftp", "sftp"]:
             if not isinstance(filename, Path):
                 if isinstance(filename, str):
                     filename = filename.strip('"')
@@ -114,7 +124,7 @@ class PacketGeoJSON(PacketSource):
             interval = datetime.now() - self.__last_access_time
             if interval < self.interval:
                 raise TimeIntervalError(
-                    f'interval {interval} less than minimum interval {self.interval}'
+                    f"interval {interval} less than minimum interval {self.interval}"
                 )
 
         if Path(self.location).exists():
@@ -125,29 +135,29 @@ class PacketGeoJSON(PacketSource):
             features = geojson.loads(response.text)
 
         packets = []
-        for feature in features['features']:
-            if feature['geometry']['type'] == 'Point':
-                properties = feature['properties']
-                time = typepigeon.convert_value(properties['time'], datetime)
-                del properties['time']
+        for feature in features["features"]:
+            if feature["geometry"]["type"] == "Point":
+                properties = feature["properties"]
+                time = typepigeon.convert_value(properties["time"], datetime)
+                del properties["time"]
 
-                if 'from' in properties:
-                    from_callsign = properties['from']
-                    to_callsign = properties['to']
-                    del properties['from'], properties['to']
+                if "from" in properties:
+                    from_callsign = properties["from"]
+                    to_callsign = properties["to"]
+                    del properties["from"], properties["to"]
 
                     packet = APRSPacket(
                         from_callsign,
                         to_callsign,
                         time,
-                        *feature['geometry']['coordinates'],
+                        *feature["geometry"]["coordinates"],
                         source=self.location,
                         **properties,
                     )
                 else:
                     packet = LocationPacket(
                         time,
-                        *feature['geometry']['coordinates'],
+                        *feature["geometry"]["coordinates"],
                         source=self.location,
                         **properties,
                     )
@@ -162,4 +172,4 @@ class PacketGeoJSON(PacketSource):
         pass
 
     def __repr__(self):
-        return f'{self.__class__.__name__}({repr(self.location)})'
+        return f"{self.__class__.__name__}({repr(self.location)})"

@@ -10,22 +10,22 @@ from packetraven.packets.tracks import APRSTrack
 def test_from_frame():
     packet_1 = APRSPacket.from_frame(
         "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,"
-        'nearspace.umd.edu',
+        "nearspace.umd.edu",
         packet_time=datetime(2019, 2, 3, 14, 36, 16),
     )
 
     assert numpy.allclose(
         packet_1.coordinates, (-77.48778502911327, 39.64903419561805, 16341.5472)
     )
-    assert packet_1['callsign'] == packet_1['from']
-    assert packet_1['callsign'] == 'W3EAX-13'
-    assert packet_1['comment'] == "|!g|  /W3EAX,313,0,21'C,nearspace.umd.edu"
+    assert packet_1["callsign"] == packet_1["from"]
+    assert packet_1["callsign"] == "W3EAX-13"
+    assert packet_1["comment"] == "|!g|  /W3EAX,313,0,21'C,nearspace.umd.edu"
 
 
 def test_equality():
     packet_1 = APRSPacket.from_frame(
         "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,"
-        'nearspace.umd.edu',
+        "nearspace.umd.edu",
         packet_time=datetime(2019, 2, 3, 14, 36, 16),
     )
     packet_2 = APRSPacket.from_frame(
@@ -34,7 +34,7 @@ def test_equality():
     )
     packet_3 = APRSPacket.from_frame(
         "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,"
-        'nearspace.umd.edu',
+        "nearspace.umd.edu",
         packet_time=datetime(2019, 2, 3, 14, 38, 23),
     )
     packet_4 = APRSPacket.from_frame(
@@ -50,7 +50,7 @@ def test_equality():
 def test_subtraction():
     packet_1 = APRSPacket.from_frame(
         "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,"
-        'nearspace.umd.edu',
+        "nearspace.umd.edu",
         packet_time=datetime(2019, 2, 3, 14, 36, 16),
     )
     packet_2 = APRSPacket.from_frame(
@@ -68,7 +68,7 @@ def test_subtraction():
 def test_append():
     packet_1 = APRSPacket.from_frame(
         "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,"
-        'nearspace.umd.edu',
+        "nearspace.umd.edu",
         packet_time=datetime(2019, 2, 3, 14, 36, 16),
     )
     packet_2 = APRSPacket.from_frame(
@@ -79,7 +79,7 @@ def test_append():
         "W3EAX-8>APRS,WIDE1-1,WIDE2-1,qAR,K3DO-11:!/:Gh=:j)#O   /A=026909|!Q|  /W3EAX,262,0,18'C,http://www.umd.edu"
     )
 
-    track = APRSTrack(callsign='W3EAX-13')
+    track = APRSTrack(callsign="W3EAX-13")
 
     track.append(packet_1)
     track.append(packet_2)
@@ -98,11 +98,11 @@ def test_append():
 def test_values():
     packet_1 = APRSPacket.from_frame(
         "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,"
-        'nearspace.umd.edu',
+        "nearspace.umd.edu",
         packet_time=datetime(2019, 2, 3, 14, 36, 16),
     )
 
-    track = APRSTrack(packets=[packet_1], callsign='W3EAX-13')
+    track = APRSTrack(packets=[packet_1], callsign="W3EAX-13")
 
     assert numpy.all(track.coordinates[-1] == packet_1.coordinates)
 
@@ -110,7 +110,7 @@ def test_values():
 def test_rates():
     packet_1 = APRSPacket.from_frame(
         "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,"
-        'nearspace.umd.edu',
+        "nearspace.umd.edu",
         packet_time=datetime(2019, 2, 3, 14, 36, 16),
     )
     packet_2 = APRSPacket.from_frame(
@@ -119,11 +119,11 @@ def test_rates():
     )
     packet_3 = APRSPacket.from_frame(
         "W3EAX-13>APRS,KC3FIT-1,WIDE1*,WIDE2-1,qAR,KC3AWP-10:!/:JL2:u4wO   /A=043080|!j|  /W3EAX,326,0,20'C,"
-        'nearspace.umd.edu',
+        "nearspace.umd.edu",
         packet_time=datetime(2019, 2, 3, 14, 39, 28),
     )
 
-    track = APRSTrack(packets=[packet_1, packet_2, packet_3], callsign='W3EAX-13')
+    track = APRSTrack(packets=[packet_1, packet_2, packet_3], callsign="W3EAX-13")
 
     assert track.ascent_rates[1] == (packet_2 - packet_1).ascent_rate
     assert track.ground_speeds[1] == (packet_2 - packet_1).ground_speed
@@ -132,7 +132,7 @@ def test_rates():
 def test_time_to_ground():
     packet_1 = APRSPacket.from_frame(
         "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,"
-        'nearspace.umd.edu',
+        "nearspace.umd.edu",
         packet_time=datetime(2019, 2, 3, 14, 36, 16),
     )
     packet_2 = APRSPacket.from_frame(
@@ -141,21 +141,21 @@ def test_time_to_ground():
     )
     packet_3 = APRSPacket.from_frame(
         "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=063614|!g|  /W3EAX,313,0,21'C,"
-        'nearspace.umd.edu',
+        "nearspace.umd.edu",
         packet_time=datetime(2019, 2, 3, 14, 39, 28),
     )
     packet_4 = APRSPacket.from_frame(
         "W3EAX-13>APRS,KC3FIT-1,WIDE1*,WIDE2-1,qAR,KC3AWP-10:!/:JL2:u4wO   /A=043080|!j|  /W3EAX,326,0,20'C,"
-        'nearspace.umd.edu',
+        "nearspace.umd.edu",
         packet_time=datetime(2019, 2, 3, 14, 41, 50),
     )
     packet_5 = APRSPacket.from_frame(
         "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=063614|!g|  /W3EAX,313,0,21'C,"
-        'nearspace.umd.edu',
+        "nearspace.umd.edu",
         packet_time=datetime(2019, 2, 3, 14, 42, 34),
     )
 
-    track = APRSTrack(callsign='W3EAX-13')
+    track = APRSTrack(callsign="W3EAX-13")
 
     track.append(packet_1)
 
@@ -182,7 +182,7 @@ def test_time_to_ground():
 def test_sorting():
     packet_1 = APRSPacket.from_frame(
         "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,"
-        'nearspace.umd.edu',
+        "nearspace.umd.edu",
         packet_time=datetime(2019, 2, 3, 14, 36, 16),
     )
     packet_2 = APRSPacket.from_frame(
@@ -191,11 +191,11 @@ def test_sorting():
     )
     packet_3 = APRSPacket.from_frame(
         "W3EAX-13>APRS,KC3FIT-1,WIDE1*,WIDE2-1,qAR,KC3AWP-10:!/:JL2:u4wO   /A=043080|!j|  /W3EAX,326,0,20'C,"
-        'nearspace.umd.edu',
+        "nearspace.umd.edu",
         packet_time=datetime(2019, 2, 3, 14, 39, 28),
     )
 
-    track = APRSTrack(packets=[packet_2, packet_1, packet_3], callsign='W3EAX-13')
+    track = APRSTrack(packets=[packet_2, packet_1, packet_3], callsign="W3EAX-13")
 
     assert sorted(track) == [packet_1, packet_2, packet_3]
 
@@ -203,7 +203,7 @@ def test_sorting():
 def test_index():
     packet_1 = APRSPacket.from_frame(
         "W3EAX-13>APRS,N3KTX-10*,WIDE1,WIDE2-1,qAR,N3TJJ-11:!/:J..:sh'O   /A=053614|!g|  /W3EAX,313,0,21'C,"
-        'nearspace.umd.edu',
+        "nearspace.umd.edu",
         packet_time=datetime(2019, 2, 3, 14, 36, 16),
     )
     packet_2 = APRSPacket.from_frame(
@@ -212,18 +212,18 @@ def test_index():
     )
     packet_3 = APRSPacket.from_frame(
         "W3EAX-13>APRS,KC3FIT-1,WIDE1*,WIDE2-1,qAR,KC3AWP-10:!/:JL2:u4wO   /A=043080|!j|  /W3EAX,326,0,20'C,"
-        'nearspace.umd.edu',
+        "nearspace.umd.edu",
         packet_time=datetime(2019, 2, 3, 14, 39, 28),
     )
 
-    track = APRSTrack(packets=[packet_1, packet_2, packet_3], callsign='W3EAX-13')
+    track = APRSTrack(packets=[packet_1, packet_2, packet_3], callsign="W3EAX-13")
 
     assert track[0] == packet_1
     assert track[0] is packet_1
     assert track[datetime(2019, 2, 3, 14, 36, 16)] == packet_1
-    assert track['2019-02-03 14:36:16'] == packet_1
+    assert track["2019-02-03 14:36:16"] == packet_1
 
-    assert track['2019-02-03 14:38:00'] == packet_2
+    assert track["2019-02-03 14:38:00"] == packet_2
 
     with pytest.raises(IndexError):
-        track['2019-02-03 14:30:00']
+        track["2019-02-03 14:30:00"]

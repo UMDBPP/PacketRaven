@@ -29,7 +29,7 @@ dynamic = ['version']
 
 [project.optional-dependencies]
 testing = ['pytest', 'pytest-cov', 'pytest-mock', 'pytest-xdist']
-development = ['isort', 'oitnb']
+development = ['isort', 'black']
 documentation = ['m2r2', 'sphinx', 'sphinx-rtd-theme', 'sphinxcontrib-programoutput']
 
 [project.urls]

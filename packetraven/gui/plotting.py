@@ -4,8 +4,8 @@ from typing import Dict
 
 import matplotlib
 
-if sys.platform == 'darwin':
-    matplotlib.use('gtk')
+if sys.platform == "darwin":
+    matplotlib.use("gtk")
     matplotlib.interactive(True)
 
 from matplotlib import pyplot
@@ -15,18 +15,23 @@ from matplotlib.figure import Figure
 from packetraven.packets.tracks import LocationPacketTrack, PredictedTrajectory
 
 VARIABLES = {
-    'altitude': {'x': 'times', 'y': 'altitudes', 'xlabel': 'time', 'ylabel': 'altitude (m)'},
-    'ascent_rate': {
-        'x': 'times',
-        'y': 'ascent_rates',
-        'xlabel': 'time',
-        'ylabel': 'ascent rate (m/s)',
+    "altitude": {
+        "x": "times",
+        "y": "altitudes",
+        "xlabel": "time",
+        "ylabel": "altitude (m)",
     },
-    'ground_speed': {
-        'x': 'ground_speeds',
-        'y': 'altitudes',
-        'xlabel': 'ground speed (m/s)',
-        'ylabel': 'altitude (m)',
+    "ascent_rate": {
+        "x": "times",
+        "y": "ascent_rates",
+        "xlabel": "time",
+        "ylabel": "ascent rate (m/s)",
+    },
+    "ground_speed": {
+        "x": "ground_speeds",
+        "y": "altitudes",
+        "xlabel": "ground speed (m/s)",
+        "ylabel": "altitude (m)",
     },
 }
 
@@ -50,7 +55,7 @@ class LiveTrackPlot:
         self.variable = variable
 
         try:
-            self.window.protocol('WM_DELETE_WINDOW', self.window.iconify)
+            self.window.protocol("WM_DELETE_WINDOW", self.window.iconify)
         except AttributeError:
             pass
 
@@ -68,7 +73,7 @@ class LiveTrackPlot:
 
         if len(self.packet_tracks) > 0 or len(self.predictions) > 0:
             try:
-                if self.window.state() == 'iconic':
+                if self.window.state() == "iconic":
                     self.window.deiconify()
                 if self.window.focus_get() is None:
                     self.window.focus_force()
@@ -82,9 +87,11 @@ class LiveTrackPlot:
 
             packet_track_lines = {}
             for name, packet_track in self.packet_tracks.items():
-                x = getattr(packet_track, VARIABLES[self.variable]['x'])
-                y = getattr(packet_track, VARIABLES[self.variable]['y'])
-                lines = axis.plot(x, y, linewidth=2, marker='o', label=packet_track.name)
+                x = getattr(packet_track, VARIABLES[self.variable]["x"])
+                y = getattr(packet_track, VARIABLES[self.variable]["y"])
+                lines = axis.plot(
+                    x, y, linewidth=2, marker="o", label=packet_track.name
+                )
                 packet_track_lines[name] = lines[0]
 
             for name, prediction in self.predictions.items():
@@ -93,15 +100,15 @@ class LiveTrackPlot:
                     if name in packet_track_lines
                     else None
                 )
-                x = getattr(prediction, VARIABLES[self.variable]['x'])
-                y = getattr(prediction, VARIABLES[self.variable]['y'])
+                x = getattr(prediction, VARIABLES[self.variable]["x"])
+                y = getattr(prediction, VARIABLES[self.variable]["y"])
                 axis.plot(
                     x,
                     y,
-                    '--',
+                    "--",
                     linewidth=0.5,
                     color=color,
-                    label=f'{prediction.name} prediction',
+                    label=f"{prediction.name} prediction",
                 )
 
             axis.legend()
@@ -116,28 +123,30 @@ class LiveTrackPlot:
 
     @property
     def figure(self) -> Figure:
-        if not hasattr(self, '__figure') or not pyplot.fignum_exists(self.__figure.number):
+        if not hasattr(self, "__figure") or not pyplot.fignum_exists(
+            self.__figure.number
+        ):
             self.__figure = self.__new_figure()
         return self.__figure
 
     @property
     def axis(self) -> Axes:
-        if not hasattr(self, '__axis') or self.__axis.figure is not self.figure:
+        if not hasattr(self, "__axis") or self.__axis.figure is not self.figure:
             self.__axis = self.__new_axis()
         return self.__axis
 
     def __new_figure(self) -> Figure:
-        x_label = VARIABLES[self.variable]['xlabel']
-        y_label = VARIABLES[self.variable]['ylabel']
+        x_label = VARIABLES[self.variable]["xlabel"]
+        y_label = VARIABLES[self.variable]["ylabel"]
 
-        return pyplot.figure(num=f'{y_label} / {x_label}')
+        return pyplot.figure(num=f"{y_label} / {x_label}")
 
     def __new_axis(self, figure: Figure = None) -> Axes:
         if figure is None:
             figure = self.figure
 
-        x_label = VARIABLES[self.variable]['xlabel']
-        y_label = VARIABLES[self.variable]['ylabel']
+        x_label = VARIABLES[self.variable]["xlabel"]
+        y_label = VARIABLES[self.variable]["ylabel"]
 
         axis = figure.add_subplot(1, 1, 1)
         axis.set_xlabel(x_label)

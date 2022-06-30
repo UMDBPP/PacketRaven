@@ -37,7 +37,7 @@ class NetworkConnection(Connection, ABC):
 
     @property
     def connected(self) -> bool:
-        """ whether current session has a network connection """
+        """whether current session has a network connection"""
         try:
             self.request_with_backoff(self.location, timeout=2)
             return True
@@ -80,7 +80,7 @@ class APRSPacketSource(PacketSource):
     @property
     @abstractmethod
     def packets(self) -> List[APRSPacket]:
-        """ most recent available APRS packets, since the last minimum time interval (if applicable) """
+        """most recent available APRS packets, since the last minimum time interval (if applicable)"""
         raise NotImplementedError
 
 
@@ -92,7 +92,7 @@ class PacketSink(Connection):
     @property
     @abstractmethod
     def send(self, packets: List[LocationPacket]):
-        """ send given packets to remote """
+        """send given packets to remote"""
         raise NotImplementedError
 
 
@@ -112,7 +112,7 @@ def next_open_serial_port() -> str:
     try:
         return next(available_serial_ports())
     except StopIteration:
-        raise ConnectionError('no open serial ports')
+        raise ConnectionError("no open serial ports")
 
 
 def available_serial_ports() -> str:

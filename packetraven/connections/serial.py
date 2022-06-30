@@ -35,11 +35,11 @@ class SerialTNC(APRSPacketSource):
         :param callsigns: list of callsigns to return from source
         """
 
-        if serial_port is None or serial_port == '' or serial_port == 'auto':
+        if serial_port is None or serial_port == "" or serial_port == "auto":
             try:
                 serial_port = next_open_serial_port()
             except ConnectionError:
-                raise ConnectionError('could not find TNC connected to serial')
+                raise ConnectionError("could not find TNC connected to serial")
         else:
             serial_port = serial_port.strip('"')
 
@@ -53,7 +53,7 @@ class SerialTNC(APRSPacketSource):
             interval = datetime.now() - self.__last_access_time
             if interval < self.interval:
                 raise TimeIntervalError(
-                    f'interval {interval} less than minimum interval {self.interval}'
+                    f"interval {interval} less than minimum interval {self.interval}"
                 )
         packets = []
         for line in self.serial_connection.readlines():
@@ -61,9 +61,11 @@ class SerialTNC(APRSPacketSource):
                 packet = APRSPacket.from_frame(line, source=self.location)
                 packets.append(packet)
             except Exception as error:
-                logging.error(f'{error.__class__.__name__} - {error}')
+                logging.error(f"{error.__class__.__name__} - {error}")
         if self.callsigns is not None:
-            packets = [packet for packet in packets if packet.from_callsign in self.callsigns]
+            packets = [
+                packet for packet in packets if packet.from_callsign in self.callsigns
+            ]
         self.__last_access_time = datetime.now()
         return packets
 
@@ -71,4 +73,6 @@ class SerialTNC(APRSPacketSource):
         self.serial_connection.close()
 
     def __repr__(self):
-        return f'{self.__class__.__name__}({repr(self.location)}, {repr(self.callsigns)})'
+        return (
+            f"{self.__class__.__name__}({repr(self.location)}, {repr(self.callsigns)})"
+        )

@@ -18,16 +18,16 @@ def parse_raw_aprs(raw_aprs: Union[str, Mapping]) -> Dict[str, Any]:
 
     if isinstance(raw_aprs, Mapping):
         parsed_packet = {
-            'from': raw_aprs['srccall'],
-            'to': raw_aprs['dstcall'],
-            'path': raw_aprs['path'].split(','),
-            'timestamp': raw_aprs['time'],
-            'symbol': raw_aprs['symbol'][1:],
-            'symbol_table': raw_aprs['symbol'][0],
-            'latitude': float(raw_aprs['lat']),
-            'longitude': float(raw_aprs['lng']),
-            'altitude': float(raw_aprs['altitude']) if 'altitude' in raw_aprs else None,
-            'comment': raw_aprs['comment'] if 'comment' in raw_aprs else 'comment',
+            "from": raw_aprs["srccall"],
+            "to": raw_aprs["dstcall"],
+            "path": raw_aprs["path"].split(","),
+            "timestamp": raw_aprs["time"],
+            "symbol": raw_aprs["symbol"][1:],
+            "symbol_table": raw_aprs["symbol"][0],
+            "latitude": float(raw_aprs["lat"]),
+            "longitude": float(raw_aprs["lng"]),
+            "altitude": float(raw_aprs["altitude"]) if "altitude" in raw_aprs else None,
+            "comment": raw_aprs["comment"] if "comment" in raw_aprs else "comment",
         }
     else:
         try:
@@ -86,7 +86,7 @@ def decompress_longitude(compressed_longitude: str) -> float:
     current_power = len(compressed_longitude) - 1
 
     for character in compressed_longitude:
-        converted_floats.append(float(ord(character) - 33) * (91 ** current_power))
+        converted_floats.append(float(ord(character) - 33) * (91**current_power))
         current_power -= 1
 
     return -180 + (sum(converted_floats) / 190463)
@@ -104,7 +104,7 @@ def decompress_latitude(compressed_latitude: str) -> float:
     current_power = len(compressed_latitude) - 1
 
     for character in compressed_latitude:
-        converted_floats.append(float(ord(character) - 33) * (91 ** current_power))
+        converted_floats.append(float(ord(character) - 33) * (91**current_power))
         current_power -= 1
 
     return 90 - (sum(converted_floats) / 380926)

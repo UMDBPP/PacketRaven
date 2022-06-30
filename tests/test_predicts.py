@@ -18,8 +18,8 @@ def test_ground_prediction():
     predict = cusf_api.predict
 
     assert all(
-        stage in [entry['stage'] for entry in response_json['prediction']]
-        for stage in ['ascent', 'descent']
+        stage in [entry["stage"] for entry in response_json["prediction"]]
+        for stage in ["ascent", "descent"]
     )
     assert len(predict) > 0
 
@@ -39,8 +39,8 @@ def test_ascending_prediction():
     predict = cusf_api.predict
 
     assert all(
-        stage in [entry['stage'] for entry in response_json['prediction']]
-        for stage in ['ascent', 'descent']
+        stage in [entry["stage"] for entry in response_json["prediction"]]
+        for stage in ["ascent", "descent"]
     )
     assert len(predict) > 0
 
@@ -60,8 +60,8 @@ def test_descending_prediction():
     predict = cusf_api.predict
 
     assert all(
-        stage in [entry['stage'] for entry in response_json['prediction']]
-        for stage in ['ascent', 'descent']
+        stage in [entry["stage"] for entry in response_json["prediction"]]
+        for stage in ["ascent", "descent"]
     )
     assert len(predict) > 0
 
@@ -79,14 +79,15 @@ def test_float_prediction():
         ascent_rate,
         burst_altitude,
         descent_rate,
-        float_duration=timedelta(seconds=burst_altitude / ascent_rate) + timedelta(hours=1),
+        float_duration=timedelta(seconds=burst_altitude / ascent_rate)
+        + timedelta(hours=1),
     )
 
     response_json = cusf_api.get()
     predict = cusf_api.predict
 
     assert all(
-        stage in [entry['stage'] for entry in response_json['prediction']]
-        for stage in ['ascent', 'float', 'descent']
+        stage in [entry["stage"] for entry in response_json["prediction"]]
+        for stage in ["ascent", "float", "descent"]
     )
     assert len(predict) > 0

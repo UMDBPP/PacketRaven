@@ -38,7 +38,7 @@ class LocationPacketTrack:
         """
 
         if name is None:
-            name = 'packet track'
+            name = "packet track"
         elif not isinstance(name, str):
             name = str(name)
 
@@ -76,10 +76,10 @@ class LocationPacketTrack:
         if self.__data is None or len(self) != self.__length:
             records = [
                 {
-                    'time': packet.time,
-                    'x': packet.coordinates[0],
-                    'y': packet.coordinates[1],
-                    'altitude': packet.coordinates[2],
+                    "time": packet.time,
+                    "x": packet.coordinates[0],
+                    "y": packet.coordinates[1],
+                    "altitude": packet.coordinates[2],
                 }
                 for packet in self.packets
             ]
@@ -88,11 +88,11 @@ class LocationPacketTrack:
             ):
                 records[index].update(
                     {
-                        'interval': packet_delta.interval,
-                        'overground_distance': packet_delta.overground,
-                        'ascent': packet_delta.ascent,
-                        'ground_speed': packet_delta.ground_speed,
-                        'ascent_rate': packet_delta.ascent_rate,
+                        "interval": packet_delta.interval,
+                        "overground_distance": packet_delta.overground,
+                        "ascent": packet_delta.ascent,
+                        "ground_speed": packet_delta.ground_speed,
+                        "ascent_rate": packet_delta.ascent_rate,
                     }
                 )
 
@@ -102,11 +102,11 @@ class LocationPacketTrack:
 
     @property
     def times(self) -> numpy.ndarray:
-        return self.data['time'].values
+        return self.data["time"].values
 
     @property
     def coordinates(self) -> numpy.ndarray:
-        return self.data[['x', 'y', 'altitude']].values
+        return self.data[["x", "y", "altitude"]].values
 
     @property
     def altitudes(self) -> numpy.ndarray:
@@ -114,36 +114,36 @@ class LocationPacketTrack:
 
     @property
     def intervals(self) -> numpy.ndarray:
-        return self.data['interval'].values
+        return self.data["interval"].values
 
     @property
     def overground_distances(self) -> numpy.ndarray:
-        """ overground distances between packets """
-        return self.data['overground_distance'].values
+        """overground distances between packets"""
+        return self.data["overground_distance"].values
 
     @property
     def ascents(self) -> numpy.ndarray:
-        """ differences in altitude between packets """
-        return self.data['ascent'].values
+        """differences in altitude between packets"""
+        return self.data["ascent"].values
 
     @property
     def ascent_rates(self) -> numpy.ndarray:
-        """ instantaneous ascent rates between packets """
-        return self.data['ascent_rate'].values
+        """instantaneous ascent rates between packets"""
+        return self.data["ascent_rate"].values
 
     @property
     def ground_speeds(self) -> numpy.ndarray:
-        """ instantaneous overground speeds between packets """
-        return self.data['ground_speed'].values
+        """instantaneous overground speeds between packets"""
+        return self.data["ground_speed"].values
 
     @property
     def cumulative_overground_distances(self) -> numpy.ndarray:
-        """ cumulative overground distances from start """
+        """cumulative overground distances from start"""
         return numpy.cumsum(self.overground_distances)
 
     @property
     def time_to_ground(self) -> timedelta:
-        """ estimated time to reach the ground at the current rate of descent """
+        """estimated time to reach the ground at the current rate of descent"""
 
         current_ascent_rate = self.ascent_rates[-1]
         if current_ascent_rate < 0:
@@ -155,7 +155,7 @@ class LocationPacketTrack:
 
     @property
     def distance_downrange(self) -> float:
-        """ direct overground distance between first and last packets only """
+        """direct overground distance between first and last packets only"""
         if len(self.packets) > 0:
             return self.packets[-1].overground_distance(self.coordinates[0, :2])
         else:
@@ -163,12 +163,12 @@ class LocationPacketTrack:
 
     @property
     def length(self) -> float:
-        """ total length of the packet track over the ground """
+        """total length of the packet track over the ground"""
         return sum([distance.overground for distance in self.packets.difference])
 
     def __getitem__(
         self, index: Union[int, Iterable[int], slice]
-    ) -> Union[LocationPacket, 'LocationPacketTrack']:
+    ) -> Union[LocationPacket, "LocationPacketTrack"]:
         if isinstance(index, str):
             try:
                 index = parse_date(index)
@@ -202,20 +202,25 @@ class LocationPacketTrack:
                     for packet in self.packets:
                         packet_time = numpy.datetime64(packet.time)
                         difference = abs(packet_time - index)
-                        if smallest_difference is None or difference < smallest_difference:
+                        if (
+                            smallest_difference is None
+                            or difference < smallest_difference
+                        ):
                             smallest_difference = difference
                             closest_time = packet_time
                     return self[closest_time]
                 else:
                     raise IndexError(
-                        f'time index out of range: {min(self.times) - maximum_interval} <= {index} <= {max(self.times) + maximum_interval}'
+                        f"time index out of range: {min(self.times) - maximum_interval} <= {index} <= {max(self.times) + maximum_interval}"
                     )
             elif len(matching_packets) == 1:
                 return matching_packets[0]
             else:
-                return self.__class__(packets=matching_packets, name=self.name, crs=self.crs)
+                return self.__class__(
+                    packets=matching_packets, name=self.name, crs=self.crs
+                )
         else:
-            raise ValueError(f'unrecognized index: {index}')
+            raise ValueError(f"unrecognized index: {index}")
 
     def __iter__(self):
         return iter(self.packets)
@@ -239,22 +244,22 @@ class LocationPacketTrack:
     def dataframe(self) -> DataFrame:
         return DataFrame(
             {
-                'name': [self.name for _ in range(len(self))],
-                'times': self.times,
-                'x': self.coordinates[:, 0],
-                'y': self.coordinates[:, 1],
-                'z': self.coordinates[:, 2],
-                'intervals': self.intervals,
-                'overground_distances': self.overground_distances,
-                'ascents': self.ascents,
-                'ascent_rates': self.ascent_rates,
-                'ground_speeds': self.ground_speeds,
-                'cumulative_overground_distances': self.cumulative_overground_distances,
+                "name": [self.name for _ in range(len(self))],
+                "times": self.times,
+                "x": self.coordinates[:, 0],
+                "y": self.coordinates[:, 1],
+                "z": self.coordinates[:, 2],
+                "intervals": self.intervals,
+                "overground_distances": self.overground_distances,
+                "ascents": self.ascents,
+                "ascent_rates": self.ascent_rates,
+                "ground_speeds": self.ground_speeds,
+                "cumulative_overground_distances": self.cumulative_overground_distances,
             }
         )
 
     @classmethod
-    def from_file(cls, filename: PathLike) -> List['LocationPacketTrack']:
+    def from_file(cls, filename: PathLike) -> List["LocationPacketTrack"]:
         """
         load packet tracks from the given file
 
@@ -267,29 +272,29 @@ class LocationPacketTrack:
 
         points = []
         linestrings = []
-        for feature in data['features']:
-            if feature['geometry']['type'] == 'Point':
+        for feature in data["features"]:
+            if feature["geometry"]["type"] == "Point":
                 points.append(feature)
-            elif feature['geometry']['type'] == 'LineString':
+            elif feature["geometry"]["type"] == "LineString":
                 linestrings.append(feature)
 
         tracks = []
         for linestring in linestrings:
             packets = []
-            for coordinate in linestring['geometry']['coordinates']:
+            for coordinate in linestring["geometry"]["coordinates"]:
                 for index, point in enumerate(points):
-                    if point['geometry']['coordinates'] == coordinate:
+                    if point["geometry"]["coordinates"] == coordinate:
                         packet = LocationPacket(
-                            x=point['geometry']['coordinates'][0],
-                            y=point['geometry']['coordinates'][1],
-                            z=point['geometry']['coordinates'][2],
-                            **point['properties'],
+                            x=point["geometry"]["coordinates"][0],
+                            y=point["geometry"]["coordinates"][1],
+                            z=point["geometry"]["coordinates"][2],
+                            **point["properties"],
                         )
                         packets.append(packet)
                         if index != 0:
                             points.pop(index)
                         break
-            track = LocationPacketTrack(packets=packets, **linestring['properties'])
+            track = LocationPacketTrack(packets=packets, **linestring["properties"])
 
             tracks.append(track)
 
@@ -308,7 +313,9 @@ class BalloonTrack(LocationPacketTrack):
         crs: CRS = None,
         **attributes,
     ):
-        LocationPacketTrack.__init__(self, packets=packets, name=name, crs=crs, **attributes)
+        LocationPacketTrack.__init__(
+            self, packets=packets, name=name, crs=crs, **attributes
+        )
         self.__falling = False
 
     @property
@@ -360,36 +367,38 @@ class APRSTrack(BalloonTrack):
         :param crs: coordinate reference system to use
         """
 
-        if 'name' not in attributes:
-            attributes['name'] = 'APRS track'
+        if "name" not in attributes:
+            attributes["name"] = "APRS track"
 
         if callsign is not None:
             if not isinstance(callsign, str):
                 callsign = str(callsign)
-            if len(callsign) > 9 or ' ' in callsign:
+            if len(callsign) > 9 or " " in callsign:
                 raise ValueError(f'unrecognized callsign format: "{callsign}"')
 
-        BalloonTrack.__init__(self, packets=packets, callsign=callsign, crs=crs, **attributes)
+        BalloonTrack.__init__(
+            self, packets=packets, callsign=callsign, crs=crs, **attributes
+        )
 
     @property
     def callsign(self) -> str:
-        return self.attributes['callsign']
+        return self.attributes["callsign"]
 
     def append(self, packet: APRSPacket):
-        packet_callsign = packet['callsign']
+        packet_callsign = packet["callsign"]
 
         if self.callsign is None or packet_callsign == self.callsign:
             super().append(packet)
         else:
             raise ValueError(
-                f'Packet callsign {packet_callsign} does not match ground track callsign {self.callsign}.'
+                f"Packet callsign {packet_callsign} does not match ground track callsign {self.callsign}."
             )
 
     def __str__(self) -> str:
-        return f'{self.callsign}: {super().__str__()}'
+        return f"{self.callsign}: {super().__str__()}"
 
     @classmethod
-    def from_file(cls, filename: PathLike) -> List['APRSTrack']:
+    def from_file(cls, filename: PathLike) -> List["APRSTrack"]:
         tracks = LocationPacketTrack.from_file(filename)
 
         for index in range(len(tracks)):
@@ -398,8 +407,8 @@ class APRSTrack(BalloonTrack):
             for packet in track.packets:
                 packets.append(
                     APRSPacket(
-                        from_callsign=packet.attributes['from'],
-                        to_callsign=packet.attributes['to'],
+                        from_callsign=packet.attributes["from"],
+                        to_callsign=packet.attributes["to"],
                         time=packet.time,
                         x=packet.coordinates[0],
                         y=packet.coordinates[1],
@@ -407,11 +416,13 @@ class APRSTrack(BalloonTrack):
                         **{
                             key: value
                             for key, value in packet.attributes.items()
-                            if key not in ['from', 'to']
+                            if key not in ["from", "to"]
                         },
                     )
                 )
-            tracks[index] = APRSTrack(packets=packets, crs=track.crs, **track.attributes)
+            tracks[index] = APRSTrack(
+                packets=packets, crs=track.crs, **track.attributes
+            )
 
         return tracks
 
@@ -436,14 +447,17 @@ class PredictedTrajectory(LocationPacketTrack):
         :param crs: coordinate reference system to use
         """
 
-        if 'name' not in attributes:
-            attributes['name'] = 'predicted trajectory'
+        if "name" not in attributes:
+            attributes["name"] = "predicted trajectory"
 
         self.__parameters = parameters
         self.__metadata = metadata
 
         LocationPacketTrack.__init__(
-            self, packets=packets, crs=crs, **attributes,
+            self,
+            packets=packets,
+            crs=crs,
+            **attributes,
         )
 
     @property
@@ -451,13 +465,15 @@ class PredictedTrajectory(LocationPacketTrack):
         return self.coordinates[-1]
 
     @classmethod
-    def from_file(cls, filename: PathLike) -> List['PredictedTrajectory']:
+    def from_file(cls, filename: PathLike) -> List["PredictedTrajectory"]:
         tracks = LocationPacketTrack.from_file(filename)
 
         for index in range(len(tracks)):
             track = tracks[index]
             tracks[index] = PredictedTrajectory(
-                packets=track.packets, crs=track.crs, **track.attributes,
+                packets=track.packets,
+                crs=track.crs,
+                **track.attributes,
             )
 
         return tracks

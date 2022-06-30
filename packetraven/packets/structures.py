@@ -65,7 +65,7 @@ class DoublyLinkedList(Sequence[T]):
             return str(self.value)
 
         def __repr__(self) -> str:
-            return f'{self.previous_node} -> [{self.value}] -> {self.next_node}'
+            return f"{self.previous_node} -> [{self.value}] -> {self.next_node}"
 
     def append(self, value: T):
         """
@@ -158,7 +158,7 @@ class DoublyLinkedList(Sequence[T]):
             current_node = current_node.next_node
             index += 1
         else:
-            raise ValueError(f'{value} is not in list')
+            raise ValueError(f"{value} is not in list")
 
     def count(self, value: T) -> int:
         """
@@ -232,7 +232,7 @@ class DoublyLinkedList(Sequence[T]):
                 index_counter -= 1
 
         if node_at_index is None:
-            raise IndexError('list index out of range')
+            raise IndexError("list index out of range")
 
         return node_at_index
 
@@ -247,21 +247,29 @@ class DoublyLinkedList(Sequence[T]):
         else:
             self.head = node.next_node
 
-    def __getitem__(self, index: Union[int, Iterable[int], slice]) -> Union[Any, List[Any]]:
-        if isinstance(index, int) or isinstance(index, int32) or isinstance(index, int64):
+    def __getitem__(
+        self, index: Union[int, Iterable[int], slice]
+    ) -> Union[Any, List[Any]]:
+        if (
+            isinstance(index, int)
+            or isinstance(index, int32)
+            or isinstance(index, int64)
+        ):
             return self._node_at_index(index).value
         elif isinstance(index, Iterable):
             return self.__class__([self.__getitem__(value) for value in index])
         elif isinstance(index, slice):
             slice_parameters = [
-                value for value in (index.start, index.stop, index.step) if value is not None
+                value
+                for value in (index.start, index.stop, index.step)
+                if value is not None
             ]
             if all(slice_parameter is None for slice_parameter in slice_parameters):
                 return self
             else:
                 return self.__getitem__(range(*slice_parameters))
         else:
-            raise ValueError(f'unrecognized index: {index}')
+            raise ValueError(f"unrecognized index: {index}")
 
     def __setitem__(self, index: int, value: T):
         self._node_at_index(index).value = value
@@ -300,7 +308,7 @@ class DoublyLinkedList(Sequence[T]):
 
         return length
 
-    def __eq__(self, other: 'DoublyLinkedList') -> bool:
+    def __eq__(self, other: "DoublyLinkedList") -> bool:
         if len(self) == len(other):
             for index in range(len(self)):
                 if self[index] != other[index]:
@@ -308,7 +316,7 @@ class DoublyLinkedList(Sequence[T]):
             else:
                 return True
 
-    def __copy__(self) -> 'DoublyLinkedList':
+    def __copy__(self) -> "DoublyLinkedList":
         return self.__class__(self)
 
     def __str__(self) -> str:
