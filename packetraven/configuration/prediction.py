@@ -9,7 +9,11 @@ import yaml
 from packetraven.configuration.base import ConfigurationSection, ConfigurationYAML
 from packetraven.model import FREEFALL_DESCENT_RATE
 from packetraven.packets.tracks import PredictedTrajectory
-from packetraven.predicts import BalloonPredictionQuery, DEFAULT_FLOAT_ALTITUDE_UNCERTAINTY, PredictionAPIURL
+from packetraven.predicts import (
+    BalloonPredictionQuery,
+    DEFAULT_FLOAT_ALTITUDE_UNCERTAINTY,
+    PredictionAPIURL,
+)
 
 
 class PredictionConfiguration(ConfigurationYAML, ConfigurationSection):

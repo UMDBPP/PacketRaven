@@ -2,10 +2,19 @@ from typing import Any
 
 from packetraven.configuration.base import ConfigurationYAML
 from packetraven.configuration.credentials import CredentialsYAML
+
 # noinspection PyUnresolvedReferences
-from packetraven.configuration.prediction import PredictionCloudConfiguration, PredictionConfiguration
+from packetraven.configuration.prediction import (
+    PredictionCloudConfiguration,
+    PredictionConfiguration,
+)
 from packetraven.configuration.run import RunConfiguration
-from tests import check_reference_directory, INPUT_DIRECTORY, OUTPUT_DIRECTORY, REFERENCE_DIRECTORY
+from tests import (
+    check_reference_directory,
+    INPUT_DIRECTORY,
+    OUTPUT_DIRECTORY,
+    REFERENCE_DIRECTORY,
+)
 
 
 class TestConfiguration(ConfigurationYAML):

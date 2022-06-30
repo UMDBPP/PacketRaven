@@ -14,10 +14,20 @@ import typer
 
 from packetraven.configuration.prediction import PredictionConfiguration
 from packetraven.configuration.run import RunConfiguration
-from packetraven.connections import PacketDatabaseTable, PacketGeoJSON, RawAPRSTextFile, SerialTNC, TimeIntervalError
+from packetraven.connections import (
+    PacketDatabaseTable,
+    PacketGeoJSON,
+    RawAPRSTextFile,
+    SerialTNC,
+    TimeIntervalError,
+)
 from packetraven.connections.base import PacketSource
 from packetraven.packets import APRSPacket
-from packetraven.packets.tracks import APRSTrack, LocationPacketTrack, PredictedTrajectory
+from packetraven.packets.tracks import (
+    APRSTrack,
+    LocationPacketTrack,
+    PredictedTrajectory,
+)
 from packetraven.packets.writer import write_packet_tracks
 from packetraven.predicts import CUSFBalloonPredictionQuery, PredictionError
 
