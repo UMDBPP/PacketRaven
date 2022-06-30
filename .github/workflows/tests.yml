@@ -19,6 +19,8 @@ jobs:
     steps:
       - uses: actions/checkout@main
       - uses: actions/setup-python@main
+        with:
+          python-version: '3.x'
       - uses: actions/cache@main
         id: cache
         with:
@@ -38,19 +40,19 @@ jobs:
     strategy:
       matrix:
         os: [ macos-latest, windows-latest ]
-        python-version: [ '3.8', '3.9', '3.x' ]
+        python: [ '3.8', '3.9', '3.x' ]
         exclude:
           - os: macos-latest
-            python-version: '3.x'
+            python: '3.x'
           - os: windows-latest
-            python-version: '3.9'
+            python: '3.9'
           - os: windows-latest
-            python-version: '3.x'
+            python: '3.x'
     steps:
       - uses: actions/checkout@main
       - uses: actions/setup-python@main
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.python }}
       - uses: actions/cache@main
         id: cache
         with:
@@ -70,7 +72,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest ]
-        python-version: [ '3.8', '3.9', '3.x' ]
+        python: [ '3.8', '3.9', '3.x' ]
     services:
       postgres:
         image: postgis/postgis:13-3.1
@@ -84,7 +86,7 @@ jobs:
       - uses: actions/checkout@main
       - uses: actions/setup-python@main
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.python }}
       - uses: actions/cache@main
         id: cache
         with:
@@ -118,6 +120,8 @@ jobs:
     steps:
       - uses: actions/checkout@main
       - uses: actions/setup-python@main
+        with:
+          python-version: '3.x'
       - uses: actions/cache@main
         id: cache
         with:

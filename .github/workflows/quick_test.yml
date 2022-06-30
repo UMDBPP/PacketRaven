@@ -16,6 +16,8 @@ jobs:
     steps:
       - uses: actions/checkout@main
       - uses: actions/setup-python@main
+        with:
+          python-version: '3.x'
       - uses: actions/cache@main
         id: cache
         with:
@@ -44,6 +46,8 @@ jobs:
     steps:
       - uses: actions/checkout@main
       - uses: actions/setup-python@main
+        with:
+          python-version: '3.x'
       - uses: actions/cache@main
         id: cache
         with:
