@@ -17,9 +17,9 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout
-      - uses: actions/setup-python
-      - uses: actions/cache
+      - uses: actions/checkout@main
+      - uses: actions/setup-python@main
+      - uses: actions/cache@main
         id: cache
         with:
           path: ${{ env.pythonLocation }}
@@ -47,11 +47,11 @@ jobs:
           - os: windows-latest
             python-version: '3.x'
     steps:
-      - uses: actions/checkout
-      - uses: actions/setup-python
+      - uses: actions/checkout@main
+      - uses: actions/setup-python@main
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: actions/cache
+      - uses: actions/cache@main
         id: cache
         with:
           path: ${{ env.pythonLocation }}
@@ -81,11 +81,11 @@ jobs:
           - 5432:5432
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
-      - uses: actions/checkout
-      - uses: actions/setup-python
+      - uses: actions/checkout@main
+      - uses: actions/setup-python@main
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: actions/cache
+      - uses: actions/cache@main
         id: cache
         with:
           path: ${{ env.pythonLocation }}
@@ -116,9 +116,9 @@ jobs:
           - 5432:5432
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
-      - uses: actions/checkout
-      - uses: actions/setup-python
-      - uses: actions/cache
+      - uses: actions/checkout@main
+      - uses: actions/setup-python@main
+      - uses: actions/cache@main
         id: cache
         with:
           path: ${{ env.pythonLocation }}
@@ -134,7 +134,7 @@ jobs:
           POSTGRES_USERNAME: postgres
           POSTGRES_PASSWORD: test_password
       - run: coverage report
-      - uses: codecov/codecov-action
+      - uses: codecov/codecov-action@main
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml

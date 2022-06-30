@@ -10,13 +10,13 @@ jobs:
     name: publish package to PyPI
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout
-      - uses: actions/cache
+      - uses: actions/checkout@main
+      - uses: actions/cache@main
         with:
           path: ${{ env.pythonLocation }}
           key: build-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml', 'setup.*') }}
       - run: pip wheel . --no-deps -w dist
-      - uses: pypa/gh-action-pypi-publish
+      - uses: pypa/gh-action-pypi-publish@main
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
