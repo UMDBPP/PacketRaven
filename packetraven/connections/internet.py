@@ -10,14 +10,7 @@ from shapely.geometry import Point
 from tablecrow import PostGresTable
 from tablecrow.utilities import split_hostname_port
 
-from packetraven.connections.base import (
-    APRSPacketSink,
-    APRSPacketSource,
-    NetworkConnection,
-    PacketSink,
-    PacketSource,
-    TimeIntervalError,
-)
+from packetraven.connections.base import APRSPacketSink, APRSPacketSource, NetworkConnection, PacketSink, PacketSource, TimeIntervalError
 from packetraven.packets import APRSPacket, LocationPacket
 from packetraven.packets.parsing import InvalidPacketError
 

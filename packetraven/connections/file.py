@@ -9,11 +9,7 @@ import geojson
 import requests
 import typepigeon
 
-from packetraven.connections.base import (
-    APRSPacketSource,
-    PacketSource,
-    TimeIntervalError,
-)
+from packetraven.connections.base import APRSPacketSource, PacketSource, TimeIntervalError
 from packetraven.packets import APRSPacket, LocationPacket
 
 

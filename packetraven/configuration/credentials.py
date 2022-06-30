@@ -3,11 +3,7 @@ import os
 
 from tablecrow.utilities import parse_hostname
 
-from packetraven.configuration.base import (
-    ConfigurationSection,
-    ConfigurationYAML,
-    PacketSourceConfiguration,
-)
+from packetraven.configuration.base import ConfigurationSection, ConfigurationYAML, PacketSourceConfiguration
 from packetraven.connections.internet import APRSfi, APRSis, PacketDatabaseTable
 
 

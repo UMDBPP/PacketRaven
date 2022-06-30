@@ -9,11 +9,7 @@ from shapely.geometry import LineString
 import typepigeon
 
 from packetraven.packets import APRSPacket
-from packetraven.packets.tracks import (
-    APRSTrack,
-    LocationPacketTrack,
-    PredictedTrajectory,
-)
+from packetraven.packets.tracks import APRSTrack, LocationPacketTrack, PredictedTrajectory
 
 KML_STANDARD = "{http://www.opengis.net/kml/2.2}"
 

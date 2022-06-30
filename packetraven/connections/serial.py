@@ -4,11 +4,7 @@ from typing import List
 
 from serial import Serial
 
-from packetraven.connections.base import (
-    APRSPacketSource,
-    next_open_serial_port,
-    TimeIntervalError,
-)
+from packetraven.connections.base import APRSPacketSource, next_open_serial_port, TimeIntervalError
 from packetraven.packets import APRSPacket
 
 

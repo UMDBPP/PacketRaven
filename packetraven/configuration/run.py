@@ -3,11 +3,7 @@ from pathlib import Path
 from typing import Any
 
 from packetraven.configuration.base import ConfigurationYAML
-from packetraven.configuration.credentials import (
-    APRSfiCredentials,
-    APRSisCredentials,
-    DatabaseCredentials,
-)
+from packetraven.configuration.credentials import APRSfiCredentials, APRSisCredentials, DatabaseCredentials
 from packetraven.configuration.prediction import PredictionConfiguration
 from packetraven.configuration.text import TextStreamConfiguration
 
