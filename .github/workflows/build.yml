@@ -16,7 +16,7 @@ jobs:
           path: ${{ env.pythonLocation }}
           key: build-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml', 'setup.*') }}
       - run: pip wheel . --no-deps -w dist
-      - uses: pypa/gh-action-pypi-publish@main
+      - uses: pypa/gh-action-pypi-publish@master
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
