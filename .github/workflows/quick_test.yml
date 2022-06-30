@@ -54,7 +54,9 @@ jobs:
           path: ${{ env.pythonLocation }}
           key: test-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml') }}
       - run: pip install ".[testing]"
-      - run: pytest
+      - run: |
+          pytest -m "serial"
+          pytest -m "not serial" -n auto
         env:
           APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
           APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
