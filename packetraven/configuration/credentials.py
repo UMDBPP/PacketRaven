@@ -8,7 +8,8 @@ from packetraven.configuration.base import (
     ConfigurationYAML,
     PacketSourceConfiguration,
 )
-from packetraven.connections.internet import APRSfi, APRSis, PacketDatabaseTable
+from packetraven.connections import APRSfi, APRSis
+from packetraven.connections.internet import PacketDatabaseTable
 
 
 class SSHCredentials(ConfigurationYAML, ConfigurationSection):

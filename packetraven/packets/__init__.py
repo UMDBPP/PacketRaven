@@ -1,1 +1,6 @@
-from packetraven.packets.base import APRSPacket, DEFAULT_CRS, LocationPacket
+from packetraven.packets.base import APRSPacket, LocationPacket
+
+__all__ = [
+    "LocationPacket",
+    "APRSPacket",
+]

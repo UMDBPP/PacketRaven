@@ -15,13 +15,12 @@ import typer
 from packetraven.configuration.prediction import PredictionConfiguration
 from packetraven.configuration.run import RunConfiguration
 from packetraven.connections import (
-    PacketDatabaseTable,
     PacketGeoJSON,
     RawAPRSTextFile,
     SerialTNC,
-    TimeIntervalError,
 )
 from packetraven.connections.base import PacketSource
+from packetraven.connections.internet import PacketDatabaseTable, TimeIntervalError
 from packetraven.packets import APRSPacket
 from packetraven.packets.tracks import (
     APRSTrack,

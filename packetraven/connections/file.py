@@ -28,7 +28,7 @@ class RawAPRSTextFile(APRSPacketSource):
         :param callsigns: list of callsigns to return from source
         """
 
-        if not urlparse(str(filename)).scheme in ["http", "https", "ftp", "sftp"]:
+        if urlparse(str(filename)).scheme not in ["http", "https", "ftp", "sftp"]:
             if not isinstance(filename, Path):
                 if isinstance(filename, str):
                     filename = filename.strip('"')
@@ -108,7 +108,7 @@ class PacketGeoJSON(PacketSource):
         :param callsigns: list of callsigns to return from source
         """
 
-        if not urlparse(str(filename)).scheme in ["http", "https", "ftp", "sftp"]:
+        if urlparse(str(filename)).scheme not in ["http", "https", "ftp", "sftp"]:
             if not isinstance(filename, Path):
                 if isinstance(filename, str):
                     filename = filename.strip('"')

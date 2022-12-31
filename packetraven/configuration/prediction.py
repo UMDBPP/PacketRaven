@@ -42,7 +42,7 @@ class PredictionConfiguration(ConfigurationYAML, ConfigurationSection):
             "duration": None,
         },
         "output": {"filename": None},
-        "api_url": PredictionAPIURL.cusf.value,
+        "api_url": PredictionAPIURL.sondehub.value,
         "name": "prediction",
     }
 

@@ -16,7 +16,7 @@ UTC_TIMEZONE = pytz.utc
 
 
 class PredictionAPIURL(Enum):
-    cusf = "https://predict.cusf.co.uk/api/v1/"
+    sondehub = "https://api.v2.sondehub.org/tawhiri"
     lukerenegar = "https://predict.lukerenegar.com/api/v1.1/"
 
 
@@ -110,10 +110,10 @@ class PredictionError(Exception):
 
 class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
     """
-    connection to https://predict.cusf.co.uk/api/v1/
+    connection to https://api.v2.sondehub.org/tawhiri
 
-    >>> cusf_api = CUSFBalloonPredictionQuery(start_location=(-77.547824, 39.359031), launch_datetime=datetime.now(), ascent_rate=5.5, burst_altitude=28000, descent_rate=9)
-    >>> predicted_track = cusf_api.predict
+    >>> sondehub_api = CUSFBalloonPredictionQuery(start_location=(-77.547824, 39.359031), launch_datetime=datetime.now(), ascent_rate=5.5, burst_altitude=28000, descent_rate=9)
+    >>> predicted_track = sondehub_api.predict
     """
 
     def __init__(
@@ -150,13 +150,13 @@ class CUSFBalloonPredictionQuery(BalloonPredictionQuery):
                 dataset_time = UTC_TIMEZONE.localize(dataset_time)
 
         if api_url is None:
-            api_url = PredictionAPIURL.cusf
+            api_url = PredictionAPIURL.sondehub
 
         if isinstance(api_url, PredictionAPIURL):
             api_url = api_url.value
 
         if name is None:
-            name = "cusf_prediction"
+            name = "sondehub_prediction"
 
         super().__init__(
             api_url,
