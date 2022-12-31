@@ -50,3 +50,10 @@ packetraven = 'packetraven.__main__:main'
 
 [tool.pytest.ini_options]
 markers = ['serial']
+
+[tool.ruff]
+extend-ignore = [
+    'E501', # Line too long
+    'E722', # Do not use bare `except`
+    'F541', # f-string without any placeholders
+]

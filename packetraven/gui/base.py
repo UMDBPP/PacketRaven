@@ -306,10 +306,6 @@ class PacketRavenGUI:
         teek.run()
 
     @property
-    def callsigns(self) -> List[str]:
-        return self.__configuration["callsigns"]
-
-    @property
     def interval(self) -> timedelta:
         return self.__configuration["time"]["interval"]
 
