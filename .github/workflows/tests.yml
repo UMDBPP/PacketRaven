@@ -2,153 +2,101 @@ name: tests
 
 on:
   push:
-    branches:
-      - main
     paths:
       - '**.py'
       - '.github/workflows/tests.yml'
       - 'pyproject.toml'
+      - 'tests/**'
   pull_request:
-    branches:
-      - main
 
 jobs:
-  lint:
-    name: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@main
-      - uses: actions/setup-python@main
-        with:
-          python-version: '3.x'
-      - uses: actions/cache@main
-        id: cache
-        with:
-          path: ${{ env.pythonLocation }}
-          key: lint-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml') }}
-      - run: pip install flake8 black
-      - run: |
-          # stop the build if there are Python syntax errors or undefined names
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-      - run: black . --check
-  test_without_postgres:
-    needs: [ lint ]
-    name: test without PostGreSQL database
+  check:
+    name: ${{ matrix.toxenv }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ macos-latest, windows-latest ]
-        python: [ '3.8', '3.9', '3.10' ]
-        exclude:
-          - os: macos-latest
-            python: '3.10'
-          - os: windows-latest
-            python: '3.9'
-          - os: windows-latest
-            python: '3.10'
-    steps:
-      - uses: actions/checkout@main
-      - uses: actions/setup-python@main
-        with:
-          python-version: ${{ matrix.python }}
-      - uses: actions/cache@main
-        id: cache
-        with:
-          path: ${{ env.pythonLocation }}
-          key: test-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml') }}
-      - run: pip install ".[test]"
-      - run: pytest -m "serial"
-        env:
-          APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
-          APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
-      - run: pytest -m "not serial" -n auto
-        env:
-          APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
-          APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
-  test_with_postgres:
-    needs: [ lint ]
-    name: test with PostGreSQL database
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
+        toxenv: [ check-style, check-build ]
+        python: [ '3.11' ]
         os: [ ubuntu-latest ]
-        python: [ '3.8', '3.9', '3.10' ]
-    services:
-      postgres:
-        image: postgis/postgis:13-3.1
-        env:
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: test_database
-        ports:
-          - 5432:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
-      - uses: actions/checkout@main
-      - uses: actions/setup-python@main
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
-      - uses: actions/cache@main
-        id: cache
-        with:
-          path: ${{ env.pythonLocation }}
-          key: test-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml') }}
-      - run: pip install ".[test]"
-      - run: pytest -m "serial"
-        env:
-          APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
-          APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
-          POSTGRES_HOSTNAME: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_DATABASE: test_database
-          POSTGRES_USERNAME: postgres
-          POSTGRES_PASSWORD: test_password
-      - run: pytest -m "not serial" -n auto
-        env:
-          APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
-          APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
-          POSTGRES_HOSTNAME: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_DATABASE: test_database
-          POSTGRES_USERNAME: postgres
-          POSTGRES_PASSWORD: test_password
-  test_with_coverage:
-    needs: [ test_without_postgres, test_with_postgres ]
-    name: test with coverage
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgis/postgis:13-3.1
-        env:
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: test_database
-        ports:
-          - 5432:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
+      - run: pip install "tox>=4.0"
+      - run: tox -e ${{ matrix.toxenv }}
+  test_without_postgres:
+    name: ${{ matrix.toxenv }} (Python ${{ matrix.python }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        toxenv: [ test-xdist ]
+        os: [ macos-latest, windows-latest ]
+        python: [ '3.8', '3.9', '3.10', '3.11' ]
     steps:
-      - uses: actions/checkout@main
-      - uses: actions/setup-python@main
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
-      - uses: actions/cache@main
-        id: cache
-        with:
-          path: ${{ env.pythonLocation }}
-          key: test-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml') }}
-      - run: pip install ".[test]"
-      - run: pytest --cov . --cov-report xml:coverage.xml
+          python-version: ${{ matrix.python }}
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
+      - run: pip install "tox>=4.0"
+      - run: tox -e ${{ matrix.toxenv }}
         env:
           APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
           APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
-          POSTGRES_HOSTNAME: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_DATABASE: test_database
-          POSTGRES_USERNAME: postgres
-          POSTGRES_PASSWORD: test_password
-      - run: coverage report
-      - uses: codecov/codecov-action@master
+      - if: ${{ contains(matrix.toxenv,'-cov') }}
+        uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage.xml
+          file: ./coverage.xml
+          flags: unit
+          fail_ci_if_error: true
+  test_with_postgres:
+    name: ${{ matrix.toxenv }} (Python ${{ matrix.python }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        toxenv: [ test-xdist ]
+        os: [ ubuntu-latest ]
+        python: [ '3.8', '3.9', '3.10', '3.11' ]
+        include:
+          - toxenv: test-cov-xdist
+            os: ubuntu-latest
+            python: '3.11'
+    services:
+      postgres:
+        image: postgis/postgis:latest
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_database
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python }}
+          cache: 'pip'
+          cache-dependency-path: 'pyproject.toml'
+      - run: pip install "tox>=4.0"
+      - run: tox -e ${{ matrix.toxenv }}
+        env:
+          APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
+          APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
+          POSTGRES_HOSTNAME: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DATABASE: test_database
+          POSTGRES_USERNAME: postgres
+          POSTGRES_PASSWORD: test_password
+      - if: ${{ contains(matrix.toxenv,'-cov') }}
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.xml
+          flags: unit
           fail_ci_if_error: true
