@@ -1,4 +1,4 @@
-api_url: https://predict.cusf.co.uk/api/v1/
+api_url: https://api.v2.sondehub.org/tawhiri
 ascent_rate: 6.5
 burst_altitude: 25000
 descent_rate: 9

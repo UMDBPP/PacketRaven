@@ -14,8 +14,8 @@ from packetraven.model import (
     FREEFALL_DESCENT_RATE_UNCERTAINTY,
     FREEFALL_SECONDS_TO_GROUND,
 )
-from packetraven.packets import APRSPacket, DEFAULT_CRS, LocationPacket
-from packetraven.packets.base import Distance
+from packetraven.packets import APRSPacket, LocationPacket
+from packetraven.packets.base import DEFAULT_CRS, Distance
 from packetraven.packets.structures import DoublyLinkedList
 
 

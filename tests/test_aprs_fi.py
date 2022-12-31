@@ -2,8 +2,8 @@ import os
 
 import pytest
 
-from packetraven import APRSfi
 from packetraven.configuration.credentials import APRSfiCredentials
+from packetraven.connections import APRSfi
 from packetraven.packets import APRSPacket
 
 

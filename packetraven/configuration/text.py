@@ -1,4 +1,3 @@
-
 from packetraven.configuration.base import (
     ConfigurationSection,
     ConfigurationYAML,

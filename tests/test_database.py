@@ -5,7 +5,7 @@ import psycopg2
 import pytest
 from tablecrow.tables.postgres import database_has_table
 
-from packetraven import APRSDatabaseTable
+from packetraven.connections import APRSDatabaseTable
 from packetraven.configuration.credentials import DatabaseCredentials
 from packetraven.packets import APRSPacket
 

@@ -2,14 +2,13 @@ from datetime import datetime
 import logging
 from typing import List
 
-from serial import Serial
-
 from packetraven.connections.base import (
     APRSPacketSource,
-    next_open_serial_port,
     TimeIntervalError,
+    next_open_serial_port,
 )
 from packetraven.packets import APRSPacket
+from serial import Serial
 
 
 class SerialTNC(APRSPacketSource):
