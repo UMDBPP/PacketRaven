@@ -6,41 +6,43 @@ readme = 'README.md'
 requires-python = '>=3.8'
 license = { file = 'LICENSE' }
 dependencies = [
-    'aprslib',
-    'backoff',
-    'humanize',
-    'numpy',
-    'pandas',
-    'pyserial',
-    'geojson',
-    'fastkml',
-    'matplotlib',
-    'pyproj',
-    'pyyaml',
-    'requests',
-    'shapely',
-    'sshtunnel',
-    'tablecrow >=1.4.3',
-    'teek',
-    'typepigeon >=1.0.13',
-    'typer',
+  'aprslib',
+  'backoff',
+  'humanize',
+  'numpy',
+  'pandas',
+  'pyserial',
+  'geojson',
+  'fastkml',
+  'matplotlib',
+  'pyproj',
+  'pyyaml',
+  'requests',
+  'shapely',
+  'sshtunnel',
+  'tablecrow >=1.4.3',
+  'teek',
+  'typepigeon >=1.0.13',
+  'typer',
 ]
 dynamic = ['version']
 
 [project.optional-dependencies]
 test = ['pytest', 'pytest-cov', 'pytest-mock', 'pytest-xdist']
-docs = ['m2r2', 'sphinx', 'sphinx-rtd-theme', 'sphinxcontrib-programoutput', 'tomli; python_version <"3.11"', ]
+docs = [
+  'm2r2',
+  'sphinx',
+  'sphinx-rtd-theme',
+  'sphinxcontrib-programoutput',
+  'tomli; python_version <"3.11"',
+]
 
 [project.urls]
 repository = 'https://github.com/UMDBPP/packetraven'
 documentation = 'https://packetraven.readthedocs.io'
 
 [build-system]
-requires = [
-    'setuptools >=61',
-    'setuptools_scm[toml] >=3.4',
-    'wheel',
-]
+requires = ['setuptools >=61', 'setuptools_scm[toml] >=3.4', 'wheel']
 build-backend = 'setuptools.build_meta'
 
 [tool.setuptools_scm]
@@ -53,7 +55,7 @@ markers = ['serial']
 
 [tool.ruff]
 extend-ignore = [
-    'E501', # Line too long
-    'E722', # Do not use bare `except`
-    'F541', # f-string without any placeholders
+  'E501', # Line too long
+  'E722', # Do not use bare `except`
+  'F541', # f-string without any placeholders
 ]
