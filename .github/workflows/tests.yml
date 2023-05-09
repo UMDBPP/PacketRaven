@@ -13,62 +13,46 @@ on:
 
 jobs:
   check:
-    name: ${{ matrix.toxenv }}
+    name: ${{ matrix.command }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        toxenv: [ check-style, check-build ]
-        python: [ '3.11' ]
+        command: [ check, build ]
         os: [ ubuntu-latest ]
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions-rs/toolchain@v1
         with:
-          python-version: ${{ matrix.python }}
-          cache: 'pip'
-          cache-dependency-path: 'pyproject.toml'
-      - run: pip install "tox>=4.0"
-      - run: tox -e ${{ matrix.toxenv }}
+          toolchain: stable
+      - uses: actions-rs/cargo@v1
+        with:
+          command: ${{ matrix.command }}
   test_without_postgres:
-    name: ${{ matrix.toxenv }} (Python ${{ matrix.python }}, ${{ matrix.os }})
+    name: ${{ matrix.command }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        toxenv: [ test-xdist ]
+        command: [ test ]
         os: [ macos-latest, windows-latest ]
-        python: [ '3.8', '3.9', '3.10', '3.11' ]
+    env:
+      APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
+      APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions-rs/toolchain@v1
         with:
-          python-version: ${{ matrix.python }}
-          cache: 'pip'
-          cache-dependency-path: 'pyproject.toml'
-      - run: pip install "tox>=4.0"
-      - run: tox -e ${{ matrix.toxenv }}
-        env:
-          APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
-          APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
-      - if: ${{ contains(matrix.toxenv,'-cov') }}
-        uses: codecov/codecov-action@v3
+          toolchain: stable
+      - uses: actions-rs/cargo@v1
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage.xml
-          flags: unit
-          fail_ci_if_error: true
+          command: ${{ matrix.command }}
   test_with_postgres:
-    name: ${{ matrix.toxenv }} (Python ${{ matrix.python }}, ${{ matrix.os }})
+    name: ${{ matrix.command }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        toxenv: [ test-xdist ]
+        command: [ test ]
         os: [ ubuntu-latest ]
-        python: [ '3.8', '3.9', '3.10', '3.11' ]
-        include:
-          - toxenv: test-cov-xdist
-            os: ubuntu-latest
-            python: '3.11'
     services:
       postgres:
         image: postgis/postgis:latest
@@ -78,27 +62,19 @@ jobs:
         ports:
           - 5432:5432
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
+      APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
+      POSTGRES_HOSTNAME: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_DATABASE: test_database
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: test_password
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions-rs/toolchain@v1
         with:
-          python-version: ${{ matrix.python }}
-          cache: 'pip'
-          cache-dependency-path: 'pyproject.toml'
-      - run: pip install "tox>=4.0"
-      - run: tox -e ${{ matrix.toxenv }}
-        env:
-          APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
-          APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
-          POSTGRES_HOSTNAME: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_DATABASE: test_database
-          POSTGRES_USERNAME: postgres
-          POSTGRES_PASSWORD: test_password
-      - if: ${{ contains(matrix.toxenv,'-cov') }}
-        uses: codecov/codecov-action@v3
+          toolchain: stable
+      - uses: actions-rs/cargo@v1
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage.xml
-          flags: unit
-          fail_ci_if_error: true
+          command: ${{ matrix.command }}

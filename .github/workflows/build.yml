@@ -6,20 +6,25 @@ on:
       - published
 
 jobs:
-  publish:
-    name: publish package to PyPI
+  build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-pc-windows-gnu
+          - target: x86_64-unknown-linux-musl
+          - target: x86_64-apple-darwin
     steps:
-      - uses: actions/checkout@main
-      - uses: actions/setup-python@main
+      - uses: actions/checkout@v3
+      - uses: rust-build/rust-build.action@v1.4.3
+        id: compile
         with:
-          python-version: '3.x'
-      - uses: actions/cache@main
+          RUSTTARGET: x86_64-unknown-linux-musl
+          UPLOAD_MODE: none
+      - uses: actions/upload-artifact@v3
         with:
-          path: ${{ env.pythonLocation }}
-          key: build-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('pyproject.toml', 'setup.*') }}
-      - run: pip wheel . --no-deps -w dist
-      - uses: pypa/gh-action-pypi-publish@master
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
+          name: executable-${{ matrix.target }}
+          path: |
+            ${{ steps.compile.outputs.BUILT_ARCHIVE }}
+            ${{ steps.compile.outputs.BUILT_CHECKSUM }}

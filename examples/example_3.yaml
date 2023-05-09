@@ -17,8 +17,8 @@ callsigns:
   - W3EAX-12
 
 time:
-  start: 2022-03-05
-  end: 2022-03-06
+  start: 2022-03-05 00:00:00
+  end: 2022-03-06 00:00:00
   interval: 30
 
 output:
