@@ -2,7 +2,7 @@ use std::io::prelude::BufRead;
 
 use chrono::{TimeZone, Timelike};
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Debug)]
 pub struct AprsTextFile {
     pub path: std::path::PathBuf,
 }
@@ -13,7 +13,7 @@ impl AprsTextFile {
     }
 }
 
-fn read_lines(path: &std::path::PathBuf) -> Vec<String> {
+fn read_lines(path: &std::path::PathBuf) -> Result<Vec<String>, crate::connection::Error> {
     let mut lines: Vec<String> = vec![];
     match url::Url::parse(path.to_str().unwrap()) {
         Ok(url) => {
@@ -31,16 +31,22 @@ fn read_lines(path: &std::path::PathBuf) -> Vec<String> {
                     lines.push(line.unwrap());
                 }
             }
-            _ => panic!("{:?}", error),
+            _ => {
+                return Err(crate::connection::Error::Passthrough {
+                    message: format!("{:} {:}", error, error),
+                });
+            }
         },
     }
 
-    lines
+    Ok(lines)
 }
 
 impl AprsTextFile {
-    pub fn read_aprs_from_file(&self) -> Vec<crate::location::BalloonLocation> {
-        let lines = read_lines(&self.path);
+    pub fn read_aprs_from_file(
+        &self,
+    ) -> Result<Vec<crate::location::BalloonLocation>, crate::connection::Error> {
+        let lines = read_lines(&self.path).unwrap();
 
         let mut locations: Vec<crate::location::BalloonLocation> = vec![];
         for line in lines {
@@ -67,7 +73,9 @@ impl AprsTextFile {
                                     continue;
                                 }
                                 _ => {
-                                    panic!("{:?} {:?}", error, error.to_string());
+                                    return Err(crate::connection::Error::Passthrough {
+                                        message: format!("{:}", error),
+                                    });
                                 }
                             },
                         };
@@ -80,11 +88,11 @@ impl AprsTextFile {
 
             locations.push(location);
         }
-        locations
+        Ok(locations)
     }
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Debug)]
 pub struct GeoJsonFile {
     pub path: std::path::PathBuf,
 }
@@ -96,8 +104,10 @@ impl GeoJsonFile {
 }
 
 impl GeoJsonFile {
-    pub fn read_locations_from_geojson(&self) -> Vec<crate::location::BalloonLocation> {
-        let lines = read_lines(&self.path);
+    pub fn read_locations_from_geojson(
+        &self,
+    ) -> Result<Vec<crate::location::BalloonLocation>, crate::connection::Error> {
+        let lines = read_lines(&self.path).unwrap();
         let contents = lines.join("\n");
         let parsed = contents.parse::<geojson::GeoJson>().unwrap();
 
@@ -119,7 +129,9 @@ impl GeoJsonFile {
                                 .unwrap()
                                 .with_timezone(&chrono::Local),
                             _ => {
-                                panic!()
+                                return Err(crate::connection::Error::Passthrough {
+                                    message: String::from(""),
+                                });
                             }
                         };
 
@@ -134,7 +146,9 @@ impl GeoJsonFile {
                                 match properties.get("comment").unwrap() {
                                     serde_json::Value::String(comment) => comment.to_owned(),
                                     _ => {
-                                        panic!()
+                                        return Err(crate::connection::Error::Passthrough {
+                                            message: String::from(""),
+                                        });
                                     }
                                 }
                             } else {
@@ -146,7 +160,12 @@ impl GeoJsonFile {
                                     serde_json::Value::String(callsign) => {
                                         aprs_parser::Callsign::new(callsign).unwrap()
                                     }
-                                    _ => panic!(),
+
+                                    _ => {
+                                        return Err(crate::connection::Error::Passthrough {
+                                            message: String::from(""),
+                                        });
+                                    }
                                 },
                                 via: vec![],
                                 data: aprs_parser::AprsData::Position(aprs_parser::AprsPosition {
@@ -154,7 +173,13 @@ impl GeoJsonFile {
                                         serde_json::Value::String(callsign) => {
                                             aprs_parser::Callsign::new(callsign).unwrap()
                                         }
-                                        _ => panic!(),
+                                        _ => {
+                                            return Err(crate::connection::Error::Passthrough {
+                                                message: String::from(
+                                                    "error parsing destination callsign",
+                                                ),
+                                            });
+                                        }
                                     },
                                     timestamp: aprs_parser::Timestamp::new_hms(
                                         time.hour() as u8,
@@ -191,7 +216,7 @@ impl GeoJsonFile {
             }
         }
 
-        locations
+        Ok(locations)
     }
 }
 
@@ -207,7 +232,7 @@ mod tests {
 
         let connection = AprsTextFile::new(url);
 
-        let packets = connection.read_aprs_from_file();
+        let packets = connection.read_aprs_from_file().unwrap();
 
         assert!(!packets.is_empty());
     }
@@ -222,7 +247,7 @@ mod tests {
 
         let connection = AprsTextFile::new(path);
 
-        let packets = connection.read_aprs_from_file();
+        let packets = connection.read_aprs_from_file().unwrap();
 
         assert!(!packets.is_empty());
     }

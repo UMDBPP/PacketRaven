@@ -82,12 +82,12 @@ For instance, to listen to a Kenwood TNC plugged into USB COM3, listen to APRS-I
 
     packetraven config.yaml
 
-graphical user interface (GUI)
-------------------------------
+.. graphical user interface (GUI)
+.. ------------------------------
 
-To start a windowed GUI, add ``--gui`` to any ``packetraven`` command:
+.. To start a windowed GUI, add ``--gui`` to any ``packetraven`` command:
 
-.. code-block:: shell
+.. .. code-block:: shell
 
-    packetraven --gui
-    packetraven config.yaml --gui
+..     packetraven --gui
+..     packetraven config.yaml --gui

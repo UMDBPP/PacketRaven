@@ -96,7 +96,7 @@ impl TawhiriQuery {
         format!("{:}?{:}", self.query.api_url, parameters.join("&"))
     }
 
-    fn get(&self) -> TawhiriResponse {
+    fn get(&self) -> Result<TawhiriResponse, TawhiriError> {
         let response = reqwest::blocking::get(self.url()).expect("error retrieving prediction");
 
         match &response.status() {
@@ -135,7 +135,7 @@ impl TawhiriQuery {
                                         None,
                                         true,
                                     );
-                                    let descent: TawhiriResponse = descent_query.get();
+                                    let descent: TawhiriResponse = descent_query.get().unwrap();
                                     for stage in descent.prediction {
                                         if stage.stage == "descent" {
                                             tawhiri_response.prediction.push(stage);
@@ -146,7 +146,7 @@ impl TawhiriQuery {
                                 }
                             }
                             if !float_stage_exists {
-                                panic!("API did not return a float stage")
+                                return Err(TawhiriError::NoFloatStage);
                             }
                         }
                     }
@@ -165,22 +165,25 @@ impl TawhiriQuery {
                         }
                     }
                     if !descent_stage_found {
-                        panic!("descent stage not found in prediction marked as 'descent only'");
+                        return Err(TawhiriError::NoDescentStage);
                     }
                 }
-                tawhiri_response
+                Ok(tawhiri_response)
             }
             _ => {
                 let status = &response.status();
                 // https://tawhiri.readthedocs.io/en/latest/api.html#error-fragment
-                let tawhiri_error: TawhiriError = response.json().unwrap();
-                panic!("{:} {:}", status, tawhiri_error.description);
+                let tawhiri_error: TawhiriErrorResponse = response.json().unwrap();
+                return Err(TawhiriError::HttpErrorStatus {
+                    status: status.as_u16(),
+                    description: tawhiri_error.description,
+                });
             }
         }
     }
 
     pub fn retrieve_prediction(&self) -> crate::location::track::BalloonTrack {
-        let response = self.get();
+        let response = self.get().unwrap();
 
         let mut locations = vec![];
 
@@ -222,6 +225,12 @@ impl crate::location::track::BalloonTrack {
     }
 }
 
+custom_error::custom_error! {pub TawhiriError
+    NoFloatStage="API did not return a float stage",
+    NoDescentStage = "API did not return a descent stage",
+    HttpErrorStatus {status:u16, description:String} = "HTTP error {status} - {description}",
+}
+
 // https://tawhiri.readthedocs.io/en/latest/api.html#responses
 #[derive(serde::Deserialize)]
 struct TawhiriResponse {
@@ -231,7 +240,7 @@ struct TawhiriResponse {
     warnings: std::collections::HashMap<String, String>,
 }
 #[derive(serde::Deserialize)]
-struct TawhiriError {
+struct TawhiriErrorResponse {
     description: String,
     #[serde(rename = "type")]
     _type: String,
@@ -320,7 +329,7 @@ mod tests {
         let query = TawhiriQuery::new(&start, &profile, None, None, None, false);
         println!("{:}", query.url());
 
-        let response = query.get();
+        let response = query.get().unwrap();
         let prediction = query.retrieve_prediction();
 
         let mut stages = vec![];
@@ -347,7 +356,7 @@ mod tests {
         let query = TawhiriQuery::new(&start, &profile, None, None, None, false);
         println!("{:}", query.url());
 
-        let response = query.get();
+        let response = query.get().unwrap();
         let prediction = query.retrieve_prediction();
 
         let mut stages = vec![];
@@ -375,7 +384,7 @@ mod tests {
         let query = TawhiriQuery::new(&start, &profile, None, None, None, true);
         println!("{:}", query.url());
 
-        let response = query.get();
+        let response = query.get().unwrap();
         let prediction = query.retrieve_prediction();
 
         let mut stages = vec![];
@@ -409,7 +418,7 @@ mod tests {
         let query = TawhiriQuery::new(&start, &profile, None, None, None, false);
         println!("{:}", query.url());
 
-        let response = query.get();
+        let response = query.get().unwrap();
         let prediction = query.retrieve_prediction();
 
         let mut stages = vec![];

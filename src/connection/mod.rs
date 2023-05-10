@@ -12,7 +12,7 @@ pub enum Connection {
 }
 
 impl Connection {
-    pub fn retrieve_packets(&mut self) -> Vec<crate::location::BalloonLocation> {
+    pub fn retrieve_packets(&mut self) -> Result<Vec<crate::location::BalloonLocation>, Error> {
         match self {
             Self::AprsFi(connection) => connection.retrieve_aprs_from_aprsfi(),
             Self::AprsTextFile(connection) => connection.read_aprs_from_file(),
@@ -21,4 +21,10 @@ impl Connection {
             Self::AprsSerial(connection) => connection.read_aprs_from_serial(),
         }
     }
+}
+
+custom_error::custom_error! {pub Error
+    TooFrequent= "retrieval request exceeded request frequency",
+    ApiError {message:String}="{message}",
+    Passthrough{message:String} = "{message}"
 }

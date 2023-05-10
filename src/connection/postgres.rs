@@ -98,7 +98,9 @@ impl PacketDatabase {
             .get(0)
     }
 
-    pub fn retrieve_locations_from_database(&mut self) -> Vec<crate::location::BalloonLocation> {
+    pub fn retrieve_locations_from_database(
+        &mut self,
+    ) -> Result<Vec<crate::location::BalloonLocation>, crate::connection::Error> {
         let mut locations: Vec<crate::location::BalloonLocation> = vec![];
 
         self.client
@@ -141,7 +143,7 @@ impl PacketDatabase {
             });
         }
 
-        locations
+        Ok(locations)
     }
 
     pub fn insert(&self) {

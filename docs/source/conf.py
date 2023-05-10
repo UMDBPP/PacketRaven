@@ -14,9 +14,7 @@ from os import PathLike
 from pathlib import Path
 import sys
 
-from dunamai import Version
-from setuptools import config
-
+import tomllib
 
 def repository_root(path: PathLike = None) -> Path:
     if path is None:
@@ -31,14 +29,17 @@ def repository_root(path: PathLike = None) -> Path:
         return repository_root(path.parent)
 
 
-sys.path.insert(0, str(repository_root()))
+ROOT = repository_root()
+
+sys.path.insert(0, str(ROOT))
 
 # -- Project information -----------------------------------------------------
-metadata = config.read_configuration("../../setup.cfg")["metadata"]
+with open(repository_root / "Cargo.toml", "rb") as configuration_file:
+    metadata = tomllib.load(configuration_file)["package"]
 
 project = metadata["name"]
-author = metadata["author"]
-copyright = f"2021, {author}"
+author = metadata["authors"][0]
+copyright = f"{datetime.now():%Y-%m-%d}, {author}"
 
 # The full version, including alpha/beta/rc tags
 try:

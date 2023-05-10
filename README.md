@@ -1,26 +1,14 @@
 # PacketRaven
 
 [![tests](https://github.com/UMDBPP/PacketRaven/workflows/tests/badge.svg)](https://github.com/UMDBPP/PacketRaven/actions?query=workflow%3Atests)
-[![codecov](https://codecov.io/gh/umdbpp/packetraven/branch/master/graph/badge.svg?token=SF5215DHUW)](https://codecov.io/gh/umdbpp/packetraven)
 [![build](https://github.com/UMDBPP/PacketRaven/workflows/build/badge.svg)](https://github.com/UMDBPP/PacketRaven/actions?query=workflow%3Abuild)
-[![version](https://img.shields.io/pypi/v/packetraven)](https://pypi.org/project/packetraven)
 [![license](https://img.shields.io/github/license/umdbpp/packetraven)](https://opensource.org/licenses/MIT)
-[![style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 PacketRaven is a dashboard built to track high-altitude balloon flights from their location telemetry.
 
-```shell
-pip install packetraven
-```
-
 ## Installation
 
-1. install Python - https://www.python.org/downloads/
-
-2. install `packetraven` with `pip`:
-    ```
-    pip install packetraven
-    ```
+retrieve the latest binary from the [Releases page](https://github.com/UMDBPP/PacketRaven/releases)
 
 ---
 **NOTE**
@@ -30,7 +18,7 @@ Alternatively, you may download the source code and build from source:
 ```shell
 git clone https://github.com/UMDBPP/PacketRaven.git
 cd packetraven
-pip install .
+cargo build
 ```
 
 ---

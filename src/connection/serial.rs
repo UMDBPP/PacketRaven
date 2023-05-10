@@ -10,18 +10,20 @@ fn first_available_port() -> String {
                     Ok(successful) => {
                         return successful.name().unwrap();
                     }
-                    Err(error) => panic!("{:?}", error),
+                    Err(error) => {
+                        panic!("{:}", error);
+                    }
                 }
             }
-            panic!("list of ports is empty but should not be");
+            panic!("{:}", "ports list is empty when it should not be");
         }
-        Err(_) => {
-            panic!("no open ports found");
+        Err(error) => {
+            panic!("{:}", error);
         }
     }
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Debug)]
 pub struct AprsSerial {
     #[serde(default = "first_available_port")]
     pub port: String,
@@ -70,7 +72,9 @@ impl AprsSerial {
         }
     }
 
-    pub fn read_aprs_from_serial(&self) -> Vec<crate::location::BalloonLocation> {
+    pub fn read_aprs_from_serial(
+        &self,
+    ) -> Result<Vec<crate::location::BalloonLocation>, crate::connection::Error> {
         let mut connection = serialport::new(&self.port, self.baud_rate).open().unwrap();
 
         let mut buffer = Vec::<u8>::new();
@@ -82,7 +86,7 @@ impl AprsSerial {
                         crate::location::BalloonLocation::from_aprs_frame(line, None).unwrap(),
                     );
                 }
-                locations
+                Ok(locations)
             }
             Err(error) => panic!("{:?}", error),
         }

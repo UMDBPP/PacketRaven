@@ -1,6 +1,6 @@
 use chrono::Timelike;
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Debug)]
 pub struct AprsFiQuery {
     pub callsigns: Vec<String>,
     pub api_key: String,
@@ -56,11 +56,13 @@ impl AprsFiQuery {
         format!("https://api.aprs.fi/api/get?{:}", parameters.join("&"))
     }
 
-    pub fn retrieve_aprs_from_aprsfi(&mut self) -> Vec<crate::location::BalloonLocation> {
+    pub fn retrieve_aprs_from_aprsfi(
+        &mut self,
+    ) -> Result<Vec<crate::location::BalloonLocation>, crate::connection::Error> {
         let now = chrono::Local::now();
         if let Some(last_access_time) = self.last_access {
             if now - last_access_time < chrono::Duration::seconds(10) {
-                return vec![];
+                return Err(crate::connection::Error::TooFrequent);
             }
         }
 
@@ -84,16 +86,18 @@ impl AprsFiQuery {
                                 balloon_locations.push(location.to_balloon_location());
                             }
                         }
-                        balloon_locations
+                        Ok(balloon_locations)
                     }
                     AprsFiResponse::Fail { description, .. } => {
-                        panic!("{:?}", description);
+                        Err(crate::connection::Error::ApiError {
+                            message: description,
+                        })
                     }
                 }
             }
-            _ => {
-                panic!("error posting request to API");
-            }
+            _ => Err(crate::connection::Error::ApiError {
+                message: String::from("error posting request to API"),
+            }),
         }
     }
 }
@@ -309,7 +313,7 @@ mod tests {
 
             let mut connection = AprsFiQuery::new(callsigns, api_key, None, None);
             println!("{:?}", connection.url());
-            let packets = connection.retrieve_aprs_from_aprsfi();
+            let packets = connection.retrieve_aprs_from_aprsfi().unwrap();
 
             assert!(!packets.is_empty());
         }
@@ -432,7 +436,7 @@ mod tests {
 
         let mut connection = AprsFiQuery::new(callsigns, api_key, None, None);
         println!("{:?}", connection.url());
-        let packets = connection.retrieve_aprs_from_aprsfi();
+        let packets = connection.retrieve_aprs_from_aprsfi().unwrap();
 
         assert!(!packets.is_empty());
     }

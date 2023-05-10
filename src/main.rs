@@ -8,7 +8,7 @@ pub mod prediction;
 use clap::Parser;
 
 use env_logger::{Builder, Target};
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -30,8 +30,6 @@ fn main() {
 
     builder.init();
 
-    info!("starting");
-
     let program_start_time = chrono::Local::now();
 
     let arguments = Cli::parse();
@@ -46,7 +44,7 @@ fn main() {
 
     if let Some(output) = &configuration.log {
         // TODO
-        error!("logging to file is not implemented");
+        warn!("logging to file is not implemented");
         let mut filename: std::path::PathBuf;
         if output.filename.is_file() {
             filename = output.filename.to_owned();
@@ -62,7 +60,7 @@ fn main() {
 
     if let Some(output) = &configuration.output {
         // TODO
-        error!("file output is not implemented");
+        warn!("file output is not implemented");
         let mut filename: std::path::PathBuf;
         if output.filename.is_file() {
             filename = output.filename.to_owned();
@@ -78,7 +76,7 @@ fn main() {
 
     if let Some(output) = &configuration.output {
         // TODO
-        error!("file output is not implemented");
+        warn!("file output is not implemented");
         let mut filename: std::path::PathBuf;
         if output.filename.is_file() {
             filename = output.filename.to_owned();
@@ -152,11 +150,16 @@ fn main() {
                     });
                 info!("reading GeoJSON file {:}", &location.to_str().unwrap());
             } else {
+                let port = location.to_str().unwrap();
                 connection =
-                    connection::Connection::AprsSerial(crate::connection::serial::AprsSerial {
-                        port: String::from(location.to_str().unwrap()),
-                        baud_rate: 9600,
-                    });
+                    connection::Connection::AprsSerial(crate::connection::serial::AprsSerial::new(
+                        if port == "auto" {
+                            None
+                        } else {
+                            Some(String::from(port))
+                        },
+                        Some(9600),
+                    ));
                 info!("opened port {:}", &location.to_str().unwrap());
             }
             connections.push(connection);
@@ -194,7 +197,8 @@ fn main() {
                 connections.push(connection);
             }
         } else {
-            panic!("no connections started");
+            error!("no connections successfully started");
+            std::process::exit(1);
         }
     }
 
@@ -251,7 +255,13 @@ fn retrieve_locations(
     let mut new_packets: Vec<crate::location::BalloonLocation> = vec![];
 
     for connection in connections {
-        new_packets.extend(connection.retrieve_packets())
+        match connection.retrieve_packets() {
+            Ok(packets) => new_packets.extend(packets),
+            Err(error) => {
+                error!("{:}", error);
+                std::process::exit(1)
+            }
+        }
     }
 
     let num_new_packets = new_packets.len();
@@ -335,26 +345,32 @@ fn retrieve_locations(
                     track.push(packet);
                 }
             }
-        }
 
-        for (name, track) in packet_tracks {
-            if track.locations.len() - packet_track_lengths.get(name).unwrap() > 0 {
-                info!("{:}", location_update(track));
-                info!("{:}", track_update(track));
-            }
+            debug!("{:}", location_update(track));
         }
 
         info!(
             "received {:} new packets",
             num_new_packets - duplicates - skipped - time_lagged_duplicates
         );
+
+        for (name, track) in packet_tracks {
+            if track.locations.len() - packet_track_lengths.get(name).unwrap() > 0 {
+                info!("{:}", track_update(track));
+            }
+        }
     }
 }
 
 fn location_update(track: &crate::location::track::BalloonTrack) -> String {
     let current_location = match track.locations.last() {
         Some(location) => location,
-        None => panic!("{:?}", track.locations.len()),
+        None => {
+            panic!(
+                "tried to log update for track with length {:?}",
+                track.locations.len()
+            )
+        }
     };
 
     let intervals = track.intervals();
@@ -363,27 +379,22 @@ fn location_update(track: &crate::location::track::BalloonTrack) -> String {
     let ascents = track.ascents();
     let ascent_rates = track.ascent_rates();
 
-    let mut message = format!("{:} - location #{:}", track.name, track.locations.len());
-    message += &(if let Some(altitude) = current_location.altitude {
-        format!(
-            " ({:}, {:}, {:} m)",
-            &current_location.location.x(),
-            &current_location.location.y(),
-            altitude,
-        )
-    } else {
-        format!(
-            " ({:}, {:})",
-            &current_location.location.x(),
-            &current_location.location.y(),
-        )
-    });
+    let mut message = format!("{: <8} - location #{:}", track.name, track.locations.len());
+    message += &format!(
+        " ({:.2}, {:.2}",
+        &current_location.location.x(),
+        &current_location.location.y(),
+    );
+    if let Some(altitude) = current_location.altitude {
+        message += &format!(", {:.2} m", altitude,)
+    };
+    message += &String::from(")");
 
-    message += &format!("; packet time is {:}", current_location.time);
+    message += &format!("; packet time is {:}", current_location.time.to_rfc3339());
 
     if track.locations.len() > 1 {
         message += &format!(
-            " ({:} s since the previous packet); traveled {:} m ({:} m/s) over the ground and {:} m ({:} m/s) vertically",
+            " ({:.2} s since the previous packet); traveled {:.2} m ({:.2} m/s) over the ground and {:.2} m ({:.2} m/s) vertically",
             intervals.last().unwrap().num_seconds(),
             overground_distances.last().unwrap(),
             ground_speeds.last().unwrap(),
@@ -403,8 +414,9 @@ fn track_update(track: &crate::location::track::BalloonTrack) -> String {
     let ascent_rates = track.ascent_rates();
 
     let mut message = format!(
-        "{:} - altitude: {:} m",
+        "{: <8} - {:} packets - current altitude: {:.2} m",
         track.name,
+        track.locations.len(),
         current_location.altitude.unwrap()
     );
 
@@ -424,7 +436,7 @@ fn track_update(track: &crate::location::track::BalloonTrack) -> String {
             total_interval = total_interval + interval.to_owned();
         }
         message += &format!(
-            "; avg. ascent rate: {:} m/s; avg. descent rate: {:} m/s; avg. ground speed: {:} m/s; avg. packet interval: {:} s",
+            " - avg. ascent rate: {:.2} m/s - avg. descent rate: {:.2} m/s - avg. ground speed: {:.2} m/s - avg. packet interval: {:.2} s",
             positive_ascent_rates.iter().sum::<f64>() / positive_ascent_rates.len() as f64,
             negative_ascent_rates.iter().sum::<f64>() / negative_ascent_rates.len() as f64,
             ground_speeds.iter().sum::<f64>() / ground_speeds.len() as f64,
@@ -442,9 +454,9 @@ fn track_update(track: &crate::location::track::BalloonTrack) -> String {
             }
         }
         message += &format!(
-            "; max altitude: {:}; estimated landing: {:} ({:})",
+            " - max altitude: {:.2} - estimated landing: {:} ({:})",
             altitudes.iter().max_by(|a, b| a.total_cmp(b)).unwrap(),
-            landing_time,
+            landing_time.to_rfc3339(),
             time_to_landing,
         );
     }
@@ -463,7 +475,7 @@ fn retrieve_predictions(
         if track.falling().is_some() || track.descending() {
             let landing_location = prediction.locations.last().unwrap().location.x_y();
             info!(
-                "{:} - predicted landing location: ({:}, {:})",
+                "{:} - predicted landing location: ({:.2}, {:.2})",
                 track.name, landing_location.0, landing_location.1
             );
         }
