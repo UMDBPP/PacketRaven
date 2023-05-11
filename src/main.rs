@@ -150,17 +150,21 @@ fn main() {
                     });
                 info!("reading GeoJSON file {:}", &location.to_str().unwrap());
             } else {
-                let port = location.to_str().unwrap();
-                connection =
-                    connection::Connection::AprsSerial(crate::connection::serial::AprsSerial::new(
-                        if port == "auto" {
-                            None
-                        } else {
-                            Some(String::from(port))
-                        },
-                        Some(9600),
-                    ));
-                info!("opened port {:}", &location.to_str().unwrap());
+                #[cfg(feature = "serial")]
+                {
+                    let port = location.to_str().unwrap();
+                    connection = connection::Connection::AprsSerial(
+                        crate::connection::serial::AprsSerial::new(
+                            if port == "auto" {
+                                None
+                            } else {
+                                Some(String::from(port))
+                            },
+                            Some(9600),
+                        ),
+                    );
+                    info!("opened port {:}", &location.to_str().unwrap());
+                }
             }
             connections.push(connection);
         }
@@ -180,6 +184,7 @@ fn main() {
         connections.push(connection);
     }
 
+    #[cfg(feature = "postgres")]
     if let Some(database_configuration) = configuration.packets.database {
         let connection = crate::connection::Connection::PacketDatabase(
             crate::connection::postgres::PacketDatabase::from_credentials(&database_configuration),

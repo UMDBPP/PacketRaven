@@ -54,8 +54,10 @@ impl Default for TimeConfiguration {
 
 #[derive(Default, serde::Deserialize, PartialEq, Debug)]
 pub struct PacketSourceConfiguration {
+    #[cfg(feature = "aprsfi")]
     pub aprs_fi: Option<crate::configuration::credentials::AprsFiCredentials>,
     pub text: Option<crate::configuration::text::TextStreamConfiguration>,
+    #[cfg(feature = "postgres")]
     pub database: Option<crate::connection::postgres::DatabaseCredentials>,
     pub aprs_is: Option<crate::configuration::credentials::AprsIsCredentials>,
 }
@@ -79,10 +81,12 @@ mod tests {
         assert_eq!(
             configuration.packets,
             PacketSourceConfiguration {
+                #[cfg(feature = "aprsfi")]
                 aprs_fi: None,
                 text: Some(crate::configuration::text::TextStreamConfiguration {
                     locations: vec![std::path::PathBuf::from("http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-11%20raw.txt"), std::path::PathBuf::from("http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-8%20raw.txt")],
                 }),
+                #[cfg(feature = "postgres")]
                 database: None,
                 aprs_is: None,
             }
@@ -117,10 +121,12 @@ mod tests {
         assert_eq!(
             configuration.packets,
             PacketSourceConfiguration {
+                #[cfg(feature = "aprsfi")]
                 aprs_fi: Some(crate::configuration::credentials::AprsFiCredentials {
                     api_key: String::from("123456.abcdefhijklmnop")
                 }),
                 text: None,
+                #[cfg(feature = "postgres")]
                 database: None,
                 aprs_is: None,
             }
@@ -201,6 +207,7 @@ mod tests {
         assert_eq!(
             configuration.packets,
             PacketSourceConfiguration {
+                #[cfg(feature = "aprsfi")]
                 aprs_fi: Some(crate::configuration::credentials::AprsFiCredentials {
                     api_key: String::from("123456.abcdefhijklmnop")
                 }),
@@ -210,6 +217,7 @@ mod tests {
                         std::path::PathBuf::from("~/packets.txt")
                     ],
                 }),
+                #[cfg(feature = "postgres")]
                 database: Some(crate::connection::postgres::DatabaseCredentials::new(
                     String::from("localhost"),
                     Some(5432),
@@ -271,10 +279,12 @@ mod tests {
         assert_eq!(
             configuration.packets,
             PacketSourceConfiguration {
+                #[cfg(feature = "aprsfi")]
                 aprs_fi: None,
                 text: Some(crate::configuration::text::TextStreamConfiguration {
                     locations: vec![std::path::PathBuf::from("http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-10/W3EAX-10_raw_NS95.txt"), std::path::PathBuf::from("http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-11/W3EAX-11_raw_NS95.txt")],
                 }),
+                #[cfg(feature = "postgres")]
                 database: None,
                 aprs_is: None,
             }
