@@ -18,7 +18,9 @@ pub enum Connection {
 }
 
 impl Connection {
-    pub fn retrieve_packets(&mut self) -> Result<Vec<crate::location::BalloonLocation>, Error> {
+    pub fn retrieve_packets(
+        &mut self,
+    ) -> Result<Vec<crate::location::BalloonLocation>, ConnectionError> {
         match self {
             #[cfg(feature = "aprsfi")]
             Self::AprsFi(connection) => connection.retrieve_aprs_from_aprsfi(),
@@ -32,8 +34,9 @@ impl Connection {
     }
 }
 
-custom_error::custom_error! {pub Error
+custom_error::custom_error! {pub ConnectionError
     TooFrequent= "retrieval request exceeded request frequency",
     ApiError {message:String}="{message}",
+    FailedToEstablish {message:String}="failed to establish connection; {message}",
     Passthrough{message:String} = "{message}"
 }

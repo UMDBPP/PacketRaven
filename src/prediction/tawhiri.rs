@@ -182,7 +182,7 @@ impl TawhiriQuery {
         }
     }
 
-    pub fn retrieve_prediction(&self) -> crate::location::track::BalloonTrack {
+    pub fn retrieve_prediction(&self) -> crate::location::track::LocationTrack {
         let response = self.get().unwrap();
 
         let mut locations = vec![];
@@ -193,17 +193,7 @@ impl TawhiriQuery {
             }
         }
 
-        crate::location::track::BalloonTrack {
-            name: match &self.query.name {
-                Some(name) => name.to_owned(),
-                None => String::from("prediction"),
-            },
-            locations,
-            attributes: crate::location::track::BalloonTrackAttributes {
-                callsign: None,
-                prediction: true,
-            },
-        }
+        locations
     }
 }
 
@@ -211,7 +201,7 @@ impl crate::location::track::BalloonTrack {
     pub fn prediction(
         &self,
         profile: &super::FlightProfile,
-    ) -> crate::location::track::BalloonTrack {
+    ) -> crate::location::track::LocationTrack {
         let query = crate::prediction::tawhiri::TawhiriQuery::new(
             &self.locations.last().unwrap(),
             profile,
@@ -340,7 +330,7 @@ mod tests {
         for stage in [String::from("ascent"), String::from("descent")] {
             assert!(stages.contains(&stage));
         }
-        assert!(!prediction.locations.is_empty());
+        assert!(!prediction.is_empty());
     }
 
     #[test]
@@ -367,7 +357,7 @@ mod tests {
         for stage in [String::from("ascent"), String::from("descent")] {
             assert!(stages.contains(&stage));
         }
-        assert!(!prediction.locations.is_empty());
+        assert!(!prediction.is_empty());
     }
 
     #[test]
@@ -395,7 +385,7 @@ mod tests {
         for stage in [String::from("descent")] {
             assert!(stages.contains(&stage));
         }
-        assert!(!prediction.locations.is_empty());
+        assert!(!prediction.is_empty());
     }
 
     #[test]
@@ -433,6 +423,6 @@ mod tests {
         ] {
             assert!(stages.contains(&stage));
         }
-        assert!(!prediction.locations.is_empty());
+        assert!(!prediction.is_empty());
     }
 }

@@ -58,11 +58,11 @@ impl AprsFiQuery {
 
     pub fn retrieve_aprs_from_aprsfi(
         &mut self,
-    ) -> Result<Vec<crate::location::BalloonLocation>, crate::connection::Error> {
+    ) -> Result<Vec<crate::location::BalloonLocation>, crate::connection::ConnectionError> {
         let now = chrono::Local::now();
         if let Some(last_access_time) = self.last_access {
             if now - last_access_time < chrono::Duration::seconds(10) {
-                return Err(crate::connection::Error::TooFrequent);
+                return Err(crate::connection::ConnectionError::TooFrequent);
             }
         }
 
@@ -89,13 +89,13 @@ impl AprsFiQuery {
                         Ok(balloon_locations)
                     }
                     AprsFiResponse::Fail { description, .. } => {
-                        Err(crate::connection::Error::ApiError {
+                        Err(crate::connection::ConnectionError::ApiError {
                             message: description,
                         })
                     }
                 }
             }
-            _ => Err(crate::connection::Error::ApiError {
+            _ => Err(crate::connection::ConnectionError::ApiError {
                 message: String::from("error posting request to API"),
             }),
         }

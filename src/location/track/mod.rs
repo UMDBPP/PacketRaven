@@ -1,17 +1,19 @@
 use geo::GeodesicDistance;
 
+pub type LocationTrack = Vec<crate::location::BalloonLocation>;
+
 pub struct BalloonTrack {
+    pub locations: LocationTrack,
+    pub prediction: Option<LocationTrack>,
     pub name: String,
-    pub locations: Vec<crate::location::BalloonLocation>,
-    pub attributes: BalloonTrackAttributes,
 }
 
 impl BalloonTrack {
-    pub fn new(name: String) -> Self {
+    pub fn new(name: String, callsign: Option<String>) -> Self {
         Self {
-            name,
             locations: vec![],
-            attributes: BalloonTrackAttributes::new(),
+            prediction: None,
+            name,
         }
     }
 
@@ -97,10 +99,26 @@ impl BalloonTrack {
     }
 
     pub fn time_to_ground(&self) -> Option<chrono::Duration> {
-        if self.descending() {
-            if let Some(freefall_estimate) = self.falling() {}
+        if let Some(prediction) = &self.prediction {
+            Some(prediction.last().unwrap().time - chrono::Local::now())
+        } else if self.descending() {
+            if let Some(freefall_estimate) = self.falling() {
+                Some(freefall_estimate.time_to_ground)
+            } else {
+                let mut altitudes = vec![];
+                for location in &self.locations {
+                    if let Some(altitude) = location.altitude {
+                        altitudes.push(altitude);
+                    }
+                }
+                Some(chrono::Duration::milliseconds(
+                    ((-self.ascent_rates().last().unwrap() / altitudes.last().unwrap()) * 1000.0)
+                        as i64,
+                ))
+            }
+        } else {
+            None
         }
-        None
     }
 
     pub fn descending(&self) -> bool {
@@ -109,10 +127,10 @@ impl BalloonTrack {
     }
 
     pub fn falling(&self) -> Option<crate::model::FreefallEstimate> {
-        let current_location: &crate::location::BalloonLocation = self.locations.last().unwrap();
+        let last_location: &crate::location::BalloonLocation = self.locations.last().unwrap();
 
-        if current_location.altitude.is_some() {
-            let freefall_estimate = current_location.estimate_freefall();
+        if last_location.altitude.is_some() && self.descending() {
+            let freefall_estimate = last_location.estimate_freefall();
 
             if let Some(last_ascent_rate) = self.ascent_rates().last() {
                 if (last_ascent_rate - freefall_estimate.ascent_rate)
@@ -138,14 +156,10 @@ impl BalloonTrack {
 
 pub struct BalloonTrackAttributes {
     pub callsign: Option<String>,
-    pub prediction: bool,
 }
 
 impl BalloonTrackAttributes {
     pub fn new() -> Self {
-        Self {
-            callsign: None,
-            prediction: false,
-        }
+        Self { callsign: None }
     }
 }

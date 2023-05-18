@@ -13,7 +13,9 @@ impl AprsTextFile {
     }
 }
 
-fn read_lines(path: &std::path::PathBuf) -> Result<Vec<String>, crate::connection::Error> {
+fn read_lines(
+    path: &std::path::PathBuf,
+) -> Result<Vec<String>, crate::connection::ConnectionError> {
     let mut lines: Vec<String> = vec![];
     match url::Url::parse(path.to_str().unwrap()) {
         Ok(url) => {
@@ -24,15 +26,21 @@ fn read_lines(path: &std::path::PathBuf) -> Result<Vec<String>, crate::connectio
             }
         }
         Err(error) => match error {
-            url::ParseError::RelativeUrlWithoutBase => {
-                let file = std::fs::File::open(path).unwrap();
-                let reader = std::io::BufReader::new(file);
-                for line in reader.lines() {
-                    lines.push(line.unwrap());
+            url::ParseError::RelativeUrlWithoutBase => match std::fs::File::open(path) {
+                Ok(file) => {
+                    let reader = std::io::BufReader::new(file);
+                    for line in reader.lines() {
+                        lines.push(line.unwrap());
+                    }
                 }
-            }
+                Err(error) => {
+                    return Err(crate::connection::ConnectionError::FailedToEstablish {
+                        message: error.to_string(),
+                    });
+                }
+            },
             _ => {
-                return Err(crate::connection::Error::Passthrough {
+                return Err(crate::connection::ConnectionError::Passthrough {
                     message: format!("{:} {:}", error, error),
                 });
             }
@@ -45,7 +53,7 @@ fn read_lines(path: &std::path::PathBuf) -> Result<Vec<String>, crate::connectio
 impl AprsTextFile {
     pub fn read_aprs_from_file(
         &self,
-    ) -> Result<Vec<crate::location::BalloonLocation>, crate::connection::Error> {
+    ) -> Result<Vec<crate::location::BalloonLocation>, crate::connection::ConnectionError> {
         let lines = read_lines(&self.path).unwrap();
 
         let mut locations: Vec<crate::location::BalloonLocation> = vec![];
@@ -73,7 +81,7 @@ impl AprsTextFile {
                                     continue;
                                 }
                                 _ => {
-                                    return Err(crate::connection::Error::Passthrough {
+                                    return Err(crate::connection::ConnectionError::Passthrough {
                                         message: format!("{:}", error),
                                     });
                                 }
@@ -106,7 +114,7 @@ impl GeoJsonFile {
 impl GeoJsonFile {
     pub fn read_locations_from_geojson(
         &self,
-    ) -> Result<Vec<crate::location::BalloonLocation>, crate::connection::Error> {
+    ) -> Result<Vec<crate::location::BalloonLocation>, crate::connection::ConnectionError> {
         let lines = read_lines(&self.path).unwrap();
         let contents = lines.join("\n");
         let parsed = contents.parse::<geojson::GeoJson>().unwrap();
@@ -129,7 +137,7 @@ impl GeoJsonFile {
                                 .unwrap()
                                 .with_timezone(&chrono::Local),
                             _ => {
-                                return Err(crate::connection::Error::Passthrough {
+                                return Err(crate::connection::ConnectionError::Passthrough {
                                     message: String::from(""),
                                 });
                             }
@@ -146,9 +154,11 @@ impl GeoJsonFile {
                                 match properties.get("comment").unwrap() {
                                     serde_json::Value::String(comment) => comment.to_owned(),
                                     _ => {
-                                        return Err(crate::connection::Error::Passthrough {
-                                            message: String::from(""),
-                                        });
+                                        return Err(
+                                            crate::connection::ConnectionError::Passthrough {
+                                                message: String::from(""),
+                                            },
+                                        );
                                     }
                                 }
                             } else {
@@ -162,9 +172,11 @@ impl GeoJsonFile {
                                     }
 
                                     _ => {
-                                        return Err(crate::connection::Error::Passthrough {
-                                            message: String::from(""),
-                                        });
+                                        return Err(
+                                            crate::connection::ConnectionError::Passthrough {
+                                                message: String::from(""),
+                                            },
+                                        );
                                     }
                                 },
                                 via: vec![],
@@ -174,11 +186,13 @@ impl GeoJsonFile {
                                             aprs_parser::Callsign::new(callsign).unwrap()
                                         }
                                         _ => {
-                                            return Err(crate::connection::Error::Passthrough {
-                                                message: String::from(
-                                                    "error parsing destination callsign",
-                                                ),
-                                            });
+                                            return Err(
+                                                crate::connection::ConnectionError::Passthrough {
+                                                    message: String::from(
+                                                        "error parsing destination callsign",
+                                                    ),
+                                                },
+                                            );
                                         }
                                     },
                                     timestamp: aprs_parser::Timestamp::new_hms(
@@ -242,7 +256,7 @@ mod tests {
         let path = std::path::PathBuf::from(format!(
             "{:}/{:}",
             env!("CARGO_MANIFEST_DIR"),
-            "tests/data/input/aprs/W3EAX-8_NS-111_raw.txt"
+            "data/aprs/W3EAX-8_raw_NS-111.txt"
         ));
 
         let connection = AprsTextFile::new(path);

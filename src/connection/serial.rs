@@ -31,7 +31,10 @@ pub struct AprsSerial {
 }
 
 impl AprsSerial {
-    pub fn new(port: Option<String>, baud_rate: Option<u32>) -> Self {
+    pub fn new(
+        port: Option<String>,
+        baud_rate: Option<u32>,
+    ) -> Result<Self, crate::connection::ConnectionError> {
         let baud = match baud_rate {
             Some(baud) => baud,
             None => 9600,
@@ -40,16 +43,17 @@ impl AprsSerial {
         let mut port_name: String = String::new();
         match port {
             Some(name) => {
-                port_name = serialport::new(&name, baud)
-                    .open()
-                    .unwrap_or_else(|_| {
-                        panic!(
-                            "error connecting to port {:?} at baud {:?}",
-                            &name, baud_rate,
-                        )
-                    })
-                    .name()
-                    .unwrap();
+                port_name = match serialport::new(&name, baud).open() {
+                    Ok(port) => port.name().unwrap(),
+                    Err(error) => {
+                        return Err(crate::connection::ConnectionError::FailedToEstablish {
+                            message: format!(
+                                "error connecting to port {:?} at baud {:?}",
+                                &name, baud_rate,
+                            ),
+                        });
+                    }
+                };
             }
             None => {
                 for available_port in serialport::available_ports().expect("no open ports found") {
@@ -60,21 +64,25 @@ impl AprsSerial {
                             port_name = successful.name().unwrap();
                             break;
                         }
-                        Err(error) => panic!("{:?}", error),
+                        Err(error) => {
+                            return Err(crate::connection::ConnectionError::FailedToEstablish {
+                                message: error.to_string(),
+                            });
+                        }
                     }
                 }
             }
         }
 
-        Self {
+        Ok(Self {
             port: port_name,
             baud_rate: baud,
-        }
+        })
     }
 
     pub fn read_aprs_from_serial(
         &self,
-    ) -> Result<Vec<crate::location::BalloonLocation>, crate::connection::Error> {
+    ) -> Result<Vec<crate::location::BalloonLocation>, crate::connection::ConnectionError> {
         let mut connection = serialport::new(&self.port, self.baud_rate).open().unwrap();
 
         let mut buffer = Vec::<u8>::new();
@@ -95,6 +103,9 @@ impl AprsSerial {
 
 impl Default for AprsSerial {
     fn default() -> Self {
-        Self::new(None, None)
+        match Self::new(None, None) {
+            Ok(connection) => connection,
+            Err(error) => panic!("{:}", error),
+        }
     }
 }

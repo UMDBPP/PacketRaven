@@ -27,6 +27,7 @@ lazy_static = "1.4.0"
 log = "0.4.17"
 postgres = {version="0.19.5", optional=true}
 ratatui = "0.20.1"
+crossterm = "*"
 regex = "1.8.1"
 reqwest = { version = "0.11.17", features = ["json", "blocking"] }
 serde = "1.0.160"
