@@ -426,7 +426,6 @@ fn draw<B: ratatui::backend::Backend>(frame: &mut ratatui::Frame<B>, app: &Packe
             ]
             .as_ref(),
         )
-        .margin(1)
         .split(size);
 
     let mut titles: Vec<ratatui::text::Spans> = app
@@ -480,7 +479,7 @@ fn draw<B: ratatui::backend::Backend>(frame: &mut ratatui::Frame<B>, app: &Packe
                 })
                 .collect::<Vec<ratatui::text::Spans>>(),
         )
-        .block(ratatui::widgets::Block::default())
+        .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL))
         .wrap(ratatui::widgets::Wrap { trim: true });
         frame.render_widget(log, areas[1]);
     } else {
