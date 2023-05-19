@@ -1,5 +1,3 @@
-use log::{debug, error, info, warn};
-
 pub fn retrieve_locations(
     connections: &mut Vec<crate::connection::Connection>,
     tracks: &mut Vec<crate::location::track::BalloonTrack>,
@@ -14,7 +12,6 @@ pub fn retrieve_locations(
             Ok(packets) => new_packets.extend(packets),
             Err(error) => {
                 messages.push((chrono::Local::now(), error.to_string(), log::Level::Error));
-                std::process::exit(1)
             }
         }
     }
@@ -79,7 +76,11 @@ pub fn retrieve_locations(
             track = match tracks.iter_mut().find(|track| track.name == name) {
                 Some(track) => track,
                 _ => {
-                    debug!("started track {:}", &name);
+                    messages.push((
+                        chrono::Local::now(),
+                        format!("started track {:}", &name),
+                        log::Level::Debug,
+                    ));
                     packet_track_lengths.insert(name.to_owned(), 0);
                     tracks.push(crate::location::track::BalloonTrack::new(
                         name.to_owned(),
@@ -100,12 +101,20 @@ pub fn retrieve_locations(
             match packet.data.status {
                 crate::location::PacketStatus::Duplicate => {
                     duplicates += 1;
-                    debug!("skipped time-lagged duplicate packet");
+                    messages.push((
+                        chrono::Local::now(),
+                        "skipped duplicate packet".to_string(),
+                        log::Level::Debug,
+                    ));
                     continue;
                 }
                 crate::location::PacketStatus::TimeLaggedDuplicate => {
                     time_lagged_duplicates += 1;
-                    debug!("skipped duplicate packet");
+                    messages.push((
+                        chrono::Local::now(),
+                        "skipped time-lagged duplicate packet".to_string(),
+                        log::Level::Debug,
+                    ));
                     continue;
                 }
                 _ => {
@@ -113,13 +122,21 @@ pub fn retrieve_locations(
                 }
             }
 
-            debug!("{:}", location_update(track));
+            messages.push((
+                chrono::Local::now(),
+                location_update(track),
+                log::Level::Debug,
+            ));
         }
 
-        info!(
-            "received {:} new packets",
-            num_new_packets - duplicates - skipped - time_lagged_duplicates
-        );
+        messages.push((
+            chrono::Local::now(),
+            format!(
+                "received {:} new packets",
+                num_new_packets - duplicates - skipped - time_lagged_duplicates,
+            ),
+            log::Level::Debug,
+        ));
 
         for track in tracks {
             if track.locations.len() - packet_track_lengths.get(&track.name.to_owned()).unwrap() > 0
@@ -214,7 +231,7 @@ fn track_update(track: &crate::location::track::BalloonTrack) -> String {
         );
     }
 
-    if let Some(time_to_ground) = track.time_to_ground() {
+    if let Some(time_to_ground) = track.estimated_time_to_ground() {
         let landing_time = last_location.time + time_to_ground;
         let time_to_ground_from_now = landing_time - chrono::Local::now();
         let mut altitudes = vec![];

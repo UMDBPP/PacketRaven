@@ -98,10 +98,8 @@ impl BalloonTrack {
         values
     }
 
-    pub fn time_to_ground(&self) -> Option<chrono::Duration> {
-        if let Some(prediction) = &self.prediction {
-            Some(prediction.last().unwrap().time - chrono::Local::now())
-        } else if self.descending() {
+    pub fn estimated_time_to_ground(&self) -> Option<chrono::Duration> {
+        if !self.locations.is_empty() && self.descending() {
             if let Some(freefall_estimate) = self.falling() {
                 Some(freefall_estimate.time_to_ground)
             } else {
@@ -111,19 +109,36 @@ impl BalloonTrack {
                         altitudes.push(altitude);
                     }
                 }
-                Some(chrono::Duration::milliseconds(
-                    ((-self.ascent_rates().last().unwrap() / altitudes.last().unwrap()) * 1000.0)
-                        as i64,
-                ))
+                if altitudes.len() > 1 {
+                    Some(chrono::Duration::milliseconds(
+                        ((-self.ascent_rates().last().unwrap() / altitudes.last().unwrap())
+                            * 1000.0) as i64,
+                    ))
+                } else {
+                    None
+                }
             }
         } else {
             None
         }
     }
 
+    pub fn predicted_time_to_ground(&self) -> Option<chrono::Duration> {
+        if let Some(prediction) = &self.prediction {
+            Some(prediction.last().unwrap().time - chrono::Local::now())
+        } else {
+            None
+        }
+    }
+
+    pub fn ascending(&self) -> bool {
+        let ascent_rates = self.ascent_rates();
+        ascent_rates.iter().rev().take(2).all(|a| a > &0.2)
+    }
+
     pub fn descending(&self) -> bool {
         let ascent_rates = self.ascent_rates();
-        ascent_rates.iter().rev().take(2).all(|a| a < &0.0)
+        ascent_rates.iter().rev().take(2).all(|a| a < &0.2)
     }
 
     pub fn falling(&self) -> Option<crate::model::FreefallEstimate> {

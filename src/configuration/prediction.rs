@@ -57,7 +57,7 @@ impl Prediction {
 #[derive(serde::Deserialize, PartialEq, Debug)]
 pub struct StartLocation {
     pub location: Vec<f64>,
-    #[serde(with = "crate::parse::deserialize_local_datetime_string")]
+    #[serde(with = "crate::parse::local_datetime_string")]
     pub time: chrono::DateTime<chrono::Local>,
 }
 

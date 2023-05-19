@@ -3,7 +3,7 @@ pub fn approx_equal(a: f64, b: f64, decimal_precision: u8) -> bool {
     (a - b).abs() < p
 }
 
-pub mod deserialize_optional_local_datetime_string {
+pub mod optional_local_datetime_string {
     use chrono::TimeZone;
     use serde::Deserialize;
 
@@ -41,7 +41,7 @@ pub mod deserialize_optional_local_datetime_string {
     }
 }
 
-pub mod deserialize_utc_datetime_string {
+pub mod utc_datetime_string {
     use chrono::TimeZone;
     use serde::Deserialize;
 
@@ -69,7 +69,7 @@ pub mod deserialize_utc_datetime_string {
     }
 }
 
-pub mod deserialize_local_datetime_string {
+pub mod local_datetime_string {
     use chrono::TimeZone;
     use serde::Deserialize;
 
@@ -97,7 +97,7 @@ pub mod deserialize_local_datetime_string {
     }
 }
 
-pub mod deserialize_utc_timestamp_string {
+pub mod utc_timestamp_string {
     use chrono::TimeZone;
     use serde::Deserialize;
 
@@ -120,6 +120,76 @@ pub mod deserialize_utc_timestamp_string {
         match chrono::Utc.timestamp_opt(value.parse::<i64>().unwrap(), 0) {
             chrono::LocalResult::Single(date) => Ok(date),
             _ => Err(serde::de::Error::custom("error parsing string")),
+        }
+    }
+}
+
+pub mod optional_f64_string {
+    use serde::Deserialize;
+    use serde_json::Value;
+
+    pub fn serialize<S>(option: &Option<f64>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        if let Some(value) = *option {
+            return serializer.serialize_f64(value);
+        }
+        serializer.serialize_none()
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let option: Option<Value> = Option::deserialize(deserializer)?;
+        if let Some(value) = option {
+            if let Some(value) = value.as_str() {
+                if let Ok(value) = value.parse::<f64>() {
+                    Ok(Some(value))
+                } else {
+                    Ok(None)
+                }
+            } else {
+                Ok(value.as_f64())
+            }
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+pub mod optional_u64_string {
+    use serde::Deserialize;
+    use serde_json::Value;
+
+    pub fn serialize<S>(option: &Option<u64>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        if let Some(value) = *option {
+            return serializer.serialize_u64(value);
+        }
+        serializer.serialize_none()
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<u64>, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let option: Option<Value> = Option::deserialize(deserializer)?;
+        if let Some(value) = option {
+            if let Some(value) = value.as_str() {
+                if let Ok(value) = value.parse::<u64>() {
+                    Ok(Some(value))
+                } else {
+                    Ok(None)
+                }
+            } else {
+                Ok(value.as_u64())
+            }
+        } else {
+            Ok(None)
         }
     }
 }

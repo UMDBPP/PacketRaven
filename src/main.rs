@@ -12,6 +12,12 @@ mod tui;
 
 use clap::Parser;
 
+lazy_static::lazy_static! {
+    pub static ref DEFAULT_INTERVAL: chrono::Duration= chrono::Duration::seconds(60);
+    pub static ref DATE_FORMAT: String = "%Y-%m-%d %H:%M:%S".to_string();
+    pub static ref LOG_LEVEL: log::Level = log::Level::Info;
+}
+
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
@@ -34,6 +40,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let configuration: crate::configuration::RunConfiguration =
         serde_yaml::from_reader(configuration_file).unwrap();
 
-    tui::run(&configuration, log::Level::Info)?;
+    tui::run(&configuration, *LOG_LEVEL)?;
     Ok(())
 }

@@ -27,15 +27,20 @@ pub struct PathConfiguration {
     pub filename: std::path::PathBuf,
 }
 
+fn default_interval() -> chrono::Duration {
+    *crate::DEFAULT_INTERVAL
+}
+
 #[serde_with::serde_as]
 #[derive(PartialEq, Debug, serde::Deserialize)]
 pub struct TimeConfiguration {
     #[serde(default)]
-    #[serde(with = "crate::parse::deserialize_optional_local_datetime_string")]
+    #[serde(with = "crate::parse::optional_local_datetime_string")]
     pub start: Option<chrono::DateTime<chrono::Local>>,
     #[serde(default)]
-    #[serde(with = "crate::parse::deserialize_optional_local_datetime_string")]
+    #[serde(with = "crate::parse::optional_local_datetime_string")]
     pub end: Option<chrono::DateTime<chrono::Local>>,
+    #[serde(default = "default_interval")]
     #[serde_as(as = "serde_with::DurationSeconds<i64>")]
     pub interval: chrono::Duration,
     #[serde_as(as = "Option<serde_with::DurationSeconds<i64>>")]
@@ -56,6 +61,8 @@ impl Default for TimeConfiguration {
 pub struct PacketSourceConfiguration {
     #[cfg(feature = "aprsfi")]
     pub aprs_fi: Option<crate::configuration::credentials::AprsFiCredentials>,
+    #[cfg(feature = "sondehub")]
+    pub sondehub: Option<bool>,
     pub text: Option<crate::configuration::text::TextStreamConfiguration>,
     #[cfg(feature = "postgres")]
     pub database: Option<crate::connection::postgres::DatabaseCredentials>,
@@ -83,6 +90,8 @@ mod tests {
             PacketSourceConfiguration {
                 #[cfg(feature = "aprsfi")]
                 aprs_fi: None,
+                #[cfg(feature = "sondehub")]
+                sondehub: None,
                 text: Some(crate::configuration::text::TextStreamConfiguration {
                     locations: vec![std::path::PathBuf::from("http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-11%20raw.txt"), std::path::PathBuf::from("http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-8%20raw.txt")],
                 }),
@@ -125,6 +134,8 @@ mod tests {
                 aprs_fi: Some(crate::configuration::credentials::AprsFiCredentials {
                     api_key: String::from("123456.abcdefhijklmnop")
                 }),
+                #[cfg(feature = "sondehub")]
+                sondehub: None,
                 text: None,
                 #[cfg(feature = "postgres")]
                 database: None,
@@ -211,6 +222,8 @@ mod tests {
                 aprs_fi: Some(crate::configuration::credentials::AprsFiCredentials {
                     api_key: String::from("123456.abcdefhijklmnop")
                 }),
+                #[cfg(feature = "sondehub")]
+                sondehub: None,
                 text: Some(crate::configuration::text::TextStreamConfiguration {
                     locations: vec![
                         std::path::PathBuf::from("/dev/ttyUSB0"),
@@ -281,6 +294,8 @@ mod tests {
             PacketSourceConfiguration {
                 #[cfg(feature = "aprsfi")]
                 aprs_fi: None,
+                #[cfg(feature = "sondehub")]
+                sondehub: None,
                 text: Some(crate::configuration::text::TextStreamConfiguration {
                     locations: vec![std::path::PathBuf::from("http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-10/W3EAX-10_raw_NS95.txt"), std::path::PathBuf::from("http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-11/W3EAX-11_raw_NS95.txt")],
                 }),

@@ -1,29 +1,22 @@
 use chrono::Timelike;
 
+lazy_static::lazy_static! {
+    static ref MINIMUM_ACCESS_INTERVAL: chrono::Duration = chrono::Duration::seconds(10);
+}
+
 #[derive(serde::Deserialize, Debug)]
 pub struct AprsFiQuery {
     pub callsigns: Vec<String>,
     pub api_key: String,
     #[serde(skip)]
-    pub timerange: Option<chrono::Duration>,
-    #[serde(skip)]
-    pub tail: Option<chrono::Duration>,
-    #[serde(skip)]
     last_access: Option<chrono::DateTime<chrono::Local>>,
 }
 
 impl AprsFiQuery {
-    pub fn new(
-        callsigns: Vec<String>,
-        api_key: String,
-        timerange: Option<chrono::Duration>,
-        tail: Option<chrono::Duration>,
-    ) -> Self {
+    pub fn new(callsigns: Vec<String>, api_key: String) -> Self {
         Self {
             callsigns,
             api_key,
-            timerange,
-            tail,
             last_access: None,
         }
     }
@@ -36,22 +29,6 @@ impl AprsFiQuery {
             format!("what={:}", "loc"),
             format!("apikey={:}", self.api_key),
             format!("format={:}", "json"),
-            format!(
-                "timerange={:}",
-                match self.timerange {
-                    Some(duration) => duration,
-                    None => chrono::Duration::days(1),
-                }
-                .num_seconds()
-            ),
-            format!(
-                "tail={:}",
-                match self.tail {
-                    Some(duration) => duration,
-                    None => chrono::Duration::days(1),
-                }
-                .num_seconds()
-            ),
         ];
         format!("https://api.aprs.fi/api/get?{:}", parameters.join("&"))
     }
@@ -61,13 +38,21 @@ impl AprsFiQuery {
     ) -> Result<Vec<crate::location::BalloonLocation>, crate::connection::ConnectionError> {
         let now = chrono::Local::now();
         if let Some(last_access_time) = self.last_access {
-            if now - last_access_time < chrono::Duration::seconds(10) {
-                return Err(crate::connection::ConnectionError::TooFrequent);
+            if now - last_access_time < *MINIMUM_ACCESS_INTERVAL {
+                return Err(crate::connection::ConnectionError::TooFrequent {
+                    connection: "APRS.fi".to_string(),
+                    seconds: (*MINIMUM_ACCESS_INTERVAL).num_seconds(),
+                });
             }
         }
 
+        let client = reqwest::blocking::Client::builder()
+            .user_agent(crate::connection::USER_AGENT.to_owned())
+            .build()
+            .unwrap();
+
         let url = self.url();
-        let response = reqwest::blocking::get(url).expect("error retrieving packets from APRS.fi");
+        let response = client.get(&url).send().expect(&url);
 
         self.last_access = Some(now);
 
@@ -76,7 +61,7 @@ impl AprsFiQuery {
                 // deserialize JSON into struct
                 let aprs_fi_response: AprsFiResponse = match response.json() {
                     Ok(object) => object,
-                    Err(error) => panic!("{:?}", error),
+                    Err(error) => panic!("{:?} - {:}", error, url),
                 };
                 match aprs_fi_response {
                     AprsFiResponse::Ok { entries, .. } => {
@@ -96,7 +81,7 @@ impl AprsFiQuery {
                 }
             }
             _ => Err(crate::connection::ConnectionError::ApiError {
-                message: String::from("error posting request to API"),
+                message: format!("API error: {:}", &url),
             }),
         }
     }
@@ -164,18 +149,23 @@ struct AprsFiLocationRecord {
     showname: Option<String>,
     #[serde(rename = "type")]
     _type: String,
-    #[serde(with = "crate::parse::deserialize_utc_timestamp_string")]
+    #[serde(with = "crate::parse::utc_timestamp_string")]
     time: chrono::DateTime<chrono::Utc>,
-    #[serde(with = "crate::parse::deserialize_utc_timestamp_string")]
+    #[serde(with = "crate::parse::utc_timestamp_string")]
     lasttime: chrono::DateTime<chrono::Utc>,
     #[serde_as(as = "serde_with::DisplayFromStr")]
     lat: f64,
     #[serde_as(as = "serde_with::DisplayFromStr")]
     lng: f64,
-    // TODO `serde_as` does not currently support deserializing a `FromStr` in an `Option`
-    altitude: Option<String>,
-    course: Option<String>,
-    speed: Option<String>,
+    #[serde(default)]
+    #[serde(with = "crate::parse::optional_f64_string")]
+    altitude: Option<f64>,
+    #[serde(default)]
+    #[serde(with = "crate::parse::optional_u64_string")]
+    course: Option<u64>,
+    #[serde(default)]
+    #[serde(with = "crate::parse::optional_f64_string")]
+    speed: Option<f64>,
     symbol: Option<String>,
     srccall: String,
     dstcall: String,
@@ -200,8 +190,6 @@ impl AprsFiLocationRecord {
 
         let symbol_chars: Vec<char> = self.symbol.as_ref().unwrap().chars().collect();
 
-        let altitude = self.altitude.as_ref().unwrap().parse::<f64>().unwrap();
-
         let aprs_packet = aprs_parser::AprsPacket {
             from,
             via,
@@ -213,8 +201,8 @@ impl AprsFiLocationRecord {
                     time.second() as u8,
                 )),
                 messaging_supported: false,
-                latitude: aprs_parser::Latitude::new(self.lng).unwrap(),
-                longitude: aprs_parser::Longitude::new(self.lat).unwrap(),
+                latitude: aprs_parser::Latitude::new(self.lat).unwrap(),
+                longitude: aprs_parser::Longitude::new(self.lng).unwrap(),
                 precision: aprs_parser::Precision::HundredthMinute,
                 symbol_table: symbol_chars[0],
                 symbol_code: symbol_chars[1],
@@ -226,7 +214,7 @@ impl AprsFiLocationRecord {
         crate::location::BalloonLocation {
             time: time.with_timezone(&chrono::Local),
             location: geo::point!(x: self.lng, y: self.lat),
-            altitude: Some(altitude),
+            altitude: self.altitude,
             data: crate::location::BalloonData::new(
                 Some(aprs_packet),
                 None,
@@ -262,7 +250,7 @@ enum AprsFiTargetType {
 #[derive(serde::Deserialize)]
 struct AprsFiWeather {
     name: String,
-    #[serde(with = "crate::parse::deserialize_utc_timestamp_string")]
+    #[serde(with = "crate::parse::utc_timestamp_string")]
     time: chrono::DateTime<chrono::Utc>,
     #[serde_as(as = "serde_with::DisplayFromStr")]
     temp: f64,
@@ -290,7 +278,7 @@ struct AprsFiWeather {
 #[derive(serde::Deserialize)]
 struct AprsFiMessage {
     messageid: String,
-    #[serde(with = "crate::parse::deserialize_utc_datetime_string")]
+    #[serde(with = "crate::parse::utc_datetime_string")]
     time: chrono::DateTime<chrono::Utc>,
     srccall: String,
     dst: String,
@@ -311,7 +299,7 @@ mod tests {
                 String::from("W3EAX-14"),
             ];
 
-            let mut connection = AprsFiQuery::new(callsigns, api_key, None, None);
+            let mut connection = AprsFiQuery::new(callsigns, api_key);
             println!("{:?}", connection.url());
             let packets = connection.retrieve_aprs_from_aprsfi().unwrap();
 
@@ -320,7 +308,7 @@ mod tests {
     }
 
     #[test]
-    fn test_deserialize_location() {
+    fn test_location() {
         let data = r#"
         {
           "class": "a",
@@ -351,7 +339,7 @@ mod tests {
     }
 
     #[test]
-    fn test_deserialize_aprs() {
+    fn test_aprs() {
         let data = r#"
         {
           "command": "get",
@@ -390,7 +378,69 @@ mod tests {
     }
 
     #[test]
-    fn test_deserialize_ais() {
+    fn test_aprs_location_string() {
+        let data = r#"
+        {
+          "class": "a",
+          "name": "W3EAX-11",
+          "type": "l",
+          "time": "1659286185",
+          "lasttime": "1659286185",
+          "lat": "39.41750",
+          "lng": "-77.06550",
+          "altitude": "1870.86",
+          "course": "146",
+          "speed": "13",
+          "symbol": "/O",
+          "srccall": "W3EAX-11",
+          "dstcall": "CQ",
+          "comment": ",StrTrk,255,9,1.55V,3C,82725Pa,",
+          "path": "N3TJJ-11*,WIDE1*,W3EPE-3*,KB3EJM-11*,WIDE2*,qAR,NA7L"
+        }
+        "#;
+        let response: AprsFiLocation = serde_json::from_str(data).unwrap();
+
+        match response {
+            AprsFiLocation::A { location } => {
+                assert_eq!(location.altitude, Some(1870.86));
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn test_aprs_location_number() {
+        let data = r#"
+        {
+          "class": "a",
+          "name": "WB4ELK-7",
+          "type": "l",
+          "time": "1683259848",
+          "lasttime": "1684447839",
+          "lat": "-52.06250",
+          "lng": "142.45817",
+          "altitude": 0,
+          "course": 90,
+          "speed": 0,
+          "symbol": "/O",
+          "srccall": "WB4ELK-7",
+          "dstcall": "",
+          "comment": "GPS:0 3.70V -2C 0m QD17FW *083QIY JO40 3* 0kt WB4VHF https://www.ashballoon.info/ 2036",
+          "path": "TCPIP*,qAS,WB8MSJ"
+        }
+        "#;
+        let response: AprsFiLocation = serde_json::from_str(data).unwrap();
+
+        match response {
+            AprsFiLocation::A { location } => {
+                assert_eq!(location.altitude, Some(0.0));
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn test_ais() {
         let data = r#"
         {
           "command": "get",
@@ -424,6 +474,32 @@ mod tests {
     }
 
     #[test]
+    fn test_ais_entry() {
+        let data = r#"
+        {
+          "class": "i",
+          "mmsi": "21BWI",
+          "type": "a",
+          "time": "1655625488",
+          "lasttime": "1682813817",
+          "lat": "62.95833",
+          "lng": "17.83333",
+          "srccall": "21BWI",
+          "dstcall": "ais",
+          "comment": "JS8 27,246334MHz -19dB"
+        }
+        "#;
+        let response: AprsFiLocation = serde_json::from_str(data).unwrap();
+
+        match response {
+            AprsFiLocation::I { location, ais } => {
+                assert_eq!(ais.mmsi, "21BWI");
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
     #[should_panic]
     fn test_api_wrong_key() {
         let api_key = String::from("123456.abcdefghijklmno");
@@ -434,10 +510,8 @@ mod tests {
             String::from("W3EAX-14"),
         ];
 
-        let mut connection = AprsFiQuery::new(callsigns, api_key, None, None);
+        let mut connection = AprsFiQuery::new(callsigns, api_key);
         println!("{:?}", connection.url());
         let packets = connection.retrieve_aprs_from_aprsfi().unwrap();
-
-        assert!(!packets.is_empty());
     }
 }
