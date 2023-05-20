@@ -48,24 +48,17 @@ impl TawhiriQuery {
             format!("launch_longitude={:}", start_location.x()),
             format!("launch_latitude={:}", start_location.y()),
             format!("launch_datetime={:}", self.query.start.time.to_rfc3339()),
-            format!("ascent_rate={:}", self.query.profile.ascent_rate),
-            format!("burst_altitude={:}", burst_altitude),
+            format!("ascent_rate={:.2}", self.query.profile.ascent_rate),
+            format!("burst_altitude={:.2}", burst_altitude),
             format!(
-                "descent_rate={:}",
+                "descent_rate={:.2}",
                 self.query.profile.sea_level_descent_rate,
             ),
         ];
 
         if let Some(altitude) = self.query.start.altitude {
-            parameters.push(format!("launch_altitude={:}", altitude));
+            parameters.push(format!("launch_altitude={:.2}", altitude));
         }
-        parameters.push(format!(
-            "profile={:}",
-            match self.query.profile.float_duration {
-                Some(_) => String::from("float_profile"),
-                None => String::from("standard_profile"),
-            },
-        ));
         if let Some(dataset_time) = self.dataset_time {
             parameters.push(format!("dataset={:}", dataset_time.to_rfc3339()));
         }
@@ -73,14 +66,15 @@ impl TawhiriQuery {
             parameters.push(format!("version={:}", version));
         }
 
-        if !self.query.descent_only {
-            if let Some(float_duration) = self.query.profile.float_duration {
+        if let Some(float_duration) = self.query.profile.float_duration {
+            if !self.query.descent_only {
+                parameters.push("profile=float_profile".to_string());
                 let float_altitude = self
                     .query
                     .profile
                     .float_altitude
                     .unwrap_or(self.query.profile.burst_altitude);
-                parameters.push(format!("float_altitude={:}", float_altitude));
+                parameters.push(format!("float_altitude={:.2}", float_altitude));
                 let start_altitude = self.query.start.altitude.unwrap_or(0.0);
                 let float_start_time = self.query.start.time
                     + chrono::Duration::seconds(
@@ -91,13 +85,24 @@ impl TawhiriQuery {
                     (float_start_time + float_duration).to_rfc3339()
                 ));
             }
+        } else {
+            parameters.push("profile=standard_profile".to_string());
         }
 
         format!("{:}?{:}", self.query.api_url, parameters.join("&"))
     }
 
     fn get(&self) -> Result<TawhiriResponse, TawhiriError> {
-        let response = reqwest::blocking::get(self.url()).expect("error retrieving prediction");
+        let client = reqwest::blocking::Client::builder()
+            .user_agent(crate::connection::USER_AGENT.to_owned())
+            .build()
+            .unwrap();
+
+        let url = self.url();
+        let response = client
+            .get(&url)
+            .send()
+            .expect("error retrieving prediction");
 
         match &response.status() {
             &reqwest::StatusCode::OK => {
@@ -174,10 +179,11 @@ impl TawhiriQuery {
                 let status = &response.status();
                 // https://tawhiri.readthedocs.io/en/latest/api.html#error-fragment
                 let tawhiri_error: TawhiriErrorResponse = response.json().unwrap();
-                return Err(TawhiriError::HttpErrorStatus {
+                Err(TawhiriError::HttpErrorStatus {
                     status: status.as_u16(),
-                    description: tawhiri_error.description,
-                });
+                    description: tawhiri_error.error.description,
+                    url,
+                })
             }
         }
     }
@@ -216,9 +222,10 @@ impl crate::location::track::BalloonTrack {
 }
 
 custom_error::custom_error! {pub TawhiriError
-    NoFloatStage="API did not return a float stage",
+    NoFloatStage ="API did not return a float stage",
     NoDescentStage = "API did not return a descent stage",
-    HttpErrorStatus {status:u16, description:String} = "HTTP error {status} - {description}",
+    HttpErrorStatus { status: u16, description: String, url: String } = "HTTP error {status} - {description} - {url}",
+    Passthrough { message: String } = "{message}",
 }
 
 // https://tawhiri.readthedocs.io/en/latest/api.html#responses
@@ -231,6 +238,11 @@ struct TawhiriResponse {
 }
 #[derive(serde::Deserialize)]
 struct TawhiriErrorResponse {
+    error: TawhiriErrorMessage,
+    metadata: TawhiriMetadata,
+}
+#[derive(serde::Deserialize)]
+struct TawhiriErrorMessage {
     description: String,
     #[serde(rename = "type")]
     _type: String,
