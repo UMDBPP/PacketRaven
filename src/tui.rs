@@ -45,6 +45,7 @@ fn run_app<B: ratatui::backend::Backend>(
 ) -> std::io::Result<()> {
     let tick_rate = app.configuration.time.interval.to_std().unwrap();
 
+    // set the first tick to be in the past to update immediately
     let mut last_tick = std::time::Instant::now() - tick_rate;
 
     loop {
@@ -57,14 +58,7 @@ fn run_app<B: ratatui::backend::Backend>(
         )? {
             if let crossterm::event::Event::Key(key) = crossterm::event::read()? {
                 if key.kind == crossterm::event::KeyEventKind::Press {
-                    match key.code {
-                        crossterm::event::KeyCode::Char(c) => app.on_key(c),
-                        crossterm::event::KeyCode::Left => app.previous(),
-                        crossterm::event::KeyCode::Right => app.next(),
-                        crossterm::event::KeyCode::Up => app.up(),
-                        crossterm::event::KeyCode::Down => app.down(),
-                        _ => {}
-                    }
+                    app.on_key(key.code);
                 }
             }
         }
@@ -111,7 +105,7 @@ impl<'a> PacketravenApp<'a> {
 
         if let Some(output) = &instance.configuration.log {
             // TODO
-            instance.log(
+            instance.add_log_message(
                 "logging to file is not implemented".to_owned(),
                 log::Level::Warn,
             );
@@ -130,7 +124,7 @@ impl<'a> PacketravenApp<'a> {
 
         if let Some(output) = &instance.configuration.output {
             // TODO
-            instance.log(
+            instance.add_log_message(
                 "file output is not implemented".to_owned(),
                 log::Level::Warn,
             );
@@ -149,7 +143,7 @@ impl<'a> PacketravenApp<'a> {
 
         if let Some(output) = &instance.configuration.output {
             // TODO
-            instance.log(
+            instance.add_log_message(
                 "file output is not implemented".to_owned(),
                 log::Level::Warn,
             );
@@ -192,7 +186,7 @@ impl<'a> PacketravenApp<'a> {
             }
         }
 
-        instance.log(filter_message, log::Level::Info);
+        instance.add_log_message(filter_message, log::Level::Info);
 
         if let Some(callsigns) = &instance.configuration.callsigns {
             if !callsigns.is_empty() {
@@ -204,7 +198,8 @@ impl<'a> PacketravenApp<'a> {
                 if let Some(end) = instance.configuration.time.end {
                     aprs_fi_url += &format!("&te={:}", end.timestamp());
                 }
-                instance.log(format!("tracking URL: {:}", aprs_fi_url), log::Level::Info);
+                instance
+                    .add_log_message(format!("tracking URL: {:}", aprs_fi_url), log::Level::Info);
             }
         }
 
@@ -218,7 +213,7 @@ impl<'a> PacketravenApp<'a> {
                         connection = crate::connection::Connection::GeoJsonFile(
                             crate::connection::file::GeoJsonFile::new(location.to_owned()),
                         );
-                        instance.log(
+                        instance.add_log_message(
                             format!("reading GeoJSON file {:}", &location.to_str().unwrap()),
                             log::Level::Info,
                         );
@@ -226,12 +221,12 @@ impl<'a> PacketravenApp<'a> {
                         connection = crate::connection::Connection::AprsTextFile(
                             crate::connection::file::AprsTextFile::new(location.to_owned()),
                         );
-                        instance.log(
+                        instance.add_log_message(
                             format!("reading text file {:}", &location.to_str().unwrap()),
                             log::Level::Info,
                         );
                     } else {
-                        instance.log(
+                        instance.add_log_message(
                             format!("File type not implemented: {:}", location.to_str().unwrap()),
                             log::Level::Error,
                         );
@@ -254,13 +249,13 @@ impl<'a> PacketravenApp<'a> {
                         match serial {
                             Ok(serial) => {
                                 connection = crate::connection::Connection::AprsSerial(serial);
-                                instance.log(
+                                instance.add_log_message(
                                     format!("opened port {:}", &location.to_str().unwrap()),
                                     log::Level::Info,
                                 );
                             }
                             Err(error) => {
-                                instance.log(error.to_string(), log::Level::Error);
+                                instance.add_log_message(error.to_string(), log::Level::Error);
                                 continue;
                             }
                         }
@@ -320,7 +315,7 @@ impl<'a> PacketravenApp<'a> {
                     instance.connections.push(connection);
                 }
             } else {
-                instance.log(
+                instance.add_log_message(
                     "no connections successfully started".to_string(),
                     log::Level::Error,
                 );
@@ -332,7 +327,7 @@ impl<'a> PacketravenApp<'a> {
             unimplemented!("APRS IS connection is not implemented");
         }
 
-        instance.log(
+        instance.add_log_message(
             format!(
                 "listening for packets every {:} s from {:} source(s)",
                 instance.configuration.time.interval.num_seconds(),
@@ -342,7 +337,7 @@ impl<'a> PacketravenApp<'a> {
         );
 
         if instance.configuration.plots.is_some() {
-            instance.log(
+            instance.add_log_message(
                 "plotting is implemented in the TUI".to_string(),
                 log::Level::Debug,
             );
@@ -351,16 +346,24 @@ impl<'a> PacketravenApp<'a> {
         instance
     }
 
-    pub fn log(&mut self, message: String, level: log::Level) {
+    pub fn add_log_message(&mut self, message: String, level: log::Level) {
         self.log_messages
             .push((chrono::Local::now(), message, level));
     }
 
-    pub fn next(&mut self) {
+    pub fn next_tab(&mut self) {
         if self.selected_tab_index < self.tracks.len() {
             self.selected_tab_index += 1;
         } else {
             self.selected_tab_index = 0;
+        }
+    }
+
+    pub fn previous_tab(&mut self) {
+        if self.selected_tab_index > 0 {
+            self.selected_tab_index -= 1;
+        } else {
+            self.selected_tab_index = self.tracks.len();
         }
     }
 
@@ -376,20 +379,24 @@ impl<'a> PacketravenApp<'a> {
         }
     }
 
-    pub fn previous(&mut self) {
-        if self.selected_tab_index > 0 {
-            self.selected_tab_index -= 1;
-        } else {
-            self.selected_tab_index = self.tracks.len();
-        }
-    }
-
-    pub fn on_key(&mut self, c: char) {
-        match c {
-            'q' => {
+    pub fn on_key(&mut self, key: crossterm::event::KeyCode) {
+        match key {
+            crossterm::event::KeyCode::Esc => {
                 self.should_quit = true;
             }
-            'r' => self.on_tick(),
+            crossterm::event::KeyCode::Char(character) => match character {
+                'q' => {
+                    self.should_quit = true;
+                }
+                'r' | ' ' => self.on_tick(),
+                _ => {}
+            },
+            crossterm::event::KeyCode::BackTab => self.previous_tab(),
+            crossterm::event::KeyCode::Tab => self.next_tab(),
+            crossterm::event::KeyCode::Left => self.previous_tab(),
+            crossterm::event::KeyCode::Right => self.next_tab(),
+            crossterm::event::KeyCode::Up => self.up(),
+            crossterm::event::KeyCode::Down => self.down(),
             _ => {}
         }
     }
