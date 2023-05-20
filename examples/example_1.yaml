@@ -1,11 +1,8 @@
-# this configuration tells PacketRaven to perform the following functions:
-#  1. read several text files containing APRS packets
-#  2. output information to the console
+# read a text file containing APRS packets
 #
 # you can run this configuration with the following: `packetraven examples/example_1.yaml`
 
 packets:
   text:
     locations:
-      - http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-11%20raw.txt
       - http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-8%20raw.txt

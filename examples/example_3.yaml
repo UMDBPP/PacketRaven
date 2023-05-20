@@ -1,11 +1,10 @@
 # this configuration tells PacketRaven to perform the following functions:
-#  1. read packet information from several sources once every 30 seconds, including
-#    - https://aprs.fi
+#  1. read packet information from several sources once every 120 seconds, including
+#    - https://amateur.sondehub.org
 #    - a USB port at `/dev/ttyUSB0`
 #    - a text file at `~/packets.txt`
-#    - a PostGreSQL database at `bpp.umd.edu`
 #  2. filter by specific callsigns and constrain to a specific time range
-#  3. provide CUSF prediction information with the given parameters
+#  3. retrieve CUSF prediction information with the given parameters
 #  4. output packets to a GeoJSON file at `./example_3.geojson`
 #  3. output information to the console and to `./example_3.log`
 #
@@ -19,7 +18,7 @@ callsigns:
 time:
   start: 2022-03-05 00:00:00
   end: 2022-03-06 00:00:00
-  interval: 30
+  interval: 120
 
 output:
   filename: example_3.geojson
@@ -28,23 +27,11 @@ log:
   filename: example_3.log
 
 packets:
-  aprs_fi:
-    api_key: 123456.abcdefhijklmnop
+  sondehub: true
   text:
     locations:
       - /dev/ttyUSB0
       - ~/packets.txt
-  database:
-    hostname: localhost
-    port: 5432
-    database: nearspace
-    table: example_3
-    username: user1
-    password: password1
-    tunnel:
-      hostname: bpp.umd.edu:22
-      username: user2
-      password: password2
 
 prediction:
   start:

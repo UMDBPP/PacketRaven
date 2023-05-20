@@ -397,12 +397,42 @@ impl<'a> PacketravenApp<'a> {
     pub fn on_tick(&mut self) {
         let tracks = &mut self.tracks;
 
-        let messages = crate::retrieve::retrieve_locations(
+        let mut messages = crate::retrieve::retrieve_locations(
             &mut self.connections,
             tracks,
             self.configuration.time.start,
             self.configuration.time.end,
         );
+
+        if let Some(crate::configuration::prediction::PredictionConfiguration::Single(
+            prediction_configuration,
+        )) = &self.configuration.prediction
+        {
+            for track in tracks {
+                let prediction =
+                    track.prediction(&prediction_configuration.to_tawhiri_query().query.profile);
+
+                match prediction {
+                    Ok(prediction) => {
+                        if track.descending() {
+                            let landing_location = prediction.last().unwrap().location.x_y();
+                            self.log_messages.push((
+                                chrono::Local::now(),
+                                format!(
+                                    "{:} - predicted landing location: ({:.2}, {:.2})",
+                                    track.name, landing_location.0, landing_location.1,
+                                ),
+                                log::Level::Info,
+                            ));
+                        }
+                        track.prediction = Some(prediction);
+                    }
+                    Err(error) => {
+                        messages.push((chrono::Local::now(), error.to_string(), log::Level::Error))
+                    }
+                }
+            }
+        }
 
         match self.log_level {
             log::Level::Debug => {
@@ -414,29 +444,6 @@ impl<'a> PacketravenApp<'a> {
                         self.log_messages.push((time, message, level));
                     }
                 }
-            }
-        }
-
-        if let Some(crate::configuration::prediction::PredictionConfiguration::Single(
-            prediction_configuration,
-        )) = &self.configuration.prediction
-        {
-            for track in tracks {
-                let prediction =
-                    track.prediction(&prediction_configuration.to_tawhiri_query().query.profile);
-
-                if track.descending() {
-                    let landing_location = prediction.last().unwrap().location.x_y();
-                    self.log_messages.push((
-                        chrono::Local::now(),
-                        format!(
-                            "{:} - predicted landing location: ({:.2}, {:.2})",
-                            track.name, landing_location.0, landing_location.1,
-                        ),
-                        log::Level::Info,
-                    ));
-                }
-                track.prediction = Some(prediction);
             }
         }
     }
@@ -761,6 +768,7 @@ fn draw<B: ratatui::backend::Backend>(frame: &mut ratatui::Frame<B>, app: &Packe
                 .marker(ratatui::symbols::Marker::Braille)
                 .style(ratatui::style::Style::default().fg(ratatui::style::Color::Blue))
                 .data(&data)
+                .name("telemetry")
                 .graph_type(ratatui::widgets::GraphType::Scatter),
         );
 
@@ -772,8 +780,8 @@ fn draw<B: ratatui::backend::Backend>(frame: &mut ratatui::Frame<B>, app: &Packe
                     .marker(ratatui::symbols::Marker::Braille)
                     .style(ratatui::style::Style::default().fg(ratatui::style::Color::Red))
                     .data(&data)
-                    .name(format!("{:} prediction", track.name))
-                    .graph_type(ratatui::widgets::GraphType::Line),
+                    .name("prediction")
+                    .graph_type(ratatui::widgets::GraphType::Scatter),
             );
         }
 

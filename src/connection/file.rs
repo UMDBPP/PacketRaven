@@ -55,7 +55,15 @@ impl AprsTextFile {
     pub fn read_aprs_from_file(
         &self,
     ) -> Result<Vec<crate::location::BalloonLocation>, crate::connection::ConnectionError> {
-        let lines = read_lines(&self.path).unwrap();
+        let lines = match read_lines(&self.path) {
+            Ok(lines) => lines,
+            Err(error) => {
+                return Err(crate::connection::ConnectionError::FailedToEstablish {
+                    connection: "file".to_string(),
+                    message: error.to_string(),
+                })
+            }
+        };
 
         let mut locations: Vec<crate::location::BalloonLocation> = vec![];
         for line in lines {

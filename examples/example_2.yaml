@@ -1,7 +1,4 @@
-# this configuration tells PacketRaven to perform the following functions:
-#  1. retrieve packets from https://aprs.fi
-#  2. filter by specific callsigns
-#  3. output information to the console and to `./example_2.log`
+#  retrieve packets from https://amateur.sondehub.org for specific callsigns within a time range
 #
 # you can run this configuration with the following: `packetraven examples/example_2.yaml`
 
@@ -9,9 +6,9 @@ callsigns:
   - W3EAX-11
   - W3EAX-12
 
-log:
-  filename: example_2.log
+time:
+  start: 2022-03-05 00:00:00
+  end: 2022-03-06 00:00:00
 
 packets:
-  aprs_fi:
-    api_key: 123456.abcdefhijklmnop
+  sondehub: true
