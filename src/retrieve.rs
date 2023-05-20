@@ -141,7 +141,7 @@ pub fn retrieve_locations(
         for track in tracks {
             if track.locations.len() - packet_track_lengths.get(&track.name.to_owned()).unwrap() > 0
             {
-                messages.push((chrono::Local::now(), track_update(&track), log::Level::Info));
+                messages.push((chrono::Local::now(), track_update(track), log::Level::Info));
             }
         }
     }

@@ -1,5 +1,9 @@
 pub mod tawhiri;
 
+lazy_static::lazy_static! {
+    static ref DEFAULT_FLOAT_UNCERTAINTY: f64 = 500.0;
+}
+
 #[derive(Clone)]
 pub struct FlightProfile {
     pub ascent_rate: f64,
@@ -23,10 +27,7 @@ impl FlightProfile {
             ascent_rate,
             float_altitude,
             float_duration,
-            float_uncertainty: match float_uncertainty {
-                Some(uncertainty) => uncertainty,
-                None => 500.0,
-            },
+            float_uncertainty: float_uncertainty.unwrap_or(*DEFAULT_FLOAT_UNCERTAINTY),
             burst_altitude,
             sea_level_descent_rate,
         }

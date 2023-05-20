@@ -76,12 +76,14 @@ impl AprsFiQuery {
                     AprsFiResponse::Fail { description, .. } => {
                         Err(crate::connection::ConnectionError::ApiError {
                             message: description,
+                            url,
                         })
                     }
                 }
             }
-            _ => Err(crate::connection::ConnectionError::ApiError {
-                message: format!("API error: {:}", &url),
+            other => Err(crate::connection::ConnectionError::ApiError {
+                message: other.to_string(),
+                url,
             }),
         }
     }
@@ -492,7 +494,7 @@ mod tests {
         let response: AprsFiLocation = serde_json::from_str(data).unwrap();
 
         match response {
-            AprsFiLocation::I { location, ais } => {
+            AprsFiLocation::I { ais, .. } => {
                 assert_eq!(ais.mmsi, "21BWI");
             }
             _ => panic!(),
@@ -500,7 +502,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn test_api_wrong_key() {
         let api_key = String::from("123456.abcdefghijklmno");
         let callsigns = vec![
@@ -512,6 +513,6 @@ mod tests {
 
         let mut connection = AprsFiQuery::new(callsigns, api_key);
         println!("{:?}", connection.url());
-        let packets = connection.retrieve_aprs_from_aprsfi().unwrap();
+        assert!(connection.retrieve_aprs_from_aprsfi().is_err());
     }
 }

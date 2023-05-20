@@ -1,6 +1,3 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
-
 mod configuration;
 mod connection;
 mod location;
@@ -38,7 +35,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let configuration_file = std::fs::File::open(arguments.configuration_filename).unwrap();
     let configuration: crate::configuration::RunConfiguration =
-        serde_yaml::from_reader(configuration_file).unwrap();
+        serde_yaml::from_reader(configuration_file).expect("error reading configuration");
 
     tui::run(&configuration, *LOG_LEVEL)?;
     Ok(())

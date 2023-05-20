@@ -216,9 +216,7 @@ impl<'a> PacketravenApp<'a> {
                         .contains(&location.extension().unwrap().to_str().unwrap())
                     {
                         connection = crate::connection::Connection::GeoJsonFile(
-                            crate::connection::file::GeoJsonFile {
-                                path: location.to_owned(),
-                            },
+                            crate::connection::file::GeoJsonFile::new(location.to_owned()),
                         );
                         instance.log(
                             format!("reading GeoJSON file {:}", &location.to_str().unwrap()),
@@ -226,9 +224,7 @@ impl<'a> PacketravenApp<'a> {
                         );
                     } else if ["txt", "log"].contains(&extension.to_str().unwrap()) {
                         connection = crate::connection::Connection::AprsTextFile(
-                            crate::connection::file::AprsTextFile {
-                                path: location.to_owned(),
-                            },
+                            crate::connection::file::AprsTextFile::new(location.to_owned()),
                         );
                         instance.log(
                             format!("reading text file {:}", &location.to_str().unwrap()),
@@ -290,15 +286,17 @@ impl<'a> PacketravenApp<'a> {
         }
 
         #[cfg(feature = "sondehub")]
-        if let Some(sondehub_configuration) = &instance.configuration.packets.sondehub {
-            let connection = crate::connection::Connection::SondeHub(
-                crate::connection::sondehub::SondeHubQuery::new(
-                    instance.configuration.callsigns.to_owned().unwrap(),
-                    instance.configuration.time.start,
-                    instance.configuration.time.end,
-                ),
-            );
-            instance.connections.push(connection);
+        if let Some(sondehub_enabled) = instance.configuration.packets.sondehub {
+            if sondehub_enabled {
+                let connection = crate::connection::Connection::SondeHub(
+                    crate::connection::sondehub::SondeHubQuery::new(
+                        instance.configuration.callsigns.to_owned().unwrap(),
+                        instance.configuration.time.start,
+                        instance.configuration.time.end,
+                    ),
+                );
+                instance.connections.push(connection);
+            }
         }
 
         #[cfg(feature = "postgres")]
@@ -343,7 +341,7 @@ impl<'a> PacketravenApp<'a> {
             log::Level::Info,
         );
 
-        if let Some(plots_configuration) = &instance.configuration.plots {
+        if instance.configuration.plots.is_some() {
             instance.log(
                 "plotting is implemented in the TUI".to_string(),
                 log::Level::Debug,

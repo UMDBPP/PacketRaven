@@ -5,7 +5,7 @@ fn first_available_port() -> String {
         Ok(available_ports) => {
             for available_port in available_ports {
                 let connection_attempt =
-                    serialport::new(&available_port.port_name, baud_rate).open();
+                    serialport::new(available_port.port_name, baud_rate).open();
                 match connection_attempt {
                     Ok(successful) => {
                         return successful.name().unwrap();
@@ -35,55 +35,75 @@ impl AprsSerial {
         port: Option<String>,
         baud_rate: Option<u32>,
     ) -> Result<Self, crate::connection::ConnectionError> {
-        let baud = match baud_rate {
-            Some(baud) => baud,
-            None => 9600,
-        };
-
-        let mut port_name: String = String::new();
+        let baud = baud_rate.unwrap_or(9600);
+        let mut port_name: Option<String> = None;
         match port {
             Some(name) => {
                 port_name = match serialport::new(&name, baud).open() {
-                    Ok(port) => port.name().unwrap(),
+                    Ok(port) => port.name(),
                     Err(error) => {
                         return Err(crate::connection::ConnectionError::FailedToEstablish {
+                            connection: "serial".to_string(),
                             message: format!(
-                                "error connecting to port {:?} at baud {:?}",
-                                &name, baud_rate,
+                                "error connecting to port {:?} at baud {:?} - {:}",
+                                &name, baud_rate, error,
                             ),
                         });
                     }
                 };
             }
             None => {
-                for available_port in serialport::available_ports().expect("no open ports found") {
-                    let connection_attempt =
-                        serialport::new(&available_port.port_name, baud).open();
+                let available_ports = match serialport::available_ports() {
+                    Ok(ports) => ports,
+                    Err(error) => {
+                        return Err(crate::connection::ConnectionError::FailedToEstablish {
+                            connection: "serial".to_string(),
+                            message: error.to_string(),
+                        })
+                    }
+                };
+
+                // return the next available port
+                for port in available_ports {
+                    let connection_attempt = serialport::new(port.port_name, baud).open();
                     match connection_attempt {
                         Ok(successful) => {
-                            port_name = successful.name().unwrap();
+                            port_name = successful.name();
                             break;
                         }
-                        Err(error) => {
-                            return Err(crate::connection::ConnectionError::FailedToEstablish {
-                                message: error.to_string(),
-                            });
+                        Err(_) => {
+                            continue;
                         }
                     }
                 }
             }
         }
 
-        Ok(Self {
-            port: port_name,
-            baud_rate: baud,
-        })
+        if let Some(port_name) = port_name {
+            Ok(Self {
+                port: port_name,
+                baud_rate: baud,
+            })
+        } else {
+            Err(crate::connection::ConnectionError::FailedToEstablish {
+                connection: "serial".to_string(),
+                message: "no open ports".to_string(),
+            })
+        }
     }
 
     pub fn read_aprs_from_serial(
         &self,
     ) -> Result<Vec<crate::location::BalloonLocation>, crate::connection::ConnectionError> {
-        let mut connection = serialport::new(&self.port, self.baud_rate).open().unwrap();
+        let mut connection = match serialport::new(&self.port, self.baud_rate).open() {
+            Ok(connection) => connection,
+            Err(error) => {
+                return Err(super::ConnectionError::FailedToEstablish {
+                    connection: "serial".to_string(),
+                    message: error.to_string(),
+                });
+            }
+        };
 
         let mut buffer = Vec::<u8>::new();
         match connection.read_to_end(&mut buffer) {

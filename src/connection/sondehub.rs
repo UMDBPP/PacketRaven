@@ -33,17 +33,14 @@ impl SondeHubQuery {
             parameters.push(format!("datetime={:}", end.to_rfc3339()));
         }
 
-        if let Some(start) = self.start {
-            let last = self.start.map(|start| {
-                if let Some(end) = self.end {
-                    end - start
-                } else {
-                    chrono::Local::now() - start
-                }
-            });
-            if let Some(last) = last {
-                parameters.push(format!("last={:}", last.num_seconds()));
+        if let Some(last) = self.start.map(|start| {
+            if let Some(end) = self.end {
+                end - start
+            } else {
+                chrono::Local::now() - start
             }
+        }) {
+            parameters.push(format!("last={:}", last.num_seconds()));
         }
 
         let mut urls = vec![];
@@ -91,15 +88,21 @@ impl SondeHubQuery {
                     // deserialize JSON into struct
                     let locations: Vec<SondeHubLocation> = match response.json() {
                         Ok(object) => object,
-                        Err(error) => panic!("{:?} - {:?}", error, url),
+                        Err(error) => {
+                            return Err(crate::connection::ConnectionError::ApiError {
+                                message: format!("{:?}", error),
+                                url: url.to_owned(),
+                            });
+                        }
                     };
                     for location in locations {
                         balloon_locations.push(location.to_balloon_location());
                     }
                 }
-                _ => {
+                other => {
                     return Err(crate::connection::ConnectionError::ApiError {
-                        message: format!("API error: {:}", &url),
+                        message: other.to_string(),
+                        url: url.to_owned(),
                     });
                 }
             }
@@ -145,18 +148,14 @@ struct SondeHubLocation {
 }
 impl SondeHubLocation {
     pub fn to_balloon_location(&self) -> crate::location::BalloonLocation {
-        let aprs_packet = if let Some(frame) = &self.raw {
-            Some(
-                match aprs_parser::AprsPacket::decode_textual(frame.as_bytes()) {
-                    Ok(packet) => packet,
-                    Err(error) => {
-                        panic!("{:?}; {:?}", error, frame);
-                    }
-                },
-            )
-        } else {
-            None
-        };
+        let aprs_packet = self.raw.as_ref().map(|frame| {
+            match aprs_parser::AprsPacket::decode_textual(frame.as_bytes()) {
+                Ok(packet) => packet,
+                Err(error) => {
+                    panic!("{:?}; {:?}", error, frame);
+                }
+            }
+        });
         let time = self.datetime.to_owned();
 
         crate::location::BalloonLocation {
@@ -215,12 +214,8 @@ mod tests {
         "#;
         let response: SondeHubLocation = serde_json::from_str(data).unwrap();
 
-        match response {
-            SondeHubLocation { lon, .. } => {
-                assert_eq!(lon, -68.30413186813188);
-            }
-            _ => panic!(),
-        }
+        let SondeHubLocation { lon, .. } = response;
+        assert_eq!(lon, -68.30413186813188);
     }
 
     #[test]
@@ -264,11 +259,12 @@ mod tests {
         ]
         "#;
         let response: Vec<SondeHubLocation> = serde_json::from_str(data).unwrap();
+
+        assert!(!response.is_empty());
     }
 
     #[test]
     fn test_api_nonexistent_callsign() {
-        let api_key = String::from("123456.abcdefghijklmno");
         let callsigns = vec![String::from("nonexistent")];
 
         let mut connection = SondeHubQuery::new(callsigns, None, None);

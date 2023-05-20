@@ -31,9 +31,15 @@ pub mod optional_local_datetime_string {
         let value: Option<String> = Option::deserialize(deserializer)?;
         if let Some(value) = value {
             return Ok(Some(
-                chrono::Local
-                    .datetime_from_str(&value, FORMAT)
-                    .map_err(serde::de::Error::custom)?,
+                match chrono::Local.datetime_from_str(&value, FORMAT) {
+                    Ok(datetime) => datetime,
+                    Err(_) => chrono::NaiveDate::parse_from_str(&value, "%Y-%m-%d")
+                        .map_err(serde::de::Error::custom)?
+                        .and_hms_opt(0, 0, 0)
+                        .unwrap()
+                        .and_local_timezone(chrono::Local)
+                        .unwrap(),
+                },
             ));
         }
 
@@ -63,9 +69,16 @@ pub mod utc_datetime_string {
         D: serde::Deserializer<'de>,
     {
         let value: String = String::deserialize(deserializer)?;
-        chrono::Utc
-            .datetime_from_str(&value, FORMAT)
-            .map_err(serde::de::Error::custom)
+        Ok(match chrono::Utc.datetime_from_str(&value, FORMAT) {
+            Ok(datetime) => datetime,
+            Err(_) => chrono::NaiveDate::parse_from_str(&value, "%Y-%m-%d")
+                .map_err(serde::de::Error::custom)?
+                .and_hms_opt(0, 0, 0)
+                .unwrap()
+                .and_local_timezone(chrono::Local)
+                .unwrap()
+                .with_timezone(&chrono::Utc),
+        })
     }
 }
 
@@ -91,9 +104,15 @@ pub mod local_datetime_string {
         D: serde::Deserializer<'de>,
     {
         let value: String = String::deserialize(deserializer)?;
-        chrono::Local
-            .datetime_from_str(&value, FORMAT)
-            .map_err(serde::de::Error::custom)
+        Ok(match chrono::Local.datetime_from_str(&value, FORMAT) {
+            Ok(datetime) => datetime,
+            Err(_) => chrono::NaiveDate::parse_from_str(&value, "%Y-%m-%d")
+                .map_err(serde::de::Error::custom)?
+                .and_hms_opt(0, 0, 0)
+                .unwrap()
+                .and_local_timezone(chrono::Local)
+                .unwrap(),
+        })
     }
 }
 

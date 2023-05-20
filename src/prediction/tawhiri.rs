@@ -209,7 +209,7 @@ impl crate::location::track::BalloonTrack {
         profile: &super::FlightProfile,
     ) -> crate::location::track::LocationTrack {
         let query = crate::prediction::tawhiri::TawhiriQuery::new(
-            &self.locations.last().unwrap(),
+            self.locations.last().unwrap(),
             profile,
             None,
             None,
@@ -394,9 +394,7 @@ mod tests {
             stages.push(stage.stage);
         }
 
-        for stage in [String::from("descent")] {
-            assert!(stages.contains(&stage));
-        }
+        assert!(stages.contains(&"descent".to_string()));
         assert!(!prediction.is_empty());
     }
 

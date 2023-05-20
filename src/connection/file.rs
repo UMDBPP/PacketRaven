@@ -35,6 +35,7 @@ fn read_lines(
                 }
                 Err(error) => {
                     return Err(crate::connection::ConnectionError::FailedToEstablish {
+                        connection: "file".to_string(),
                         message: error.to_string(),
                     });
                 }

@@ -4,7 +4,7 @@ pub mod prediction;
 pub mod text;
 
 fn default_name() -> String {
-    String::from("packetraven_flight")
+    String::from("unnamed_flight")
 }
 
 #[derive(serde::Deserialize)]

@@ -46,7 +46,7 @@ impl Connection {
 
 custom_error::custom_error! {pub ConnectionError
     TooFrequent { connection: String, seconds: i64 } = "retrieval request exceeded request frequency set for {connection} ({seconds} s)",
-    ApiError { message: String } = "{message}",
-    FailedToEstablish { message: String } = "failed to establish connection; {message}",
+    ApiError { message: String, url: String } = "API error parsing {url} - {message}",
+    FailedToEstablish { connection: String, message: String } = "failed to establish {connection} connection; {message}",
     Passthrough { message: String } = "{message}"
 }
