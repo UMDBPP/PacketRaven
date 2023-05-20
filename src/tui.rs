@@ -672,25 +672,29 @@ fn draw<B: ratatui::backend::Backend>(frame: &mut ratatui::Frame<B>, app: &Packe
             frame.render_widget(track_info, track_info_areas[1]);
         }
 
+        let with_altitude: Vec<&crate::location::BalloonLocation> = track
+            .locations
+            .iter()
+            .filter(|location| location.altitude.is_some())
+            .collect();
+        let start_time = with_altitude.first().unwrap().time;
+        let end_time = with_altitude.last().unwrap().time;
+        let altitudes: Vec<f64> = with_altitude
+            .iter()
+            .map(|location| location.altitude.unwrap())
+            .collect();
+        let min_altitude = altitudes.iter().min_by(|a, b| a.total_cmp(b)).unwrap();
+        let max_altitude = altitudes.iter().max_by(|a, b| a.total_cmp(b)).unwrap();
+
         let mut landing_estimate = vec![];
         if let Some(estimated_time_to_ground) = track.estimated_time_to_ground() {
             let landing_time = last_location.time + estimated_time_to_ground;
             let time_to_ground_from_now = landing_time - chrono::Local::now();
-            let mut altitudes = vec![];
-
-            for location in &track.locations {
-                if let Some(altitude) = location.altitude {
-                    altitudes.push(altitude)
-                }
-            }
 
             landing_estimate.extend([
                 ratatui::text::Spans::from(vec![
                     ratatui::text::Span::styled("max altitude: ", bold_style),
-                    ratatui::text::Span::raw(format!(
-                        "{:.2} m",
-                        altitudes.iter().max_by(|a, b| a.total_cmp(b)).unwrap(),
-                    )),
+                    ratatui::text::Span::raw(format!("{:.2} m", max_altitude)),
                 ]),
                 ratatui::text::Spans::from(vec![
                     ratatui::text::Span::styled("est. time to landing: ", bold_style),
@@ -744,8 +748,139 @@ fn draw<B: ratatui::backend::Backend>(frame: &mut ratatui::Frame<B>, app: &Packe
         );
         frame.render_widget(landing_estimate, track_info_areas[2]);
 
+        let mut datasets = vec![];
+
+        let x_range = [0.0, (end_time - start_time).num_seconds() as f64];
+        let y_range = [min_altitude.to_owned(), max_altitude.to_owned()];
+
+        let data = altitudes_dataset(&track.locations);
+        datasets.push(
+            ratatui::widgets::Dataset::default()
+                .marker(ratatui::symbols::Marker::Dot)
+                .style(ratatui::style::Style::default().fg(ratatui::style::Color::Cyan))
+                .data(&data)
+                .name(track.name.to_owned())
+                .graph_type(ratatui::widgets::GraphType::Scatter),
+        );
+
+        let data;
+        if let Some(prediction) = &track.prediction {
+            data = altitudes_dataset(prediction);
+            datasets.push(
+                ratatui::widgets::Dataset::default()
+                    .marker(ratatui::symbols::Marker::Dot)
+                    .style(ratatui::style::Style::default().fg(ratatui::style::Color::Cyan))
+                    .data(&data)
+                    .name(format!("{:} prediction", track.name))
+                    .graph_type(ratatui::widgets::GraphType::Line),
+            );
+        }
+
+        let chart = ratatui::widgets::Chart::new(datasets)
+            .block(
+                ratatui::widgets::Block::default().title(ratatui::text::Span::styled(
+                    "altitude / time",
+                    ratatui::style::Style::default()
+                        .fg(ratatui::style::Color::Cyan)
+                        .add_modifier(ratatui::style::Modifier::BOLD),
+                )),
+            )
+            .x_axis(
+                ratatui::widgets::Axis::default()
+                    .style(ratatui::style::Style::default().fg(ratatui::style::Color::Gray))
+                    .labels(vec![
+                        ratatui::text::Span::styled(
+                            start_time.format("%H:%M").to_string(),
+                            ratatui::style::Style::default()
+                                .add_modifier(ratatui::style::Modifier::BOLD),
+                        ),
+                        ratatui::text::Span::raw(
+                            (start_time + ((end_time - start_time) / 4))
+                                .format("%H:%M")
+                                .to_string(),
+                        ),
+                        ratatui::text::Span::raw(
+                            (start_time + ((end_time - start_time) / 2))
+                                .format("%H:%M")
+                                .to_string(),
+                        ),
+                        ratatui::text::Span::raw(
+                            (start_time + ((end_time - start_time) * 3 / 4))
+                                .format("%H:%M")
+                                .to_string(),
+                        ),
+                        ratatui::text::Span::styled(
+                            end_time.format("%H:%M").to_string(),
+                            ratatui::style::Style::default()
+                                .add_modifier(ratatui::style::Modifier::BOLD),
+                        ),
+                    ])
+                    .bounds(x_range),
+            )
+            .y_axis(
+                ratatui::widgets::Axis::default()
+                    .style(ratatui::style::Style::default().fg(ratatui::style::Color::Gray))
+                    .labels(vec![
+                        ratatui::text::Span::styled(
+                            format!("{:.0} m", min_altitude),
+                            ratatui::style::Style::default()
+                                .add_modifier(ratatui::style::Modifier::BOLD),
+                        ),
+                        ratatui::text::Span::styled(
+                            format!(
+                                "{:.0} m",
+                                min_altitude + ((max_altitude - min_altitude) / 4.0)
+                            ),
+                            ratatui::style::Style::default(),
+                        ),
+                        ratatui::text::Span::styled(
+                            format!(
+                                "{:.0} m",
+                                min_altitude + ((max_altitude - min_altitude) / 2.0)
+                            ),
+                            ratatui::style::Style::default(),
+                        ),
+                        ratatui::text::Span::styled(
+                            format!(
+                                "{:.0} m",
+                                min_altitude + ((max_altitude - min_altitude) * 3.0 / 4.0)
+                            ),
+                            ratatui::style::Style::default(),
+                        ),
+                        ratatui::text::Span::styled(
+                            format!("{:.0} m", max_altitude),
+                            ratatui::style::Style::default()
+                                .add_modifier(ratatui::style::Modifier::BOLD),
+                        ),
+                    ])
+                    .bounds(y_range),
+            );
+        frame.render_widget(chart, track_areas[1]);
+
         frame.render_widget(block, areas[1]);
     }
+}
+
+fn altitudes_dataset(locations: &[crate::location::BalloonLocation]) -> Vec<(f64, f64)> {
+    let with_altitude: Vec<&crate::location::BalloonLocation> = locations
+        .iter()
+        .filter(|location| location.altitude.is_some())
+        .collect();
+    let start_time = with_altitude.first().unwrap().time;
+    let seconds: Vec<f64> = with_altitude
+        .iter()
+        .map(|location| (location.time - start_time).num_seconds() as f64)
+        .collect();
+    let altitudes: Vec<f64> = with_altitude
+        .iter()
+        .map(|location| location.altitude.unwrap())
+        .collect();
+
+    seconds
+        .iter()
+        .zip(altitudes.iter())
+        .map(|tuple| (tuple.0.to_owned(), tuple.1.to_owned()))
+        .collect::<Vec<(f64, f64)>>()
 }
 
 fn reset_terminal() -> Result<(), Box<dyn std::error::Error>> {
