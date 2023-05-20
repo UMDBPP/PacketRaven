@@ -14,7 +14,7 @@ use clap::Parser;
 
 lazy_static::lazy_static! {
     pub static ref DEFAULT_INTERVAL: chrono::Duration= chrono::Duration::seconds(60);
-    pub static ref DATE_FORMAT: String = "%Y-%m-%d %H:%M:%S".to_string();
+    pub static ref DATETIME_FORMAT: String = "%Y-%m-%d %H:%M:%S".to_string();
     pub static ref LOG_LEVEL: log::Level = log::Level::Info;
 }
 

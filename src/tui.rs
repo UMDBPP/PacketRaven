@@ -45,8 +45,7 @@ fn run_app<B: ratatui::backend::Backend>(
 ) -> std::io::Result<()> {
     let tick_rate = app.configuration.time.interval.to_std().unwrap();
 
-    app.on_tick();
-    let mut last_tick = std::time::Instant::now();
+    let mut last_tick = std::time::Instant::now() - tick_rate;
 
     loop {
         terminal.draw(|frame| draw(frame, &app))?;
@@ -124,7 +123,7 @@ impl<'a> PacketravenApp<'a> {
                 filename.push(format!(
                     "{:}_log_{:}.txt",
                     instance.configuration.name,
-                    program_start_time.to_rfc3339(),
+                    program_start_time.format(&crate::DATETIME_FORMAT),
                 ));
             }
         }
@@ -143,7 +142,7 @@ impl<'a> PacketravenApp<'a> {
                 filename.push(format!(
                     "{:}_{:}.geojson",
                     instance.configuration.name,
-                    program_start_time.to_rfc3339()
+                    program_start_time.format(&crate::DATETIME_FORMAT)
                 ));
             }
         }
@@ -162,24 +161,25 @@ impl<'a> PacketravenApp<'a> {
                 filename.push(format!(
                     "{:}_predict_{:}.geojson",
                     instance.configuration.name,
-                    program_start_time.to_rfc3339()
+                    program_start_time.format(&crate::DATETIME_FORMAT)
                 ));
             }
         }
 
-        let mut filter_message = String::from("retrieving packets");
+        let mut filter_message = "retrieving packets".to_string();
         if let Some(start) = instance.configuration.time.start {
             if let Some(end) = instance.configuration.time.end {
                 filter_message += &format!(
                     " sent between {:} and {:}",
-                    start.to_rfc3339(),
-                    end.to_rfc3339()
+                    start.format(&crate::DATETIME_FORMAT),
+                    end.format(&crate::DATETIME_FORMAT)
                 );
             } else {
-                filter_message += &format!(" sent after {:}", start.to_rfc3339(),);
+                filter_message +=
+                    &format!(" sent after {:}", start.format(&crate::DATETIME_FORMAT),);
             }
         } else if let Some(end) = instance.configuration.time.end {
-            filter_message += &format!(" sent before {:}", end.to_rfc3339());
+            filter_message += &format!(" sent before {:}", end.format(&crate::DATETIME_FORMAT));
         }
 
         if let Some(callsigns) = &instance.configuration.callsigns {
@@ -250,7 +250,7 @@ impl<'a> PacketravenApp<'a> {
                             if port == "auto" {
                                 None
                             } else {
-                                Some(String::from(port))
+                                Some(port.to_string())
                             },
                             Some(9600),
                         );
@@ -323,7 +323,7 @@ impl<'a> PacketravenApp<'a> {
                 }
             } else {
                 instance.log(
-                    String::from("no connections successfully started"),
+                    "no connections successfully started".to_string(),
                     log::Level::Error,
                 );
             }
@@ -344,8 +344,10 @@ impl<'a> PacketravenApp<'a> {
         );
 
         if let Some(plots_configuration) = &instance.configuration.plots {
-            // TODO
-            unimplemented!("plotting is not implemented");
+            instance.log(
+                "plotting is implemented in the TUI".to_string(),
+                log::Level::Debug,
+            );
         }
 
         instance
@@ -741,12 +743,14 @@ fn draw<B: ratatui::backend::Backend>(frame: &mut ratatui::Frame<B>, app: &Packe
             ]);
         }
 
-        let landing_estimate = ratatui::widgets::Paragraph::new(landing_estimate).block(
-            ratatui::widgets::Block::default()
-                .borders(ratatui::widgets::Borders::ALL)
-                .title("Descent"),
-        );
-        frame.render_widget(landing_estimate, track_info_areas[2]);
+        if !landing_estimate.is_empty() {
+            let landing_estimate = ratatui::widgets::Paragraph::new(landing_estimate).block(
+                ratatui::widgets::Block::default()
+                    .borders(ratatui::widgets::Borders::ALL)
+                    .title("Descent"),
+            );
+            frame.render_widget(landing_estimate, track_info_areas[2]);
+        }
 
         let mut datasets = vec![];
 
@@ -756,10 +760,9 @@ fn draw<B: ratatui::backend::Backend>(frame: &mut ratatui::Frame<B>, app: &Packe
         let data = altitudes_dataset(&track.locations);
         datasets.push(
             ratatui::widgets::Dataset::default()
-                .marker(ratatui::symbols::Marker::Dot)
-                .style(ratatui::style::Style::default().fg(ratatui::style::Color::Cyan))
+                .marker(ratatui::symbols::Marker::Braille)
+                .style(ratatui::style::Style::default().fg(ratatui::style::Color::Blue))
                 .data(&data)
-                .name(track.name.to_owned())
                 .graph_type(ratatui::widgets::GraphType::Scatter),
         );
 
@@ -768,13 +771,34 @@ fn draw<B: ratatui::backend::Backend>(frame: &mut ratatui::Frame<B>, app: &Packe
             data = altitudes_dataset(prediction);
             datasets.push(
                 ratatui::widgets::Dataset::default()
-                    .marker(ratatui::symbols::Marker::Dot)
-                    .style(ratatui::style::Style::default().fg(ratatui::style::Color::Cyan))
+                    .marker(ratatui::symbols::Marker::Braille)
+                    .style(ratatui::style::Style::default().fg(ratatui::style::Color::Red))
                     .data(&data)
                     .name(format!("{:} prediction", track.name))
                     .graph_type(ratatui::widgets::GraphType::Line),
             );
         }
+
+        let time_format = if end_time - start_time < chrono::Duration::days(1) {
+            "%H:%M:%S"
+        } else {
+            "%Y-%m-%d %H:%M:%S"
+        };
+        let time_labels = vec![
+            ratatui::text::Span::styled(
+                start_time.format(time_format).to_string(),
+                ratatui::style::Style::default().add_modifier(ratatui::style::Modifier::BOLD),
+            ),
+            ratatui::text::Span::raw(
+                (start_time + ((end_time - start_time) / 2))
+                    .format(time_format)
+                    .to_string(),
+            ),
+            ratatui::text::Span::styled(
+                end_time.format(time_format).to_string(),
+                ratatui::style::Style::default().add_modifier(ratatui::style::Modifier::BOLD),
+            ),
+        ];
 
         let chart = ratatui::widgets::Chart::new(datasets)
             .block(
@@ -788,33 +812,7 @@ fn draw<B: ratatui::backend::Backend>(frame: &mut ratatui::Frame<B>, app: &Packe
             .x_axis(
                 ratatui::widgets::Axis::default()
                     .style(ratatui::style::Style::default().fg(ratatui::style::Color::Gray))
-                    .labels(vec![
-                        ratatui::text::Span::styled(
-                            start_time.format("%H:%M").to_string(),
-                            ratatui::style::Style::default()
-                                .add_modifier(ratatui::style::Modifier::BOLD),
-                        ),
-                        ratatui::text::Span::raw(
-                            (start_time + ((end_time - start_time) / 4))
-                                .format("%H:%M")
-                                .to_string(),
-                        ),
-                        ratatui::text::Span::raw(
-                            (start_time + ((end_time - start_time) / 2))
-                                .format("%H:%M")
-                                .to_string(),
-                        ),
-                        ratatui::text::Span::raw(
-                            (start_time + ((end_time - start_time) * 3 / 4))
-                                .format("%H:%M")
-                                .to_string(),
-                        ),
-                        ratatui::text::Span::styled(
-                            end_time.format("%H:%M").to_string(),
-                            ratatui::style::Style::default()
-                                .add_modifier(ratatui::style::Modifier::BOLD),
-                        ),
-                    ])
+                    .labels(time_labels)
                     .bounds(x_range),
             )
             .y_axis(

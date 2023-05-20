@@ -177,7 +177,10 @@ fn location_update(track: &crate::location::track::BalloonTrack) -> String {
     };
     message += &String::from(")");
 
-    message += &format!("; packet time is {:}", last_location.time.to_rfc3339());
+    message += &format!(
+        "; packet time is {:}",
+        last_location.time.format(&crate::DATETIME_FORMAT)
+    );
 
     if track.locations.len() > 1 {
         message += &format!(
