@@ -1,3 +1,7 @@
+lazy_static::lazy_static! {
+    pub static ref CHARTS: Vec<String> = vec!["altitude / time".to_string(), "ascent rate / time".to_string(), "ground speed / altitude".to_string(), "coordinates (unprojected)".to_string()];
+}
+
 pub fn draw<B: ratatui::backend::Backend>(
     frame: &mut ratatui::Frame<B>,
     app: &super::app::PacketravenApp,
@@ -31,7 +35,7 @@ pub fn draw<B: ratatui::backend::Backend>(
     );
     let tabs = ratatui::widgets::Tabs::new(titles)
         .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL))
-        .select(app.selected_tab_index)
+        .select(app.tab_index)
         .style(ratatui::style::Style::default().fg(ratatui::style::Color::Cyan))
         .highlight_style(
             ratatui::style::Style::default()
@@ -42,7 +46,7 @@ pub fn draw<B: ratatui::backend::Backend>(
 
     let bold_style = ratatui::style::Style::default().add_modifier(ratatui::style::Modifier::BOLD);
 
-    if app.selected_tab_index == 0 {
+    if app.tab_index == 0 {
         let num_messages = app.log_messages.len() as u16;
         let paragraph_height = areas[1].height;
         if num_messages < paragraph_height {
@@ -102,18 +106,7 @@ pub fn draw<B: ratatui::backend::Backend>(
             )
             .split(track_areas[0]);
 
-        let track_chart_areas = ratatui::layout::Layout::default()
-            .direction(ratatui::layout::Direction::Vertical)
-            .constraints(
-                [
-                    ratatui::layout::Constraint::Min(10),
-                    ratatui::layout::Constraint::Min(5),
-                ]
-                .as_ref(),
-            )
-            .split(track_areas[1]);
-
-        let track = &app.tracks[app.selected_tab_index - 1];
+        let track = &app.tracks[app.tab_index - 1];
         let intervals = crate::location::track::intervals(&track.locations);
         let overground_distances = crate::location::track::overground_distances(&track.locations);
         let ground_speeds = crate::location::track::ground_speeds(&track.locations);
@@ -140,19 +133,6 @@ pub fn draw<B: ratatui::backend::Backend>(
                 }
             })
             .collect();
-
-        let ascent_rate_range = [
-            ascent_rates
-                .iter()
-                .min_by(|a, b| a.total_cmp(b))
-                .unwrap()
-                .to_owned(),
-            ascent_rates
-                .iter()
-                .max_by(|a, b| a.total_cmp(b))
-                .unwrap()
-                .to_owned(),
-        ];
 
         let mut total_interval = chrono::Duration::seconds(0);
         for interval in &intervals {
@@ -363,34 +343,30 @@ pub fn draw<B: ratatui::backend::Backend>(
         }
 
         let mut datasets = vec![];
+        let x_range;
+        let y_range;
+        let x_labels;
+        let y_labels;
 
-        let x_range = [0.0, (end_time - start_time).num_seconds() as f64];
+        let time_format = if end_time - start_time < chrono::Duration::days(1) {
+            "%H:%M:%S"
+        } else {
+            &crate::DATETIME_FORMAT
+        };
+        let time_labels = [
+            start_time,
+            start_time + ((end_time - start_time) / 2),
+            end_time,
+        ]
+        .iter()
+        .map(|value| ratatui::text::Span::raw(value.format(time_format).to_string()))
+        .collect();
 
-        let data: Vec<(f64, f64)> = seconds_since_start
-            .iter()
-            .zip(altitudes.iter())
-            .map(|tuple| (tuple.0.to_owned(), tuple.1.to_owned()))
-            .collect();
-        datasets.push(
-            ratatui::widgets::Dataset::default()
-                .marker(ratatui::symbols::Marker::Braille)
-                .style(ratatui::style::Style::default().fg(ratatui::style::Color::Blue))
-                .data(&data)
-                .name("telemetry")
-                .graph_type(ratatui::widgets::GraphType::Scatter),
-        );
-
-        let data: Vec<(f64, f64)>;
-        if let Some(prediction) = &track.prediction {
-            let with_altitude = crate::location::track::with_altitude(prediction);
-            let start_time = with_altitude.first().unwrap().time;
-            let seconds_since_start: Vec<f64> = with_altitude
-                .iter()
-                .map(|location| (location.time - start_time).num_seconds() as f64)
-                .collect();
-            let altitudes = crate::location::track::altitudes(&with_altitude);
-
-            data = seconds_since_start
+        let chart_name = CHARTS.get(app.chart_index).unwrap();
+        let telemetry_data: Vec<(f64, f64)>;
+        let predicted_data: Vec<(f64, f64)>;
+        if chart_name == "altitude / time" {
+            telemetry_data = seconds_since_start
                 .iter()
                 .zip(altitudes.iter())
                 .map(|tuple| (tuple.0.to_owned(), tuple.1.to_owned()))
@@ -398,93 +374,49 @@ pub fn draw<B: ratatui::backend::Backend>(
             datasets.push(
                 ratatui::widgets::Dataset::default()
                     .marker(ratatui::symbols::Marker::Braille)
-                    .style(ratatui::style::Style::default().fg(ratatui::style::Color::Red))
-                    .data(&data)
-                    .name("prediction")
+                    .style(ratatui::style::Style::default().fg(ratatui::style::Color::Blue))
+                    .data(&telemetry_data)
+                    .name("telemetry")
                     .graph_type(ratatui::widgets::GraphType::Scatter),
             );
-        }
 
-        let time_format = if end_time - start_time < chrono::Duration::days(1) {
-            "%H:%M:%S"
-        } else {
-            &crate::DATETIME_FORMAT
-        };
-        let time_labels = vec![
-            ratatui::text::Span::raw(start_time.format(time_format).to_string()),
-            ratatui::text::Span::raw(
-                (start_time + ((end_time - start_time) / 2))
-                    .format(time_format)
-                    .to_string(),
-            ),
-            ratatui::text::Span::raw(end_time.format(time_format).to_string()),
-        ];
+            if let Some(prediction) = &track.prediction {
+                let with_altitude = crate::location::track::with_altitude(prediction);
+                let start_time = with_altitude.first().unwrap().time;
+                let seconds_since_start: Vec<f64> = with_altitude
+                    .iter()
+                    .map(|location| (location.time - start_time).num_seconds() as f64)
+                    .collect();
+                let altitudes = crate::location::track::altitudes(&with_altitude);
 
-        let chart = ratatui::widgets::Chart::new(datasets)
-            .block(
-                ratatui::widgets::Block::default()
-                    .title(ratatui::text::Span::styled(
-                        "altitude",
-                        ratatui::style::Style::default()
-                            .fg(ratatui::style::Color::Cyan)
-                            .add_modifier(ratatui::style::Modifier::BOLD),
-                    ))
-                    .borders(ratatui::widgets::Borders::ALL),
-            )
-            .x_axis(
-                ratatui::widgets::Axis::default()
-                    .style(ratatui::style::Style::default().fg(ratatui::style::Color::DarkGray))
-                    .labels(time_labels.to_owned())
-                    .labels_alignment(ratatui::layout::Alignment::Right)
-                    .bounds(x_range),
-            )
-            .y_axis(
-                ratatui::widgets::Axis::default()
-                    .style(ratatui::style::Style::default().fg(ratatui::style::Color::DarkGray))
-                    .labels(vec![
-                        ratatui::text::Span::raw(format!(
-                            "{:>9}",
-                            format!("{:.0} m", altitude_range[0])
-                        )),
-                        ratatui::text::Span::raw(format!(
-                            "{:>9}",
-                            format!("{:.0} m", altitude_range[1])
-                        )),
-                    ])
-                    .labels_alignment(ratatui::layout::Alignment::Right)
-                    .bounds(altitude_range),
-            );
-        frame.render_widget(chart, track_chart_areas[0]);
+                predicted_data = seconds_since_start
+                    .iter()
+                    .zip(altitudes.iter())
+                    .map(|tuple| (tuple.0.to_owned(), tuple.1.to_owned()))
+                    .collect();
+                datasets.push(
+                    ratatui::widgets::Dataset::default()
+                        .marker(ratatui::symbols::Marker::Braille)
+                        .style(ratatui::style::Style::default().fg(ratatui::style::Color::Red))
+                        .data(&predicted_data)
+                        .name("prediction")
+                        .graph_type(ratatui::widgets::GraphType::Scatter),
+                );
+            }
 
-        let mut datasets = vec![];
-        let data: Vec<(f64, f64)> = seconds_since_start
+            x_range = [0.0, (end_time - start_time).num_seconds() as f64];
+            y_range = altitude_range;
+            x_labels = time_labels;
+            y_labels = [
+                y_range[0],
+                y_range[0] + ((y_range[1] - y_range[0]) / 2.0),
+                y_range[1],
+            ]
             .iter()
-            .zip(ascent_rates.iter())
-            .map(|tuple| (tuple.0.to_owned(), tuple.1.to_owned()))
+            .map(|value| ratatui::text::Span::raw(format!("{:.1} m", value)))
             .collect();
-        datasets.push(
-            ratatui::widgets::Dataset::default()
-                .marker(ratatui::symbols::Marker::Braille)
-                .style(ratatui::style::Style::default().fg(ratatui::style::Color::Blue))
-                .data(&data)
-                .name("telemetry")
-                .graph_type(ratatui::widgets::GraphType::Scatter),
-        );
-        let data: Vec<(f64, f64)>;
-        if let Some(prediction) = &track.prediction {
-            let locations_with_altitude: Vec<&crate::location::BalloonLocation> = prediction
-                .iter()
-                .filter(|location| location.altitude.is_some())
-                .collect();
-            let start_time = locations_with_altitude.first().unwrap().time;
-            let seconds_since_start: Vec<f64> = locations_with_altitude
-                .iter()
-                .map(|location| (location.time - start_time).num_seconds() as f64)
-                .collect();
-
-            let ascent_rates = crate::location::track::ascent_rates(prediction);
-
-            data = seconds_since_start
+        } else if chart_name == "ascent rate / time" {
+            telemetry_data = seconds_since_start
                 .iter()
                 .zip(ascent_rates.iter())
                 .map(|tuple| (tuple.0.to_owned(), tuple.1.to_owned()))
@@ -492,18 +424,205 @@ pub fn draw<B: ratatui::backend::Backend>(
             datasets.push(
                 ratatui::widgets::Dataset::default()
                     .marker(ratatui::symbols::Marker::Braille)
-                    .style(ratatui::style::Style::default().fg(ratatui::style::Color::Red))
-                    .data(&data)
-                    .name("prediction")
+                    .style(ratatui::style::Style::default().fg(ratatui::style::Color::Blue))
+                    .data(&telemetry_data)
+                    .name("telemetry")
                     .graph_type(ratatui::widgets::GraphType::Scatter),
             );
+            if let Some(prediction) = &track.prediction {
+                let locations_with_altitude: Vec<&crate::location::BalloonLocation> = prediction
+                    .iter()
+                    .filter(|location| location.altitude.is_some())
+                    .collect();
+                let start_time = locations_with_altitude.first().unwrap().time;
+                let seconds_since_start: Vec<f64> = locations_with_altitude
+                    .iter()
+                    .map(|location| (location.time - start_time).num_seconds() as f64)
+                    .collect();
+
+                let ascent_rates = crate::location::track::ascent_rates(
+                    &locations_with_altitude
+                        .into_iter()
+                        .map(|location| location.to_owned())
+                        .collect(),
+                );
+
+                predicted_data = seconds_since_start
+                    .iter()
+                    .zip(ascent_rates.iter())
+                    .map(|tuple| (tuple.0.to_owned(), tuple.1.to_owned()))
+                    .collect();
+                datasets.push(
+                    ratatui::widgets::Dataset::default()
+                        .marker(ratatui::symbols::Marker::Braille)
+                        .style(ratatui::style::Style::default().fg(ratatui::style::Color::Red))
+                        .data(&predicted_data)
+                        .name("prediction")
+                        .graph_type(ratatui::widgets::GraphType::Scatter),
+                );
+            }
+
+            x_range = [0.0, (end_time - start_time).num_seconds() as f64];
+            y_range = [
+                ascent_rates
+                    .iter()
+                    .min_by(|a, b| a.total_cmp(b))
+                    .unwrap()
+                    .to_owned(),
+                ascent_rates
+                    .iter()
+                    .max_by(|a, b| a.total_cmp(b))
+                    .unwrap()
+                    .to_owned(),
+            ];
+            x_labels = time_labels;
+            y_labels = [
+                y_range[0],
+                y_range[0] + ((y_range[1] - y_range[0]) / 2.0),
+                y_range[1],
+            ]
+            .iter()
+            .map(|value| ratatui::text::Span::raw(format!("{:.1} m/s", value)))
+            .collect();
+        } else if chart_name == "ground speed / altitude" {
+            telemetry_data = altitudes
+                .iter()
+                .zip(ground_speeds.iter())
+                .map(|tuple| (tuple.0.to_owned(), tuple.1.to_owned()))
+                .collect();
+            datasets.push(
+                ratatui::widgets::Dataset::default()
+                    .marker(ratatui::symbols::Marker::Braille)
+                    .style(ratatui::style::Style::default().fg(ratatui::style::Color::Blue))
+                    .data(&telemetry_data)
+                    .name("telemetry")
+                    .graph_type(ratatui::widgets::GraphType::Scatter),
+            );
+            if let Some(prediction) = &track.prediction {
+                let ground_speeds = crate::location::track::ground_speeds(prediction);
+
+                predicted_data = altitudes
+                    .iter()
+                    .zip(ground_speeds.iter())
+                    .map(|tuple| (tuple.0.to_owned(), tuple.1.to_owned()))
+                    .collect();
+                datasets.push(
+                    ratatui::widgets::Dataset::default()
+                        .marker(ratatui::symbols::Marker::Braille)
+                        .style(ratatui::style::Style::default().fg(ratatui::style::Color::Red))
+                        .data(&predicted_data)
+                        .name("prediction")
+                        .graph_type(ratatui::widgets::GraphType::Scatter),
+                );
+            }
+
+            x_range = altitude_range;
+            y_range = [
+                ground_speeds
+                    .iter()
+                    .min_by(|a, b| a.total_cmp(b))
+                    .unwrap()
+                    .to_owned(),
+                ground_speeds
+                    .iter()
+                    .max_by(|a, b| a.total_cmp(b))
+                    .unwrap()
+                    .to_owned(),
+            ];
+            x_labels = [
+                x_range[0],
+                x_range[0] + ((x_range[1] - x_range[0]) / 2.0),
+                x_range[1],
+            ]
+            .iter()
+            .map(|value| ratatui::text::Span::raw(format!("{:.1} m", value)))
+            .collect();
+            y_labels = [
+                y_range[0],
+                y_range[0] + ((y_range[1] - y_range[0]) / 2.0),
+                y_range[1],
+            ]
+            .iter()
+            .map(|value| ratatui::text::Span::raw(format!("{:.1} m/s", value)))
+            .collect();
+        } else if chart_name == "coordinates (unprojected)" {
+            telemetry_data = track
+                .locations
+                .iter()
+                .map(|location| location.location.x_y())
+                .collect();
+            datasets.push(
+                ratatui::widgets::Dataset::default()
+                    .marker(ratatui::symbols::Marker::Braille)
+                    .style(ratatui::style::Style::default().fg(ratatui::style::Color::Blue))
+                    .data(&telemetry_data)
+                    .name("telemetry")
+                    .graph_type(ratatui::widgets::GraphType::Scatter),
+            );
+            if let Some(prediction) = &track.prediction {
+                predicted_data = prediction
+                    .iter()
+                    .map(|location| location.location.x_y())
+                    .collect();
+                datasets.push(
+                    ratatui::widgets::Dataset::default()
+                        .marker(ratatui::symbols::Marker::Braille)
+                        .style(ratatui::style::Style::default().fg(ratatui::style::Color::Red))
+                        .data(&predicted_data)
+                        .name("prediction")
+                        .graph_type(ratatui::widgets::GraphType::Scatter),
+                );
+            }
+
+            x_range = [
+                telemetry_data
+                    .iter()
+                    .map(|coordinate| coordinate.0)
+                    .min_by(|a, b| a.total_cmp(b))
+                    .unwrap(),
+                telemetry_data
+                    .iter()
+                    .map(|coordinate| coordinate.0)
+                    .max_by(|a, b| a.total_cmp(b))
+                    .unwrap(),
+            ];
+            y_range = [
+                telemetry_data
+                    .iter()
+                    .map(|coordinate| coordinate.1)
+                    .min_by(|a, b| a.total_cmp(b))
+                    .unwrap(),
+                telemetry_data
+                    .iter()
+                    .map(|coordinate| coordinate.1)
+                    .max_by(|a, b| a.total_cmp(b))
+                    .unwrap(),
+            ];
+            x_labels = [
+                x_range[0],
+                x_range[0] + ((x_range[1] - x_range[0]) / 2.0),
+                x_range[1],
+            ]
+            .iter()
+            .map(|value| ratatui::text::Span::raw(format!("{:.1}", value)))
+            .collect();
+            y_labels = [
+                y_range[0],
+                y_range[0] + ((y_range[1] - y_range[0]) / 2.0),
+                y_range[1],
+            ]
+            .iter()
+            .map(|value| ratatui::text::Span::raw(format!("{:.1}", value)))
+            .collect();
+        } else {
+            panic!("unknown chart name {:}", chart_name);
         }
 
         let chart = ratatui::widgets::Chart::new(datasets)
             .block(
                 ratatui::widgets::Block::default()
                     .title(ratatui::text::Span::styled(
-                        "ascent rate",
+                        chart_name,
                         ratatui::style::Style::default()
                             .fg(ratatui::style::Color::Cyan)
                             .add_modifier(ratatui::style::Modifier::BOLD),
@@ -513,27 +632,18 @@ pub fn draw<B: ratatui::backend::Backend>(
             .x_axis(
                 ratatui::widgets::Axis::default()
                     .style(ratatui::style::Style::default().fg(ratatui::style::Color::DarkGray))
-                    .labels(time_labels)
+                    .labels(x_labels)
                     .labels_alignment(ratatui::layout::Alignment::Right)
                     .bounds(x_range),
             )
             .y_axis(
                 ratatui::widgets::Axis::default()
                     .style(ratatui::style::Style::default().fg(ratatui::style::Color::DarkGray))
-                    .labels(vec![
-                        ratatui::text::Span::raw(format!(
-                            "{:>9}",
-                            format!("{:.1} m/s", ascent_rate_range[0])
-                        )),
-                        ratatui::text::Span::raw(format!(
-                            "{:>9}",
-                            format!("{:.1} m/s", ascent_rate_range[1])
-                        )),
-                    ])
+                    .labels(y_labels)
                     .labels_alignment(ratatui::layout::Alignment::Right)
-                    .bounds(ascent_rate_range),
+                    .bounds(y_range),
             );
-        frame.render_widget(chart, track_chart_areas[1]);
+        frame.render_widget(chart, track_areas[1]);
 
         frame.render_widget(block, areas[1]);
     }

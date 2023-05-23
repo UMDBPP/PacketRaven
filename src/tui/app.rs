@@ -2,7 +2,8 @@ pub struct PacketravenApp<'a> {
     pub configuration: &'a crate::configuration::RunConfiguration,
     pub connections: Vec<crate::connection::Connection>,
     pub tracks: Vec<crate::location::track::BalloonTrack>,
-    pub selected_tab_index: usize,
+    pub tab_index: usize,
+    pub chart_index: usize,
     pub log_messages: Vec<(chrono::DateTime<chrono::Local>, String, log::Level)>,
     pub log_messages_scroll_offset: u16,
     pub log_level: log::Level,
@@ -21,7 +22,8 @@ impl<'a> PacketravenApp<'a> {
             configuration,
             connections: vec![],
             tracks: vec![],
-            selected_tab_index: 0,
+            tab_index: 0,
+            chart_index: 0,
             log_messages: vec![],
             log_messages_scroll_offset: 0,
             log_level,
@@ -297,30 +299,38 @@ impl<'a> PacketravenApp<'a> {
     }
 
     pub fn next_tab(&mut self) {
-        if self.selected_tab_index < self.tracks.len() {
-            self.selected_tab_index += 1;
+        if self.tab_index < self.tracks.len() {
+            self.tab_index += 1;
         } else {
-            self.selected_tab_index = 0;
+            self.tab_index = 0;
         }
     }
 
     pub fn previous_tab(&mut self) {
-        if self.selected_tab_index > 0 {
-            self.selected_tab_index -= 1;
+        if self.tab_index > 0 {
+            self.tab_index -= 1;
         } else {
-            self.selected_tab_index = self.tracks.len();
+            self.tab_index = self.tracks.len();
         }
     }
 
     pub fn up(&mut self) {
-        if self.selected_tab_index == 0 && self.log_messages_scroll_offset > 0 {
+        if self.tab_index == 0 && self.log_messages_scroll_offset > 0 {
             self.log_messages_scroll_offset -= 1;
+        } else if self.chart_index < super::draw::CHARTS.len() - 1 {
+            self.chart_index += 1;
+        } else {
+            self.chart_index = 0;
         }
     }
 
     pub fn down(&mut self) {
-        if self.selected_tab_index == 0 {
+        if self.tab_index == 0 {
             self.log_messages_scroll_offset += 1;
+        } else if self.chart_index > 0 {
+            self.chart_index -= 1;
+        } else {
+            self.chart_index = super::draw::CHARTS.len() - 1;
         }
     }
 
