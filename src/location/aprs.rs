@@ -32,7 +32,10 @@ impl crate::location::BalloonLocation {
         let packet = match aprs_parser::AprsPacket::decode_textual(frame) {
             Ok(packet) => packet,
             Err(error) => {
-                panic!("{:?}; {:?}", error, std::str::from_utf8(frame).unwrap());
+                return Err(ParseError::InvalidFrame {
+                    error: error.to_string(),
+                    frame: String::from_utf8(frame.to_vec()).unwrap(),
+                });
             }
         };
         match &packet.data {
@@ -145,11 +148,12 @@ impl crate::location::BalloonLocation {
 }
 
 custom_error::custom_error! {pub ParseError
+    InvalidFrame { error: String, frame: String } = "{error}; \"{frame}\"",
     NoPosition = "packet does not have an encoded position",
     MicEPacketNotCurrent = "packet is not current, and no time was specified",
     InvalidTimestamp  = "could not parse packet timestamp",
-    NoAltitudeInComment{comment:String}="comment does not contain an altitude; {comment}",
-    NoAltitudeInCompressedData="compressed data does not contain altitude",
+    NoAltitudeInComment {comment: String} = "comment does not contain an altitude; {comment}",
+    NoAltitudeInCompressedData = "compressed data does not contain altitude",
 }
 
 #[cfg(test)]

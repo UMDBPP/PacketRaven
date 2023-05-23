@@ -1,11 +1,14 @@
+lazy_static::lazy_static! {
+    static ref DEFAULT_BAUD_RATE: u32 = 9600;
+}
+
 fn first_available_port() -> String {
     // TODO iterate over baud rates
-    let baud_rate = 9600;
     match serialport::available_ports() {
         Ok(available_ports) => {
             for available_port in available_ports {
                 let connection_attempt =
-                    serialport::new(available_port.port_name, baud_rate).open();
+                    serialport::new(available_port.port_name, *DEFAULT_BAUD_RATE).open();
                 match connection_attempt {
                     Ok(successful) => {
                         return successful.name().unwrap();
@@ -28,14 +31,17 @@ pub struct AprsSerial {
     #[serde(default = "first_available_port")]
     pub port: String,
     pub baud_rate: u32,
+    #[serde(skip)]
+    callsigns: Option<Vec<String>>,
 }
 
 impl AprsSerial {
     pub fn new(
         port: Option<String>,
         baud_rate: Option<u32>,
+        callsigns: Option<Vec<String>>,
     ) -> Result<Self, crate::connection::ConnectionError> {
-        let baud = baud_rate.unwrap_or(9600);
+        let baud = baud_rate.unwrap_or(*DEFAULT_BAUD_RATE);
         let mut port_name: Option<String> = None;
         match port {
             Some(name) => {
@@ -46,7 +52,9 @@ impl AprsSerial {
                             connection: "serial".to_string(),
                             message: format!(
                                 "error connecting to port {:?} at baud {:?} - {:}",
-                                &name, baud_rate, error,
+                                &name,
+                                baud_rate.unwrap(),
+                                error,
                             ),
                         });
                     }
@@ -83,6 +91,7 @@ impl AprsSerial {
             Ok(Self {
                 port: port_name,
                 baud_rate: baud,
+                callsigns,
             })
         } else {
             Err(crate::connection::ConnectionError::FailedToEstablish {
@@ -110,9 +119,16 @@ impl AprsSerial {
             Ok(_) => {
                 let mut locations: Vec<crate::location::BalloonLocation> = vec![];
                 for line in buffer.split(|a| a == &b'\n') {
-                    locations.push(
-                        crate::location::BalloonLocation::from_aprs_frame(line, None).unwrap(),
-                    );
+                    let location =
+                        crate::location::BalloonLocation::from_aprs_frame(line, None).unwrap();
+                    if let Some(callsigns) = &self.callsigns {
+                        if let Some(aprs_packet) = &location.data.aprs_packet {
+                            if !callsigns.contains(&aprs_packet.from.call().to_string()) {
+                                continue;
+                            }
+                        }
+                    }
+                    locations.push(location);
                 }
                 Ok(locations)
             }
@@ -123,7 +139,7 @@ impl AprsSerial {
 
 impl Default for AprsSerial {
     fn default() -> Self {
-        match Self::new(None, None) {
+        match Self::new(None, None, None) {
             Ok(connection) => connection,
             Err(error) => panic!("{:}", error),
         }

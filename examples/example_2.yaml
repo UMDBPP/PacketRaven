@@ -12,3 +12,5 @@ time:
 
 packets:
   sondehub: true
+  aprs_fi: 
+    api_key: 123456.abcdefhijklmnop

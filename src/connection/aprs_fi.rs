@@ -48,6 +48,7 @@ impl AprsFiQuery {
 
         let client = reqwest::blocking::Client::builder()
             .user_agent(crate::connection::USER_AGENT.to_owned())
+            .timeout(Some(std::time::Duration::from_secs(3)))
             .build()
             .unwrap();
 
@@ -61,7 +62,12 @@ impl AprsFiQuery {
                 // deserialize JSON into struct
                 let aprs_fi_response: AprsFiResponse = match response.json() {
                     Ok(object) => object,
-                    Err(error) => panic!("{:?} - {:}", error, url),
+                    Err(error) => {
+                        return Err(crate::connection::ConnectionError::ApiError {
+                            message: error.to_string(),
+                            url,
+                        })
+                    }
                 };
                 match aprs_fi_response {
                     AprsFiResponse::Ok { entries, .. } => {

@@ -212,3 +212,31 @@ pub mod optional_u64_string {
         }
     }
 }
+
+pub fn duration_string(duration: chrono::Duration) -> String {
+    let mut parts = vec![];
+
+    if duration.num_weeks() != 0 {
+        parts.push(format!("{:}w", duration.num_weeks().abs()));
+    }
+
+    if duration.num_days() != 0 {
+        parts.push(format!("{:}d", duration.num_days().abs() % 7));
+    }
+
+    if duration.num_hours() != 0 {
+        parts.push(format!("{:}h", duration.num_hours().abs() % 24));
+    }
+
+    if duration.num_minutes() != 0 {
+        parts.push(format!("{:}m", duration.num_minutes().abs() % 60));
+    }
+
+    parts.push(format!("{:}s", duration.num_seconds().abs() % 60));
+
+    if duration < chrono::Duration::zero() {
+        parts.push("ago".to_string());
+    }
+
+    parts.join(" ")
+}

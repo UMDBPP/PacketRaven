@@ -82,10 +82,7 @@ pub fn retrieve_locations(
                         log::Level::Debug,
                     ));
                     packet_track_lengths.insert(name.to_owned(), 0);
-                    tracks.push(crate::location::track::BalloonTrack::new(
-                        name.to_owned(),
-                        None,
-                    ));
+                    tracks.push(crate::location::track::BalloonTrack::new(name.to_owned()));
                     tracks.last_mut().unwrap()
                 }
             };
@@ -160,11 +157,11 @@ fn location_update(track: &crate::location::track::BalloonTrack) -> String {
         }
     };
 
-    let intervals = track.intervals();
-    let overground_distances = track.overground_distances();
-    let ground_speeds = track.ground_speeds();
-    let ascents = track.ascents();
-    let ascent_rates = track.ascent_rates();
+    let intervals = crate::location::track::intervals(&track.locations);
+    let overground_distances = crate::location::track::overground_distances(&track.locations);
+    let ground_speeds = crate::location::track::ground_speeds(&track.locations);
+    let ascents = crate::location::track::ascents(&track.locations);
+    let ascent_rates = crate::location::track::ascent_rates(&track.locations);
 
     let mut message = format!("{: <8} - location #{:}", track.name, track.locations.len());
     message += &format!(
@@ -199,9 +196,9 @@ fn location_update(track: &crate::location::track::BalloonTrack) -> String {
 fn track_update(track: &crate::location::track::BalloonTrack) -> String {
     let last_location = track.locations.last().unwrap();
 
-    let intervals = track.intervals();
-    let ground_speeds = track.ground_speeds();
-    let ascent_rates = track.ascent_rates();
+    let intervals = crate::location::track::intervals(&track.locations);
+    let ground_speeds = crate::location::track::ground_speeds(&track.locations);
+    let ascent_rates = crate::location::track::ascent_rates(&track.locations);
 
     let mut message = format!(
         "{: <8} - {:} packets - current altitude: {:.2} m",
@@ -247,7 +244,7 @@ fn track_update(track: &crate::location::track::BalloonTrack) -> String {
             " - max altitude: {:.2} - estimated landing: {:} s ({:})",
             altitudes.iter().max_by(|a, b| a.total_cmp(b)).unwrap(),
             time_to_ground_from_now.num_seconds(),
-            landing_time.format("%Y-%m-%d %H:%M:%S"),
+            landing_time.format(&crate::DATETIME_FORMAT),
         );
     }
 

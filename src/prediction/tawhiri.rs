@@ -95,6 +95,7 @@ impl TawhiriQuery {
     fn get(&self) -> Result<TawhiriResponse, TawhiriError> {
         let client = reqwest::blocking::Client::builder()
             .user_agent(crate::connection::USER_AGENT.to_owned())
+            .timeout(Some(std::time::Duration::from_secs(5)))
             .build()
             .unwrap();
 
@@ -179,7 +180,7 @@ impl TawhiriQuery {
                 let status = &response.status();
                 // https://tawhiri.readthedocs.io/en/latest/api.html#error-fragment
                 let tawhiri_error: TawhiriErrorResponse = response.json().unwrap();
-                Err(TawhiriError::HttpErrorStatus {
+                Err(TawhiriError::HttpError {
                     status: status.as_u16(),
                     description: tawhiri_error.error.description,
                     url,
@@ -224,10 +225,9 @@ impl crate::location::track::BalloonTrack {
 }
 
 custom_error::custom_error! {pub TawhiriError
-    NoFloatStage ="API did not return a float stage",
-    NoDescentStage = "API did not return a descent stage",
-    HttpErrorStatus { status: u16, description: String, url: String } = "HTTP error {status} - {description} - {url}",
-    Passthrough { message: String } = "{message}",
+    NoFloatStage ="server did not return a float stage",
+    NoDescentStage = "server did not return a descent stage",
+    HttpError { status: u16, description: String, url: String } = "HTTP error {status} - {description} - {url}",
 }
 
 // https://tawhiri.readthedocs.io/en/latest/api.html#responses

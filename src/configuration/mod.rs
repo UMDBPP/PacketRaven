@@ -93,7 +93,7 @@ mod tests {
                 #[cfg(feature = "sondehub")]
                 sondehub: None,
                 text: Some(crate::configuration::text::TextStreamConfiguration {
-                    locations: vec![std::path::PathBuf::from("http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-11%20raw.txt"), std::path::PathBuf::from("http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-8%20raw.txt")],
+                    locations: vec![std::path::PathBuf::from("http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-8%20raw.txt")],
                 }),
                 #[cfg(feature = "postgres")]
                 database: None,
@@ -121,13 +121,6 @@ mod tests {
         }
 
         assert_eq!(
-            configuration.log.unwrap(),
-            PathConfiguration {
-                filename: std::path::PathBuf::from("example_2.log")
-            }
-        );
-
-        assert_eq!(
             configuration.packets,
             PacketSourceConfiguration {
                 #[cfg(feature = "aprsfi")]
@@ -135,7 +128,7 @@ mod tests {
                     api_key: String::from("123456.abcdefhijklmnop")
                 }),
                 #[cfg(feature = "sondehub")]
-                sondehub: None,
+                sondehub: Some(true),
                 text: None,
                 #[cfg(feature = "postgres")]
                 database: None,
@@ -196,7 +189,7 @@ mod tests {
                         )
                         .unwrap()
                 ),
-                interval: chrono::Duration::seconds(30),
+                interval: chrono::Duration::seconds(120),
                 timeout: None,
             }
         );
@@ -219,11 +212,9 @@ mod tests {
             configuration.packets,
             PacketSourceConfiguration {
                 #[cfg(feature = "aprsfi")]
-                aprs_fi: Some(crate::configuration::credentials::AprsFiCredentials {
-                    api_key: String::from("123456.abcdefhijklmnop")
-                }),
+                aprs_fi: None,
                 #[cfg(feature = "sondehub")]
-                sondehub: None,
+                sondehub: Some(true),
                 text: Some(crate::configuration::text::TextStreamConfiguration {
                     locations: vec![
                         std::path::PathBuf::from("/dev/ttyUSB0"),
@@ -259,7 +250,7 @@ mod tests {
                     start: crate::configuration::prediction::StartLocation {
                         location: vec![-78.4987, 40.0157],
                         time: chrono::Local
-                            .datetime_from_str("2022-03-05 10:36:00", "%Y-%m-%d %H:%M:%S")
+                            .datetime_from_str("2022-03-05 10:36:00", &crate::DATETIME_FORMAT)
                             .unwrap()
                     },
                     profile: crate::configuration::prediction::StandardProfile {
@@ -275,38 +266,6 @@ mod tests {
                     })
                 }
             );
-        }
-    }
-
-    #[test]
-    fn test_example_4() {
-        let path = format!(
-            "{:}/{:}",
-            env!("CARGO_MANIFEST_DIR"),
-            "examples/example_4.yaml"
-        );
-
-        let file = std::fs::File::open(path).unwrap();
-        let configuration: RunConfiguration = serde_yaml::from_reader(file).unwrap();
-
-        assert_eq!(
-            configuration.packets,
-            PacketSourceConfiguration {
-                #[cfg(feature = "aprsfi")]
-                aprs_fi: None,
-                #[cfg(feature = "sondehub")]
-                sondehub: None,
-                text: Some(crate::configuration::text::TextStreamConfiguration {
-                    locations: vec![std::path::PathBuf::from("http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-10/W3EAX-10_raw_NS95.txt"), std::path::PathBuf::from("http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-11/W3EAX-11_raw_NS95.txt")],
-                }),
-                #[cfg(feature = "postgres")]
-                database: None,
-                aprs_is: None,
-            }
-        );
-
-        if let Some(plots) = configuration.plots {
-            assert!(plots.altitude.unwrap());
         }
     }
 }

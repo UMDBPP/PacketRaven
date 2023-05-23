@@ -2,6 +2,7 @@ lazy_static::lazy_static! {
     static ref MINIMUM_ACCESS_INTERVAL: chrono::Duration = chrono::Duration::seconds(10);
 }
 
+#[derive(serde::Deserialize, Debug)]
 pub struct SondeHubQuery {
     pub callsigns: Vec<String>,
     pub start: Option<chrono::DateTime<chrono::Local>>,
@@ -76,6 +77,7 @@ impl SondeHubQuery {
 
         let client = reqwest::blocking::Client::builder()
             .user_agent(crate::connection::USER_AGENT.to_owned())
+            .timeout(Some(std::time::Duration::from_secs(5)))
             .build()
             .unwrap();
 
@@ -142,7 +144,7 @@ struct SondeHubLocation {
     snr: Option<f64>,
     frequency: Option<f64>,
     rssi: Option<f64>,
-    uploader_position: Option<[f64; 3]>,
+    uploader_position: Option<String>,
     uploader_antenna: Option<String>,
     uploader_radio: Option<String>,
 }
@@ -185,14 +187,22 @@ mod tests {
             String::from("W3EAX-14"),
         ];
 
-        let mut connection = SondeHubQuery::new(callsigns, None, None);
+        let mut connection = SondeHubQuery::new(
+            callsigns,
+            Some(
+                chrono::DateTime::parse_from_rfc3339("2022-07-31T00:00:00-04:00")
+                    .unwrap()
+                    .with_timezone(&chrono::Local),
+            ),
+            None,
+        );
         let packets = connection.retrieve_locations_from_sondehub().unwrap();
 
         assert!(!packets.is_empty());
     }
 
     #[test]
-    fn test_location() {
+    fn test_aprs() {
         let data = r#"
         {
             "software_name": "SondeHub APRS-IS Gateway",
@@ -216,6 +226,36 @@ mod tests {
 
         let SondeHubLocation { lon, .. } = response;
         assert_eq!(lon, -68.30413186813188);
+    }
+
+    #[test]
+    fn test_lora() {
+        let data = r#"
+        {
+            "software_name": "HAB Base",
+            "software_version": "V1.7.2",
+            "uploader_callsign": "F6ASP-Ttgo",
+            "time_received": "2023-05-23T09:46:10Z",
+            "payload_callsign": "TTGO",
+            "datetime": "2023-05-23T09:46:09Z",
+            "lat": 50.94162,
+            "lon": 1.86,
+            "alt": -29,
+            "frequency": 434.7525,
+            "modulation": "LoRa Mode 2",
+            "snr": 11,
+            "rssi": -94,
+            "uploader_position": "50.9414,1.86021",
+            "raw": "$$TTGO,83,09:46:09,50.94162,1.86000,-29,0,2,0,4149*EE2B",
+            "user-agent": "Amazon CloudFront",
+            "position": "50.94162,1.86",
+            "uploader_alt": 15
+        }
+        "#;
+        let response: SondeHubLocation = serde_json::from_str(data).unwrap();
+
+        let SondeHubLocation { lon, .. } = response;
+        assert_eq!(lon, 1.86);
     }
 
     #[test]
