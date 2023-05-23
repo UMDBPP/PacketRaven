@@ -123,8 +123,20 @@ impl<'a> PacketravenApp<'a> {
                 if let Some(end) = instance.configuration.time.end {
                     aprs_fi_url += &format!("&te={:}", end.timestamp());
                 }
-                instance
-                    .add_log_message(format!("tracking URL: {:}", aprs_fi_url), log::Level::Info);
+                instance.add_log_message(format!("tracking: {:}", aprs_fi_url), log::Level::Info);
+
+                let mut sondehub_url =
+                    format!("https://amateur.sondehub.org/#!q={:}", callsigns.join(","));
+                if let Some(start) = instance.configuration.time.start {
+                    let duration = chrono::Local::now() - start;
+                    sondehub_url += &if duration < chrono::Duration::days(1) {
+                        format!("&qm={:}d", duration.num_days())
+                    } else {
+                        format!("&qm={:}h", duration.num_hours())
+                    }
+                }
+
+                instance.add_log_message(format!("tracking: {:}", sondehub_url), log::Level::Info);
             }
         }
 
