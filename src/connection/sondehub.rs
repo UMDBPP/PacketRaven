@@ -150,14 +150,13 @@ struct SondeHubLocation {
 }
 impl SondeHubLocation {
     pub fn to_balloon_location(&self) -> crate::location::BalloonLocation {
-        let aprs_packet = self.raw.as_ref().map(|frame| {
-            match aprs_parser::AprsPacket::decode_textual(frame.as_bytes()) {
-                Ok(packet) => packet,
-                Err(error) => {
-                    panic!("{:?}; {:?}", error, frame);
-                }
-            }
-        });
+        let aprs_packet = match self.raw.as_ref() {
+            Some(frame) => match aprs_parser::AprsPacket::decode_textual(frame.as_bytes()) {
+                Ok(packet) => Some(packet),
+                Err(_) => None,
+            },
+            None => None,
+        };
         let time = self.datetime.to_owned();
 
         crate::location::BalloonLocation {
