@@ -116,6 +116,7 @@ enum AprsFiResponse {
         description: String,
     },
 }
+
 #[derive(serde::Deserialize)]
 #[serde(untagged)]
 #[serde(rename_all = "snake_case")]
@@ -124,6 +125,7 @@ enum AprsFiEntries {
     Wx(Vec<AprsFiWeather>),
     Msg(Vec<AprsFiMessage>),
 }
+
 #[derive(serde::Deserialize)]
 #[serde(tag = "class")]
 #[serde(rename_all = "lowercase")]
@@ -136,13 +138,14 @@ enum AprsFiLocation {
         #[serde(flatten)]
         location: AprsFiLocationRecord,
         #[serde(flatten)]
-        ais: AisData,
+        ais: crate::location::ais::AisData,
     },
     W {
         #[serde(flatten)]
         location: AprsFiLocationRecord,
     },
 }
+
 impl AprsFiLocation {
     pub fn to_balloon_location(&self) -> crate::location::BalloonLocation {
         match self {
@@ -155,6 +158,7 @@ impl AprsFiLocation {
         }
     }
 }
+
 #[serde_with::serde_as]
 #[derive(serde::Deserialize)]
 struct AprsFiLocationRecord {
@@ -188,6 +192,7 @@ struct AprsFiLocationRecord {
     status: Option<String>,
     status_lasttime: Option<String>,
 }
+
 impl AprsFiLocationRecord {
     pub fn to_balloon_location(&self) -> crate::location::BalloonLocation {
         let from = aprs_parser::Callsign::new(&self.srccall).unwrap();
@@ -238,20 +243,7 @@ impl AprsFiLocationRecord {
         }
     }
 }
-#[serde_with::serde_as]
-#[derive(serde::Deserialize, Clone, Debug, PartialEq)]
-pub struct AisData {
-    mmsi: String,
-    imo: Option<String>,
-    vesselclass: Option<String>,
-    navstat: Option<String>,
-    heading: Option<String>,
-    length: Option<String>,
-    width: Option<String>,
-    draught: Option<String>,
-    ref_front: Option<String>,
-    ref_left: Option<String>,
-}
+
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum AprsFiTargetType {
@@ -261,6 +253,7 @@ enum AprsFiTargetType {
     O,
     W,
 }
+
 #[serde_with::serde_as]
 #[derive(serde::Deserialize)]
 struct AprsFiWeather {

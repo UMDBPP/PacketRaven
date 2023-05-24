@@ -1,3 +1,4 @@
+pub mod ais;
 pub mod aprs;
 pub mod track;
 
@@ -57,7 +58,7 @@ pub struct BalloonLocation {
 #[derive(Clone, Default, Debug, PartialEq)]
 pub struct BalloonData {
     pub aprs_packet: Option<aprs_parser::AprsPacket>,
-    pub ais: Option<crate::connection::aprs_fi::AisData>,
+    pub ais: Option<ais::AisData>,
     pub source: LocationSource,
     pub status: PacketStatus,
 }
@@ -65,7 +66,7 @@ pub struct BalloonData {
 impl BalloonData {
     pub fn new(
         aprs_packet: Option<aprs_parser::AprsPacket>,
-        ais: Option<crate::connection::aprs_fi::AisData>,
+        ais: Option<ais::AisData>,
         source: LocationSource,
     ) -> Self {
         Self {
