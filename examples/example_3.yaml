@@ -27,17 +27,16 @@ log:
   filename: example_3.log
 
 packets:
-  sondehub: true
   text:
-    locations:
-      - /dev/ttyUSB0
-      - ~/packets.txt
+    - port: /dev/ttyUSB0
+      baud_rate: 9600
+    - path: ~/packets.txt
 
 prediction:
   start:
-    location:
-      - -78.4987
-      - 40.0157
+    coord:
+      x: -78.4987
+      y: 40.0157
     time: 2022-03-05 10:36:00
   profile:
     ascent_rate: 6.5

@@ -28,7 +28,7 @@ impl FreefallEstimate {
     }
 }
 
-impl crate::location::BalloonLocation {
+impl crate::location::Location {
     pub fn estimate_freefall(&self) -> FreefallEstimate {
         FreefallEstimate::new(
             self.altitude

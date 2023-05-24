@@ -69,7 +69,7 @@ impl FlightProfile {
 
 pub struct BalloonPredictionQuery {
     pub api_url: String,
-    pub start: crate::location::BalloonLocation,
+    pub start: crate::location::Location,
     pub profile: FlightProfile,
     pub name: Option<String>,
     pub descent_only: bool,
@@ -78,7 +78,7 @@ pub struct BalloonPredictionQuery {
 impl BalloonPredictionQuery {
     pub fn new(
         api_url: String,
-        start: &crate::location::BalloonLocation,
+        start: &crate::location::Location,
         profile: &FlightProfile,
         name: Option<String>,
         descent_only: bool,

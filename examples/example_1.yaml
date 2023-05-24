@@ -4,5 +4,5 @@
 
 packets:
   text:
-    locations:
-      - http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-8%20raw.txt
+    - path: http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-8%20raw.txt
+      callsigns: ["W3EAX-8"]

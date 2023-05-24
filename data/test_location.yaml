@@ -1,0 +1,11 @@
+locations:
+  - time: 2023-05-31
+    coord: 
+      x: -90.1
+      y: 40.1
+  - time: 2023-04-01 12:00:00
+    coord:
+      x: -77
+      y: 39.111
+    altitude: 500.0
+

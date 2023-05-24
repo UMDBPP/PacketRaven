@@ -1,7 +1,4 @@
-pub mod credentials;
-pub mod plots;
 pub mod prediction;
-pub mod text;
 
 fn default_name() -> String {
     String::from("unnamed_flight")
@@ -19,7 +16,6 @@ pub struct RunConfiguration {
     #[serde(default)]
     pub packets: PacketSourceConfiguration,
     pub prediction: Option<crate::configuration::prediction::PredictionConfiguration>,
-    pub plots: Option<crate::configuration::plots::PlotsConfiguration>,
 }
 
 #[derive(serde::Deserialize, PartialEq, Debug)]
@@ -35,24 +31,22 @@ fn default_interval() -> chrono::Duration {
 #[derive(PartialEq, Debug, serde::Deserialize)]
 pub struct TimeConfiguration {
     #[serde(default)]
-    #[serde(with = "crate::parse::optional_local_datetime_string")]
+    #[serde(with = "crate::utilities::optional_local_datetime_string")]
     pub start: Option<chrono::DateTime<chrono::Local>>,
     #[serde(default)]
-    #[serde(with = "crate::parse::optional_local_datetime_string")]
+    #[serde(with = "crate::utilities::optional_local_datetime_string")]
     pub end: Option<chrono::DateTime<chrono::Local>>,
     #[serde(default = "default_interval")]
     #[serde_as(as = "serde_with::DurationSeconds<i64>")]
     pub interval: chrono::Duration,
-    #[serde_as(as = "Option<serde_with::DurationSeconds<i64>>")]
-    pub timeout: Option<chrono::Duration>,
 }
+
 impl Default for TimeConfiguration {
     fn default() -> Self {
         Self {
             start: None,
             end: None,
             interval: chrono::Duration::seconds(10),
-            timeout: None,
         }
     }
 }
@@ -60,13 +54,13 @@ impl Default for TimeConfiguration {
 #[derive(Default, serde::Deserialize, PartialEq, Debug)]
 pub struct PacketSourceConfiguration {
     #[cfg(feature = "aprsfi")]
-    pub aprs_fi: Option<crate::configuration::credentials::AprsFiCredentials>,
+    pub aprs_fi: Option<crate::connection::aprs_fi::AprsFiQuery>,
     #[cfg(feature = "sondehub")]
-    pub sondehub: Option<bool>,
-    pub text: Option<crate::configuration::text::TextStreamConfiguration>,
+    #[serde(default)]
+    pub sondehub: crate::connection::sondehub::SondeHubQuery,
+    pub text: Option<Vec<crate::connection::text::TextStream>>,
     #[cfg(feature = "postgres")]
     pub database: Option<crate::connection::postgres::DatabaseCredentials>,
-    pub aprs_is: Option<crate::configuration::credentials::AprsIsCredentials>,
 }
 
 #[cfg(test)]
@@ -91,13 +85,18 @@ mod tests {
                 #[cfg(feature = "aprsfi")]
                 aprs_fi: None,
                 #[cfg(feature = "sondehub")]
-                sondehub: None,
-                text: Some(crate::configuration::text::TextStreamConfiguration {
-                    locations: vec![std::path::PathBuf::from("http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-8%20raw.txt")],
-                }),
+                sondehub: crate::connection::sondehub::SondeHubQuery::default(),
+                text: Some(
+                    vec![
+                        crate::connection::text::TextStream::AprsTextFile ( 
+                            crate::connection::text::file::AprsTextFile::new(
+                                std::path::PathBuf::from("http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-8%20raw.txt"), None,
+                            ).unwrap()
+                        )
+                    ]
+                ),
                 #[cfg(feature = "postgres")]
                 database: None,
-                aprs_is: None,
             }
         );
     }
@@ -113,10 +112,12 @@ mod tests {
         let file = std::fs::File::open(path).unwrap();
         let configuration: RunConfiguration = serde_yaml::from_reader(file).unwrap();
 
+        let expected_callsigns = vec!["W3EAX-11".to_string(), "W3EAX-12".to_string()];
+
         if let Some(callsigns) = configuration.callsigns {
             assert_eq!(
                 callsigns,
-                vec![String::from("W3EAX-11"), String::from("W3EAX-12")]
+                expected_callsigns
             );
         }
 
@@ -124,15 +125,15 @@ mod tests {
             configuration.packets,
             PacketSourceConfiguration {
                 #[cfg(feature = "aprsfi")]
-                aprs_fi: Some(crate::configuration::credentials::AprsFiCredentials {
-                    api_key: String::from("123456.abcdefhijklmnop")
-                }),
+                aprs_fi: Some(crate::connection::aprs_fi::AprsFiQuery::new( 
+                    String::from("123456.abcdefhijklmnop"),
+                    None,
+                )),
                 #[cfg(feature = "sondehub")]
-                sondehub: Some(true),
+                sondehub: crate::connection::sondehub::SondeHubQuery::default(),
                 text: None,
                 #[cfg(feature = "postgres")]
                 database: None,
-                aprs_is: None,
             }
         );
     }
@@ -148,22 +149,16 @@ mod tests {
         let file = std::fs::File::open(path).unwrap();
         let configuration: RunConfiguration = serde_yaml::from_reader(file).unwrap();
 
+        let expected_callsigns = vec!["W3EAX-9".to_string(), "W3EAX-11".to_string(), "W3EAX-12".to_string()];
+
         assert_eq!(
-            configuration.callsigns.to_owned().unwrap(),
-            vec![
-                String::from("W3EAX-9"),
-                String::from("W3EAX-11"),
-                String::from("W3EAX-12"),
-            ]
+            configuration.callsigns.to_owned().unwrap(), 
+            expected_callsigns
         );
 
         assert_eq!(
-            configuration.callsigns.to_owned().unwrap(),
-            vec![
-                String::from("W3EAX-9"),
-                String::from("W3EAX-11"),
-                String::from("W3EAX-12"),
-            ]
+            configuration.callsigns.to_owned().unwrap(), 
+            expected_callsigns
         );
 
         assert_eq!(
@@ -190,7 +185,6 @@ mod tests {
                         .unwrap()
                 ),
                 interval: chrono::Duration::seconds(120),
-                timeout: None,
             }
         );
 
@@ -208,37 +202,7 @@ mod tests {
             }
         );
 
-        assert_eq!(
-            configuration.packets,
-            PacketSourceConfiguration {
-                #[cfg(feature = "aprsfi")]
-                aprs_fi: None,
-                #[cfg(feature = "sondehub")]
-                sondehub: Some(true),
-                text: Some(crate::configuration::text::TextStreamConfiguration {
-                    locations: vec![
-                        std::path::PathBuf::from("/dev/ttyUSB0"),
-                        std::path::PathBuf::from("~/packets.txt")
-                    ],
-                }),
-                #[cfg(feature = "postgres")]
-                database: Some(crate::connection::postgres::DatabaseCredentials::new(
-                    String::from("localhost"),
-                    Some(5432),
-                    Some(String::from("nearspace")),
-                    String::from("example_3"),
-                    String::from("user1"),
-                    String::from("password1"),
-                    Some(crate::connection::postgres::SshCredentials {
-                        hostname: String::from("bpp.umd.edu:22"),
-                        port: 22,
-                        username: String::from("user2"),
-                        password: String::from("password2"),
-                    })
-                )),
-                aprs_is: None,
-            }
-        );
+        assert!(configuration.packets.text.is_some());
 
         if let Some(crate::configuration::prediction::PredictionConfiguration::Single(prediction)) =
             configuration.prediction
@@ -247,8 +211,9 @@ mod tests {
                 prediction,
                 crate::configuration::prediction::Prediction {
                     name: String::from("prediction"),
-                    start: crate::configuration::prediction::StartLocation {
-                        location: vec![-78.4987, 40.0157],
+                    start: crate::location::Location{
+                        coord: geo::coord! { x: -78.4987, y: 40.0157 },
+                        altitude: None,
                         time: chrono::Local
                             .datetime_from_str("2022-03-05 10:36:00", &crate::DATETIME_FORMAT)
                             .unwrap()

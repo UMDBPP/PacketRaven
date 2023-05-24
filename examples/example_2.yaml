@@ -11,6 +11,5 @@ time:
   end: 2022-03-06 00:00:00
 
 packets:
-  sondehub: true
   aprs_fi: 
     api_key: 123456.abcdefhijklmnop

@@ -19,12 +19,13 @@ impl BalloonTrack {
 
     pub fn push(&mut self, location: crate::location::BalloonLocation) {
         let needs_sorting = match self.locations.last() {
-            Some(current) => current.time > location.time,
+            Some(current) => current.location.time > location.location.time,
             None => false,
         };
         self.locations.push(location);
         if needs_sorting {
-            self.locations.sort_by_key(|location| location.time);
+            self.locations
+                .sort_by_key(|location| location.location.time);
         }
     }
 
@@ -44,7 +45,7 @@ impl BalloonTrack {
             } else {
                 let mut altitudes = vec![];
                 for location in &self.locations {
-                    if let Some(altitude) = location.altitude {
+                    if let Some(altitude) = location.location.altitude {
                         altitudes.push(altitude);
                     }
                 }
@@ -65,7 +66,7 @@ impl BalloonTrack {
 
     pub fn predicted_time_to_ground(&self) -> Option<chrono::Duration> {
         if let Some(prediction) = &self.prediction {
-            Some(prediction.last().unwrap().time - chrono::Local::now())
+            Some(prediction.last().unwrap().location.time - chrono::Local::now())
         } else {
             None
         }
@@ -84,8 +85,8 @@ impl BalloonTrack {
     pub fn falling(&self) -> Option<crate::model::FreefallEstimate> {
         let last_location: &crate::location::BalloonLocation = self.locations.last().unwrap();
 
-        if last_location.altitude.is_some() && self.descending() {
-            let freefall_estimate = last_location.estimate_freefall();
+        if last_location.location.altitude.is_some() && self.descending() {
+            let freefall_estimate = last_location.location.estimate_freefall();
 
             if let Some(last_ascent_rate) = ascent_rates(&self.locations).last() {
                 if (last_ascent_rate - freefall_estimate.ascent_rate)
@@ -122,7 +123,7 @@ impl BalloonTrackAttributes {
 pub fn with_altitude(locations: &Vec<super::BalloonLocation>) -> Vec<super::BalloonLocation> {
     locations
         .into_iter()
-        .filter(|location| location.altitude.is_some())
+        .filter(|location| location.location.altitude.is_some())
         .map(|location| location.to_owned())
         .collect()
 }
@@ -133,7 +134,7 @@ pub fn intervals(locations: &Vec<super::BalloonLocation>) -> Vec<chrono::Duratio
     for index in 0..(locations.len() - 1) {
         let current = locations.get(index).unwrap();
         let next = locations.get(index + 1).unwrap();
-        values.push(next.time - current.time);
+        values.push(next.location.time - current.location.time);
     }
 
     values
@@ -142,7 +143,7 @@ pub fn intervals(locations: &Vec<super::BalloonLocation>) -> Vec<chrono::Duratio
 pub fn altitudes(locations: &Vec<super::BalloonLocation>) -> Vec<f64> {
     locations
         .iter()
-        .filter_map(|locations| locations.altitude)
+        .filter_map(|locations| locations.location.altitude)
         .collect()
 }
 
@@ -160,7 +161,7 @@ pub fn ascents(locations: &Vec<super::BalloonLocation>) -> Vec<f64> {
             }
         };
 
-        values.push(next.altitude.unwrap() - current.altitude.unwrap());
+        values.push(next.location.altitude.unwrap() - current.location.altitude.unwrap());
 
         current = next;
         index += 1;
@@ -195,7 +196,10 @@ pub fn overground_distances(locations: &Vec<super::BalloonLocation>) -> Vec<f64>
             }
         };
 
-        values.push(current.location.geodesic_distance(&next.location));
+        let current_point: geo::Point = current.location.coord.into();
+        let next_point: geo::Point = current.location.coord.into();
+
+        values.push(current_point.geodesic_distance(&next_point));
 
         current = next;
         index += 1;

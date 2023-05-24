@@ -6,7 +6,7 @@ pub struct TawhiriQuery {
 
 impl TawhiriQuery {
     pub fn new(
-        start: &crate::location::BalloonLocation,
+        start: &crate::location::Location,
         profile: &crate::prediction::FlightProfile,
         dataset_time: Option<chrono::DateTime<chrono::Utc>>,
         version: Option<f64>,
@@ -28,9 +28,9 @@ impl TawhiriQuery {
 
     fn url(&self) -> String {
         // CUSF API requires longitude in 0-360 format
-        let mut start_location = self.query.start.location;
-        if start_location.x() < 0.0 {
-            start_location = geo::point!(x: start_location.x() + 360.0, y: start_location.y())
+        let mut start_location = self.query.start.coord;
+        if start_location.x < 0.0 {
+            start_location = geo::coord! { x: start_location.x + 360.0, y: start_location.y }
         }
 
         let burst_altitude = match self.query.descent_only {
@@ -45,8 +45,8 @@ impl TawhiriQuery {
         };
 
         let mut parameters = vec![
-            format!("launch_longitude={:}", start_location.x()),
-            format!("launch_latitude={:}", start_location.y()),
+            format!("launch_longitude={:}", start_location.x),
+            format!("launch_latitude={:}", start_location.y),
             format!("launch_datetime={:}", self.query.start.time.to_rfc3339()),
             format!("ascent_rate={:.2}", self.query.profile.ascent_rate),
             format!("burst_altitude={:.2}", burst_altitude),
@@ -95,7 +95,7 @@ impl TawhiriQuery {
     fn get(&self) -> Result<TawhiriResponse, TawhiriError> {
         let client = reqwest::blocking::Client::builder()
             .user_agent(crate::connection::USER_AGENT.to_owned())
-            .timeout(Some(std::time::Duration::from_secs(5)))
+            .timeout(Some(std::time::Duration::from_secs(10)))
             .build()
             .unwrap();
 
@@ -130,10 +130,10 @@ impl TawhiriQuery {
                                     let float_end_location =
                                         stage.trajectory.last().unwrap().to_balloon_location();
                                     let descent_query = TawhiriQuery::new(
-                                        &float_end_location,
+                                        &float_end_location.location,
                                         &crate::prediction::FlightProfile::new_standard(
                                             10.0,
-                                            float_end_location.altitude.unwrap(),
+                                            float_end_location.location.altitude.unwrap(),
                                             self.query.profile.sea_level_descent_rate,
                                         ),
                                         self.dataset_time,
@@ -212,7 +212,7 @@ impl crate::location::track::BalloonTrack {
         profile: &super::FlightProfile,
     ) -> Result<crate::location::track::LocationTrack, TawhiriError> {
         let query = crate::prediction::tawhiri::TawhiriQuery::new(
-            self.locations.last().unwrap(),
+            &self.locations.last().unwrap().location,
             profile,
             None,
             None,
@@ -238,22 +238,26 @@ struct TawhiriResponse {
     prediction: Vec<TawhiriPrediction>,
     warnings: std::collections::HashMap<String, String>,
 }
+
 #[derive(serde::Deserialize)]
 struct TawhiriErrorResponse {
     error: TawhiriErrorMessage,
     metadata: TawhiriMetadata,
 }
+
 #[derive(serde::Deserialize)]
 struct TawhiriErrorMessage {
     description: String,
     #[serde(rename = "type")]
     _type: String,
 }
+
 #[derive(serde::Deserialize)]
 struct TawhiriMetadata {
     start_datetime: String,
     complete_datetime: String,
 }
+
 #[derive(serde::Deserialize)]
 #[serde(tag = "profile")]
 #[serde(rename_all = "snake_case")]
@@ -281,11 +285,13 @@ enum TawhiriRequest {
         version: f64,
     },
 }
+
 #[derive(serde::Deserialize, Clone)]
 struct TawhiriPrediction {
     stage: String,
     trajectory: Vec<TawhiriLocation>,
 }
+
 #[derive(serde::Deserialize, Clone)]
 struct TawhiriLocation {
     altitude: f64,
@@ -293,6 +299,7 @@ struct TawhiriLocation {
     latitude: f64,
     longitude: f64,
 }
+
 impl TawhiriLocation {
     pub fn to_balloon_location(&self) -> crate::location::BalloonLocation {
         // CUSF API requires longitude in 0-360 format
@@ -302,11 +309,13 @@ impl TawhiriLocation {
         }
 
         crate::location::BalloonLocation {
-            time: chrono::DateTime::parse_from_rfc3339(&self.datetime)
-                .unwrap()
-                .with_timezone(&chrono::Local),
-            location: geo::point!(x: longitude, y: self.latitude),
-            altitude: Some(self.altitude),
+            location: crate::location::Location {
+                time: chrono::DateTime::parse_from_rfc3339(&self.datetime)
+                    .unwrap()
+                    .with_timezone(&chrono::Local),
+                coord: geo::coord! { x: longitude, y: self.latitude },
+                altitude: Some(self.altitude),
+            },
             data: crate::location::BalloonData::new(
                 None,
                 None,
@@ -322,11 +331,10 @@ mod tests {
 
     #[test]
     fn test_ground_prediction() {
-        let start = crate::location::BalloonLocation {
+        let start = crate::location::Location {
             time: chrono::Local::now(),
-            location: geo::point!(x: -77.547824, y: 39.359031),
+            coord: geo::coord! { x: -77.547824, y: 39.359031 },
             altitude: None,
-            data: crate::location::BalloonData::default(),
         };
         let profile = crate::prediction::FlightProfile::new_standard(5.5, 28000.0, 9.0);
 
@@ -350,11 +358,10 @@ mod tests {
 
     #[test]
     fn test_ascending_prediction() {
-        let start = crate::location::BalloonLocation {
+        let start = crate::location::Location {
             time: chrono::Local::now(),
-            location: geo::point!(x: -77.547824, y: 39.359031),
+            coord: geo::coord! { x: -77.547824, y: 39.359031 },
             altitude: Some(2000.0),
-            data: crate::location::BalloonData::default(),
         };
         let profile = crate::prediction::FlightProfile::new_standard(5.5, 28000.0, 9.0);
 
@@ -378,11 +385,10 @@ mod tests {
 
     #[test]
     fn test_descending_prediction() {
-        let start = crate::location::BalloonLocation {
+        let start = crate::location::Location {
             time: chrono::Local::now(),
-            location: geo::point!(x: -77.547824, y: 39.359031),
+            coord: geo::coord! { x: -77.547824, y: 39.359031 },
             altitude: Some(26888.0),
-            data: crate::location::BalloonData::default(),
         };
         let profile =
             crate::prediction::FlightProfile::new_standard(5.5, start.altitude.unwrap(), 9.0);
@@ -405,11 +411,10 @@ mod tests {
 
     #[test]
     fn test_float_prediction() {
-        let start = crate::location::BalloonLocation {
+        let start = crate::location::Location {
             time: chrono::Local::now(),
-            location: geo::point!(x: -77.547824, y: 39.359031),
+            coord: geo::coord! { x: -77.547824, y: 39.359031 },
             altitude: None,
-            data: crate::location::BalloonData::default(),
         };
         let profile = crate::prediction::FlightProfile::new(
             5.5,

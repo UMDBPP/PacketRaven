@@ -1,12 +1,10 @@
 #[cfg(feature = "aprsfi")]
 pub mod aprs_fi;
-pub mod file;
 #[cfg(feature = "postgres")]
 pub mod postgres;
-#[cfg(feature = "serial")]
-pub mod serial;
 #[cfg(feature = "sondehub")]
 pub mod sondehub;
+pub mod text;
 
 lazy_static::lazy_static! {
     pub static ref USER_AGENT: String = format!("packetraven/{:}", env!("CARGO_PKG_VERSION"));
@@ -17,12 +15,12 @@ pub enum Connection {
     AprsFi(aprs_fi::AprsFiQuery),
     #[cfg(feature = "sondehub")]
     SondeHub(sondehub::SondeHubQuery),
-    AprsTextFile(file::AprsTextFile),
-    GeoJsonFile(file::GeoJsonFile),
+    AprsTextFile(text::file::AprsTextFile),
+    GeoJsonFile(text::file::GeoJsonFile),
     #[cfg(feature = "postgres")]
     PacketDatabase(postgres::PacketDatabase),
     #[cfg(feature = "serial")]
-    AprsSerial(serial::AprsSerial),
+    AprsSerial(text::serial::AprsSerial),
 }
 
 impl Connection {
@@ -45,6 +43,7 @@ impl Connection {
 }
 
 custom_error::custom_error! {pub ConnectionError
+    ReadFailure { connection: String, message: String } = "failed to read from {connection} - {message}",
     TooFrequent { connection: String, seconds: i64 } = "retrieval request exceeded request frequency set for {connection} ({seconds} s)",
     ApiError { message: String, url: String } = "API error parsing {url} - {message}",
     FailedToEstablish { connection: String, message: String } = "failed to establish connection to {connection}; {message}",

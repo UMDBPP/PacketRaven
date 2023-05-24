@@ -2,62 +2,71 @@ lazy_static::lazy_static! {
     static ref MINIMUM_ACCESS_INTERVAL: chrono::Duration = chrono::Duration::seconds(10);
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Deserialize, Debug, PartialEq, Clone, Default)]
 pub struct SondeHubQuery {
-    pub callsigns: Vec<String>,
     pub start: Option<chrono::DateTime<chrono::Local>>,
     pub end: Option<chrono::DateTime<chrono::Local>>,
+    #[serde(skip)]
+    pub callsigns: Option<Vec<String>>,
+    #[serde(skip)]
     last_access: Option<chrono::DateTime<chrono::Local>>,
 }
 
 // https://generator.swagger.io/?url=https://raw.githubusercontent.com/projecthorus/sondehub-infra/main/swagger.yaml#/amateur/get_amateur_telemetry__payload_callsign_
 impl SondeHubQuery {
     pub fn new(
-        callsigns: Vec<String>,
         start: Option<chrono::DateTime<chrono::Local>>,
         end: Option<chrono::DateTime<chrono::Local>>,
+        callsigns: Option<&Vec<String>>,
     ) -> Self {
         Self {
-            callsigns,
             start,
             end,
+            callsigns: callsigns.map(|callsigns| callsigns.to_owned()),
             last_access: None,
         }
     }
 }
 
 impl SondeHubQuery {
-    fn urls(&self) -> Vec<String> {
-        let mut parameters = vec![];
+    fn urls(&self) -> Result<Vec<String>, crate::connection::ConnectionError> {
+        if let Some(callsigns) = &self.callsigns {
+            let mut parameters = vec![];
 
-        if let Some(end) = self.end {
-            parameters.push(format!("datetime={:}", end.to_rfc3339()));
-        }
-
-        if let Some(last) = self.start.map(|start| {
             if let Some(end) = self.end {
-                end - start
-            } else {
-                chrono::Local::now() - start
-            }
-        }) {
-            parameters.push(format!("last={:}", last.num_seconds()));
-        }
-
-        let mut urls = vec![];
-        for callsign in &self.callsigns {
-            let mut url = format!(
-                "https://api.v2.sondehub.org/amateur/telemetry/{:}",
-                callsign
-            );
-            if !parameters.is_empty() {
-                url += &format!("?{:}", parameters.join("&"));
+                parameters.push(format!("datetime={:}", end.to_rfc3339()));
             }
 
-            urls.push(url);
-        }
+            if let Some(last) = self.start.map(|start| {
+                if let Some(end) = self.end {
+                    end - start
+                } else {
+                    chrono::Local::now() - start
+                }
+            }) {
+                parameters.push(format!("last={:}", last.num_seconds()));
+            }
 
-        urls
+            let mut urls = vec![];
+            for callsign in callsigns {
+                let mut url = format!(
+                    "https://api.v2.sondehub.org/amateur/telemetry/{:}",
+                    callsign
+                );
+                if !parameters.is_empty() {
+                    url += &format!("?{:}", parameters.join("&"));
+                }
+
+                urls.push(url);
+            }
+
+            Ok(urls)
+        } else {
+            Err(crate::connection::ConnectionError::FailedToEstablish {
+                connection: "APRS.fi".to_string(),
+                message: "SondeHub requires a list of callsigns".to_string(),
+            })
+        }
     }
 
     pub fn retrieve_locations_from_sondehub(
@@ -77,11 +86,11 @@ impl SondeHubQuery {
 
         let client = reqwest::blocking::Client::builder()
             .user_agent(crate::connection::USER_AGENT.to_owned())
-            .timeout(Some(std::time::Duration::from_secs(5)))
+            .timeout(Some(std::time::Duration::from_secs(10)))
             .build()
             .unwrap();
 
-        let urls = self.urls();
+        let urls = self.urls()?;
         for url in &urls {
             let response = client.get(url).send().expect(url);
 
@@ -160,9 +169,11 @@ impl SondeHubLocation {
         let time = self.datetime.to_owned();
 
         crate::location::BalloonLocation {
-            time: time.with_timezone(&chrono::Local),
-            location: geo::point!(x: self.lon, y: self.lat),
-            altitude: Some(self.alt),
+            location: crate::location::Location {
+                time: time.with_timezone(&chrono::Local),
+                coord: geo::coord! { x: self.lon, y: self.lat },
+                altitude: Some(self.alt),
+            },
             data: crate::location::BalloonData::new(
                 aprs_packet,
                 None,
@@ -187,13 +198,13 @@ mod tests {
         ];
 
         let mut connection = SondeHubQuery::new(
-            callsigns,
             Some(
                 chrono::DateTime::parse_from_rfc3339("2022-07-31T00:00:00-04:00")
                     .unwrap()
                     .with_timezone(&chrono::Local),
             ),
             None,
+            Some(&callsigns),
         );
         let packets = connection.retrieve_locations_from_sondehub().unwrap();
 
@@ -306,7 +317,7 @@ mod tests {
     fn test_api_nonexistent_callsign() {
         let callsigns = vec![String::from("nonexistent")];
 
-        let mut connection = SondeHubQuery::new(callsigns, None, None);
+        let mut connection = SondeHubQuery::new(None, None, Some(&callsigns));
         let packets = connection.retrieve_locations_from_sondehub().unwrap();
 
         assert!(packets.is_empty());

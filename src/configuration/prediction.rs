@@ -16,7 +16,7 @@ fn default_name() -> String {
 
 #[derive(serde::Deserialize, PartialEq, Debug)]
 pub struct Prediction {
-    pub start: StartLocation,
+    pub start: crate::location::Location,
     pub profile: StandardProfile,
     pub float: Option<FloatProfile>,
     pub output: Option<crate::configuration::PathConfiguration>,
@@ -44,35 +44,13 @@ impl Prediction {
         };
 
         crate::prediction::tawhiri::TawhiriQuery::new(
-            &self.start.to_balloon_location(),
+            &self.start,
             &profile,
             None,
             None,
             None,
             false,
         )
-    }
-}
-
-#[derive(serde::Deserialize, PartialEq, Debug)]
-pub struct StartLocation {
-    pub location: Vec<f64>,
-    #[serde(with = "crate::parse::local_datetime_string")]
-    pub time: chrono::DateTime<chrono::Local>,
-}
-
-impl StartLocation {
-    pub fn to_balloon_location(&self) -> crate::location::BalloonLocation {
-        crate::location::BalloonLocation {
-            time: self.time.with_timezone(&chrono::Local),
-            location: geo::point!(x: self.location[0], y: self.location[1]),
-            altitude: if self.location.len() > 2 {
-                Some(self.location[2])
-            } else {
-                None
-            },
-            data: crate::location::BalloonData::default(),
-        }
     }
 }
 

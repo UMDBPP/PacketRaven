@@ -130,7 +130,7 @@ impl PacketDatabase {
         {
             locations.push(crate::location::BalloonLocation {
                 time: chrono::Local.timestamp_opt(row.get(0), 0).unwrap(),
-                location: geo::point!(x: row.get(1), y: row.get(2)),
+                location: geo::coord! { x: row.get(1), y: row.get(2) },
                 altitude: Some(row.get(3)),
                 data: crate::location::BalloonData::new(
                     None,

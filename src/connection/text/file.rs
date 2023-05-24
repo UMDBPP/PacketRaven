@@ -2,15 +2,20 @@ use std::io::prelude::BufRead;
 
 use chrono::{TimeZone, Timelike};
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Deserialize, Debug, PartialEq, Clone)]
 pub struct AprsTextFile {
     pub path: std::path::PathBuf,
+    #[serde(skip)]
+    pub callsigns: Option<Vec<String>>,
 }
 
 impl AprsTextFile {
-    pub fn new(path: std::path::PathBuf) -> Result<Self, crate::connection::ConnectionError> {
+    pub fn new(
+        path: std::path::PathBuf,
+        callsigns: Option<Vec<String>>,
+    ) -> Result<Self, crate::connection::ConnectionError> {
         if path.exists() || url::Url::parse(path.to_str().unwrap()).is_ok() {
-            Ok(Self { path })
+            Ok(Self { path, callsigns })
         } else {
             Err(crate::connection::ConnectionError::FailedToEstablish {
                 connection: path.to_str().unwrap().to_string(),
@@ -107,13 +112,27 @@ impl AprsTextFile {
                     .unwrap();
             }
 
+            if let Some(callsigns) = &self.callsigns {
+                if !callsigns.contains(
+                    &location
+                        .data
+                        .aprs_packet
+                        .to_owned()
+                        .unwrap()
+                        .from
+                        .call()
+                        .to_string(),
+                ) {
+                    continue;
+                }
+            }
             locations.push(location);
         }
         Ok(locations)
     }
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Deserialize, Debug, PartialEq, Clone)]
 pub struct GeoJsonFile {
     pub path: std::path::PathBuf,
 }
@@ -203,9 +222,11 @@ impl GeoJsonFile {
                         };
 
                         let location = crate::location::BalloonLocation {
-                            time,
-                            location: geo::point!(x: point[0], y: point[1]),
-                            altitude,
+                            location: crate::location::Location {
+                                time,
+                                coord: geo::coord! { x: point[0], y: point[1] },
+                                altitude,
+                            },
                             data: crate::location::BalloonData::new(
                                 aprs_packet,
                                 None,
@@ -232,7 +253,7 @@ mod tests {
             "http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-11%20raw.txt",
         );
 
-        let connection = AprsTextFile::new(url).unwrap();
+        let connection = AprsTextFile::new(url, None).unwrap();
 
         let packets = connection.read_aprs_from_file().unwrap();
 
@@ -247,7 +268,7 @@ mod tests {
             "data/aprs/W3EAX-8_raw_NS-111.txt"
         ));
 
-        let connection = AprsTextFile::new(path).unwrap();
+        let connection = AprsTextFile::new(path, None).unwrap();
 
         let packets = connection.read_aprs_from_file().unwrap();
 

@@ -2,10 +2,10 @@ mod configuration;
 mod connection;
 mod location;
 mod model;
-mod parse;
 mod prediction;
 mod retrieve;
 mod tui;
+mod utilities;
 
 use clap::Parser;
 
@@ -20,18 +20,10 @@ lazy_static::lazy_static! {
 struct Cli {
     // configuration file to read
     configuration_filename: std::path::PathBuf,
-
-    // start graphical interface
-    #[arg(long, default_value_t = false)]
-    gui: bool,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let arguments = Cli::parse();
-    if arguments.gui {
-        // TODO
-        unimplemented!("GUI not implemented");
-    }
 
     let configuration_file = std::fs::File::open(arguments.configuration_filename).unwrap();
     let configuration: crate::configuration::RunConfiguration =

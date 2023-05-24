@@ -36,12 +36,12 @@ pub fn retrieve_locations(
         let mut track: &mut crate::location::track::BalloonTrack;
         for mut packet in new_packets {
             if let Some(start_time) = start_time {
-                if packet.time < start_time {
+                if packet.location.time < start_time {
                     messages.push((
                         chrono::Local::now(),
                         format!(
                             "skipped packet from before {:?}; {:?}",
-                            start_time, packet.time
+                            start_time, packet.location.time
                         ),
                         log::Level::Debug,
                     ));
@@ -51,12 +51,12 @@ pub fn retrieve_locations(
             }
 
             if let Some(end_time) = end_time {
-                if packet.time > end_time {
+                if packet.location.time > end_time {
                     messages.push((
                         chrono::Local::now(),
                         format!(
                             "skipped packet from after {:?}; {:?}",
-                            end_time, packet.time
+                            end_time, packet.location.time
                         ),
                         log::Level::Debug,
                     ));
@@ -90,7 +90,7 @@ pub fn retrieve_locations(
             for existing_packet in &track.locations {
                 if packet.eq(existing_packet) {
                     packet.data.status = crate::location::PacketStatus::Duplicate;
-                } else if packet.time_lag_of(existing_packet) {
+                } else if packet.location.time_lag_of(&existing_packet.location) {
                     packet.data.status = crate::location::PacketStatus::TimeLaggedDuplicate;
                 }
             }
@@ -166,17 +166,16 @@ fn location_update(track: &crate::location::track::BalloonTrack) -> String {
     let mut message = format!("{: <8} - location #{:}", track.name, track.locations.len());
     message += &format!(
         " ({:.2}, {:.2}",
-        &last_location.location.x(),
-        &last_location.location.y(),
+        &last_location.location.coord.x, &last_location.location.coord.y,
     );
-    if let Some(altitude) = last_location.altitude {
+    if let Some(altitude) = last_location.location.altitude {
         message += &format!(", {:.2} m", altitude,)
     };
     message += &String::from(")");
 
     message += &format!(
         "; packet time is {:}",
-        last_location.time.format(&crate::DATETIME_FORMAT)
+        last_location.location.time.format(&crate::DATETIME_FORMAT)
     );
 
     if track.locations.len() > 1 {
@@ -204,7 +203,7 @@ fn track_update(track: &crate::location::track::BalloonTrack) -> String {
         "{: <8} - {:} packets - current altitude: {:.2} m",
         track.name,
         track.locations.len(),
-        last_location.altitude.unwrap()
+        last_location.location.altitude.unwrap()
     );
 
     if track.locations.len() > 1 {
@@ -232,11 +231,11 @@ fn track_update(track: &crate::location::track::BalloonTrack) -> String {
     }
 
     if let Some(time_to_ground) = track.estimated_time_to_ground() {
-        let landing_time = last_location.time + time_to_ground;
+        let landing_time = last_location.location.time + time_to_ground;
         let time_to_ground_from_now = landing_time - chrono::Local::now();
         let mut altitudes = vec![];
         for location in &track.locations {
-            if let Some(altitude) = location.altitude {
+            if let Some(altitude) = location.location.altitude {
                 altitudes.push(altitude)
             }
         }

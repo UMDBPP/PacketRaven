@@ -143,152 +143,112 @@ impl<'a> PacketravenApp<'a> {
         }
 
         if let Some(text_configuration) = &instance.configuration.packets.text {
-            for location in &text_configuration.locations {
-                let connection: crate::connection::Connection;
-                if let Some(extension) = location.extension() {
-                    if ["json", "geojson"]
-                        .contains(&location.extension().unwrap().to_str().unwrap())
-                    {
-                        connection = crate::connection::Connection::GeoJsonFile(
-                            crate::connection::file::GeoJsonFile::new(location.to_owned()),
-                        );
+            for text_stream in text_configuration {
+                let connection = match text_stream {
+                    crate::connection::text::TextStream::GeoJsonFile(geojson_file) => {
                         instance.add_log_message(
-                            format!("reading GeoJSON file {:}", &location.to_str().unwrap()),
+                            format!(
+                                "reading GeoJSON file: {:}",
+                                geojson_file.path.to_str().unwrap()
+                            ),
                             log::Level::Info,
                         );
-                    } else if ["txt", "log"].contains(&extension.to_str().unwrap()) {
-                        connection = crate::connection::Connection::AprsTextFile(
-                            match crate::connection::file::AprsTextFile::new(location.to_owned()) {
-                                Ok(file) => file,
-                                Err(_) => continue,
-                            },
-                        );
-                        instance.add_log_message(
-                            format!("reading text file {:}", &location.to_str().unwrap()),
-                            log::Level::Info,
-                        );
-                    } else {
-                        instance.add_log_message(
-                            format!("File type not implemented: {:}", location.to_str().unwrap()),
-                            log::Level::Error,
-                        );
-                        continue;
+
+                        crate::connection::Connection::GeoJsonFile(geojson_file.to_owned())
                     }
-                } else {
+                    crate::connection::text::TextStream::AprsTextFile(aprs_text_file) => {
+                        instance.add_log_message(
+                            format!(
+                                "reading text file of APRS frames: {:}",
+                                aprs_text_file.path.to_str().unwrap()
+                            ),
+                            log::Level::Info,
+                        );
+                        crate::connection::Connection::AprsTextFile(aprs_text_file.to_owned())
+                    }
                     #[cfg(feature = "serial")]
-                    {
-                        let port = location.to_str().unwrap();
-
-                        let serial = crate::connection::serial::AprsSerial::new(
-                            if port == "auto" {
-                                None
-                            } else {
-                                Some(port.to_string())
-                            },
-                            Some(9600),
-                            configuration.callsigns.to_owned(),
+                    crate::connection::text::TextStream::AprsSerial(aprs_serial) => {
+                        instance.add_log_message(
+                            format!(
+                                "opened port {:}@{:}",
+                                aprs_serial.port, aprs_serial.baud_rate
+                            ),
+                            log::Level::Info,
                         );
-
-                        match serial {
-                            Ok(serial) => {
-                                connection = crate::connection::Connection::AprsSerial(serial);
-                                instance.add_log_message(
-                                    format!("opened port {:}", &location.to_str().unwrap()),
-                                    log::Level::Info,
-                                );
-                            }
-                            Err(error) => {
-                                instance.add_log_message(error.to_string(), log::Level::Error);
-                                continue;
-                            }
-                        }
+                        crate::connection::Connection::AprsSerial(aprs_serial.to_owned())
                     }
-                }
+                };
                 instance.connections.push(connection);
             }
         }
 
         #[cfg(feature = "aprsfi")]
-        if let Some(aprs_fi_configuration) = &instance.configuration.packets.aprs_fi {
-            let connection = crate::connection::Connection::AprsFi(
-                crate::connection::aprs_fi::AprsFiQuery::new(
-                    instance
-                        .configuration
-                        .callsigns
-                        .to_owned()
-                        .expect("APRS.fi requires a list of callsigns"),
-                    aprs_fi_configuration.api_key.to_owned(),
-                ),
-            );
-            instance.connections.push(connection);
-        }
-
-        #[cfg(feature = "sondehub")]
-        if let Some(sondehub_enabled) = instance.configuration.packets.sondehub {
-            if sondehub_enabled {
-                let connection = crate::connection::Connection::SondeHub(
-                    crate::connection::sondehub::SondeHubQuery::new(
-                        instance
-                            .configuration
-                            .callsigns
-                            .to_owned()
-                            .expect("SondeHub requires a list of callsigns"),
-                        instance.configuration.time.start,
-                        instance.configuration.time.end,
-                    ),
-                );
-                instance.connections.push(connection);
-            }
-        }
-
-        #[cfg(feature = "postgres")]
-        if let Some(database_configuration) = instance.configuration.packets.database {
-            let connection = crate::connection::Connection::PacketDatabase(
-                crate::connection::postgres::PacketDatabase::from_credentials(
-                    &database_configuration,
-                ),
-            );
-            connections.push(connection);
-        }
-
-        if instance.connections.is_empty() {
-            if let Some(output) = &instance.configuration.output {
-                if output.filename.exists() {
-                    let connection = crate::connection::Connection::GeoJsonFile(
-                        crate::connection::file::GeoJsonFile {
-                            path: output.filename.to_owned(),
-                        },
-                    );
-                    instance.connections.push(connection);
-                }
+        if let Some(aprs_fi_query) = &instance.configuration.packets.aprs_fi {
+            if let Some(callsigns) = &instance.configuration.callsigns {
+                let mut connection = aprs_fi_query.to_owned();
+                connection.callsigns = Some(callsigns.to_owned());
+                instance
+                    .connections
+                    .push(crate::connection::Connection::AprsFi(connection));
             } else {
                 instance.add_log_message(
-                    "no connections successfully started".to_string(),
+                    "APRS.fi requires a list of callsigns".to_string(),
                     log::Level::Error,
                 );
             }
         }
 
-        if let Some(aprs_is_configuration) = &configuration.packets.aprs_is {
-            // TODO
-            unimplemented!("APRS IS connection is not implemented");
+        #[cfg(feature = "sondehub")]
+        if instance.configuration.callsigns.is_none() {
+            instance.add_log_message(
+                "SondeHub requires a list of callsigns".to_string(),
+                log::Level::Error,
+            );
+        } else {
+            instance
+                .connections
+                .push(crate::connection::Connection::SondeHub(
+                    instance.configuration.packets.sondehub.to_owned(),
+                ));
+        }
+
+        #[cfg(feature = "postgres")]
+        if let Some(database) = instance.configuration.packets.database {
+            connections.push(crate::connection::Connection::PacketDatabase(database));
+        }
+
+        if instance.connections.is_empty() {
+            if let Some(output) = &instance.configuration.output {
+                if output.filename.exists() {
+                    instance
+                        .connections
+                        .push(crate::connection::Connection::GeoJsonFile(
+                            crate::connection::text::file::GeoJsonFile {
+                                path: output.filename.to_owned(),
+                            },
+                        ));
+                    instance.add_log_message(
+                        format!(
+                            "reading existing output file: {:}",
+                            output.filename.to_str().unwrap()
+                        ),
+                        log::Level::Debug,
+                    );
+                }
+            } else {
+                instance
+                    .add_log_message("no connections were started".to_string(), log::Level::Error);
+            }
         }
 
         instance.add_log_message(
             format!(
                 "listening for packets every {:} from {:} source(s)",
-                crate::parse::duration_string(instance.configuration.time.interval),
+                crate::utilities::duration_string(instance.configuration.time.interval),
                 instance.connections.len(),
             ),
             log::Level::Info,
         );
-
-        if instance.configuration.plots.is_some() {
-            instance.add_log_message(
-                "plotting is implemented in the TUI".to_string(),
-                log::Level::Debug,
-            );
-        }
 
         instance
     }
@@ -383,11 +343,14 @@ impl<'a> PacketravenApp<'a> {
                                 format!(
                                     "{:} - predicted landing location: ({:.2}, {:.2}) at {:} ({:})",
                                     track.name,
-                                    landing_location.location.x(),
-                                    landing_location.location.y(),
-                                    landing_location.time.format(&crate::DATETIME_FORMAT),
-                                    crate::parse::duration_string(
-                                        chrono::Local::now() - landing_location.time
+                                    landing_location.location.coord.x,
+                                    landing_location.location.coord.y,
+                                    landing_location
+                                        .location
+                                        .time
+                                        .format(&crate::DATETIME_FORMAT),
+                                    crate::utilities::duration_string(
+                                        chrono::Local::now() - landing_location.location.time
                                     )
                                 ),
                                 log::Level::Info,

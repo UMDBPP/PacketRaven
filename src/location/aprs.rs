@@ -22,7 +22,7 @@ impl crate::location::BalloonLocation {
     pub fn from_aprs_frame(
         frame: &[u8],
         time: Option<chrono::DateTime<chrono::Local>>,
-    ) -> Result<crate::location::BalloonLocation, ParseError> {
+    ) -> Result<Self, ParseError> {
         let packet_time: chrono::DateTime<chrono::Local>;
         let longitude: f64;
         let latitude: f64;
@@ -134,10 +134,12 @@ impl crate::location::BalloonLocation {
             }
         }
 
-        Ok(crate::location::BalloonLocation {
-            time: packet_time,
-            location: geo::point!(x: longitude, y: latitude),
-            altitude: Some(altitude),
+        Ok(Self {
+            location: super::Location {
+                time: packet_time,
+                coord: geo::coord! { x: longitude, y: latitude },
+                altitude: Some(altitude),
+            },
             data: crate::location::BalloonData::new(
                 Some(packet),
                 None,
@@ -170,12 +172,12 @@ mod tests {
             crate::location::BalloonLocation::from_aprs_frame(frame, Some(packet_time_override))
                 .unwrap();
 
-        assert_eq!(packet.time, packet_time_override);
+        assert_eq!(packet.location.time, packet_time_override);
         assert_eq!(
-            packet.location,
-            geo::point!(x: -77.48778502911327, y: 39.64903419561805)
+            packet.location.coord,
+            geo::coord! { x: -77.48778502911327, y: 39.64903419561805 }
         );
-        assert_eq!(packet.altitude.unwrap(), 16341.5472);
+        assert_eq!(packet.location.altitude.unwrap(), 16341.5472);
 
         match packet.data.aprs_packet {
             Some(aprs_parser::AprsPacket { from, via, data }) => {
@@ -230,12 +232,12 @@ mod tests {
             crate::location::BalloonLocation::from_aprs_frame(frame, Some(packet_time_override))
                 .unwrap();
 
-        assert_eq!(packet.time, packet_time_override);
+        assert_eq!(packet.location.time, packet_time_override);
         assert_eq!(
-            packet.location,
-            geo::point!(x: -77.90921071284187, y: 39.7003564996876)
+            packet.location.coord,
+            geo::coord! { x: -77.90921071284187, y: 39.7003564996876 }
         );
-        assert_eq!(packet.altitude.unwrap(), 8201.8632);
+        assert_eq!(packet.location.altitude.unwrap(), 8201.8632);
 
         match packet.data.aprs_packet {
             Some(aprs_parser::AprsPacket { from, via, data }) => {
@@ -284,7 +286,7 @@ mod tests {
         let packet = crate::location::BalloonLocation::from_aprs_frame(frame, None).unwrap();
 
         assert_eq!(
-            packet.time,
+            packet.location.time,
             chrono::DateTime::<chrono::Local>::from_utc(
                 chrono::Utc::now()
                     .date_naive()
@@ -294,10 +296,10 @@ mod tests {
             )
         );
         assert_eq!(
-            packet.location,
-            geo:: point!(x: 12.408166666666666, y: 48.36016666666667)
+            packet.location.coord,
+            geo::coord! { x: 12.408166666666666, y: 48.36016666666667 }
         );
-        assert_eq!(packet.altitude.unwrap(), 930.8592000000001);
+        assert_eq!(packet.location.altitude.unwrap(), 930.8592000000001);
 
         match packet.data.aprs_packet {
             Some(aprs_parser::AprsPacket { from, via, data }) => {
