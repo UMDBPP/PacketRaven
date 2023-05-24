@@ -6,27 +6,21 @@ on:
       - published
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  release:
+    runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - target: x86_64-pc-windows-gnu
-          - target: x86_64-unknown-linux-musl
-          - target: x86_64-apple-darwin
+        runs-on: [ "ubuntu-latest", "macos-latest", "windows-latest" ]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
+          profile: minimal
           toolchain: stable
-      - uses: actions-rs/cargo@v1
+          override: true
+      - run: cargo build --release
+      - uses: actions/upload-artifact@v2
         with:
-          command: build
-          args: --release --all-features
-      - uses: actions/upload-artifact@v3
-        with:
-          name: executable-${{ matrix.target }}
-          path: |
-            ${{ steps.compile.outputs.BUILT_ARCHIVE }}
-            ${{ steps.compile.outputs.BUILT_CHECKSUM }}
+          name: packetraven
+          path: target/release/packetraven
