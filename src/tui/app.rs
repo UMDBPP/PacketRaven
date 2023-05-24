@@ -276,8 +276,8 @@ impl<'a> PacketravenApp<'a> {
 
         instance.add_log_message(
             format!(
-                "listening for packets every {:} s from {:} source(s)",
-                instance.configuration.time.interval.num_seconds(),
+                "listening for packets every {:} from {:} source(s)",
+                crate::parse::duration_string(instance.configuration.time.interval),
                 instance.connections.len(),
             ),
             log::Level::Info,
@@ -371,23 +371,27 @@ impl<'a> PacketravenApp<'a> {
         )) = &self.configuration.prediction
         {
             for track in tracks {
-                if self.should_not_retrieve.contains(&track.name) {
+                if !self.should_not_retrieve.contains(&track.name) {
                     let prediction = track
                         .prediction(&prediction_configuration.to_tawhiri_query().query.profile);
 
                     match prediction {
                         Ok(prediction) => {
-                            if track.descending() {
-                                let landing_location = prediction.last().unwrap().location.x_y();
-                                self.log_messages.push((
-                                    chrono::Local::now(),
-                                    format!(
-                                        "{:} - predicted landing location: ({:.2}, {:.2})",
-                                        track.name, landing_location.0, landing_location.1,
-                                    ),
-                                    log::Level::Info,
-                                ));
-                            }
+                            let landing_location = prediction.last().unwrap();
+                            messages.push((
+                                chrono::Local::now(),
+                                format!(
+                                    "{:} - predicted landing location: ({:.2}, {:.2}) at {:} ({:})",
+                                    track.name,
+                                    landing_location.location.x(),
+                                    landing_location.location.y(),
+                                    landing_location.time.format(&crate::DATETIME_FORMAT),
+                                    crate::parse::duration_string(
+                                        chrono::Local::now() - landing_location.time
+                                    )
+                                ),
+                                log::Level::Info,
+                            ));
                             track.prediction = Some(prediction);
                         }
                         Err(error) => {

@@ -216,23 +216,31 @@ pub mod optional_u64_string {
 pub fn duration_string(duration: chrono::Duration) -> String {
     let mut parts = vec![];
 
-    if duration.num_weeks() != 0 {
-        parts.push(format!("{:}w", duration.num_weeks().abs()));
+    let weeks = duration.num_weeks().abs();
+    let days = duration.num_days().abs() % 7;
+    let hours = duration.num_hours().abs() % 24;
+    let minutes = duration.num_minutes().abs() % 60;
+    let seconds = duration.num_seconds().abs() % 60;
+
+    if weeks > 0 {
+        parts.push(format!("{:}w", weeks));
     }
 
-    if duration.num_days() != 0 {
-        parts.push(format!("{:}d", duration.num_days().abs() % 7));
+    if days > 0 {
+        parts.push(format!("{:}d", days));
     }
 
-    if duration.num_hours() != 0 {
-        parts.push(format!("{:}h", duration.num_hours().abs() % 24));
+    if hours > 0 {
+        parts.push(format!("{:}h", hours));
     }
 
-    if duration.num_minutes() != 0 {
-        parts.push(format!("{:}m", duration.num_minutes().abs() % 60));
+    if minutes > 0 {
+        parts.push(format!("{:}m", minutes));
     }
 
-    parts.push(format!("{:}s", duration.num_seconds().abs() % 60));
+    if seconds > 0 {
+        parts.push(format!("{:}s", seconds));
+    }
 
     if duration < chrono::Duration::zero() {
         parts.push("ago".to_string());

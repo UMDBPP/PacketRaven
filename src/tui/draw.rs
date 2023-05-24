@@ -307,23 +307,22 @@ pub fn draw<B: ratatui::backend::Backend>(
             let predicted_landing_location = prediction.last().unwrap();
             landing_estimate.extend([
                 ratatui::text::Spans::from(vec![
-                    ratatui::text::Span::styled("pred. time to landing: ", bold_style),
-                    ratatui::text::Span::raw(format!(
-                        "{:} s",
-                        (predicted_landing_location.time - chrono::Local::now()).num_seconds()
+                    ratatui::text::Span::styled("pred. landing: ", bold_style),
+                    ratatui::text::Span::raw(crate::parse::duration_string(
+                        predicted_landing_location.time - chrono::Local::now(),
                     )),
                 ]),
                 ratatui::text::Spans::from(vec![
-                    ratatui::text::Span::styled("pred. landing time: ", bold_style),
-                    ratatui::text::Span::raw(format!(
-                        "{:}",
+                    ratatui::text::Span::styled("pred. landing: ", bold_style),
+                    ratatui::text::Span::raw(
                         predicted_landing_location
                             .time
-                            .format(&crate::DATETIME_FORMAT),
-                    )),
+                            .format(&crate::DATETIME_FORMAT)
+                            .to_string(),
+                    ),
                 ]),
                 ratatui::text::Spans::from(vec![
-                    ratatui::text::Span::styled("pred. landing location: ", bold_style),
+                    ratatui::text::Span::styled("pred. landing: ", bold_style),
                     ratatui::text::Span::raw(format!(
                         "({:.2}, {:.2})",
                         predicted_landing_location.location.x(),
