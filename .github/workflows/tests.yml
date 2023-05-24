@@ -15,20 +15,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
-    name: ${{ matrix.command }} (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        command: [ check, build ]
-        os: [ ubuntu-latest ]
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - run: cargo ${{ matrix.command }}
   test:
     name: test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
