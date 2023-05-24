@@ -22,12 +22,11 @@ jobs:
       matrix:
         runs-on: [ ubuntu-latest, macos-latest, windows-latest ]
     env:
-      CARGO_INCREMENTAL: 0
-      RUSTFLAGS: -Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort
-      RUSTDOCFLAGS: -Cpanic=abort
       APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
       APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
     steps:
+      - if: runner.os == 'Linux'
+        run: sudo apt install pkg-config
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
@@ -89,4 +88,23 @@ jobs:
           toolchain: nightly
           override: true
       - run: cargo test --features postgres
+  build:
+    needs: [ test ]
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: [ "ubuntu-latest", "macos-latest", "windows-latest" ]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - run: cargo build --release
+      - uses: actions/upload-artifact@v2
+        with:
+          name: packetraven
+          path: target/release/packetraven
 
