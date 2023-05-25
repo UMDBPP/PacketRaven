@@ -10,7 +10,7 @@ lazy_static::lazy_static! {
     pub static ref USER_AGENT: String = format!("packetraven/{:}", env!("CARGO_PKG_VERSION"));
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Connection {
     #[cfg(feature = "aprsfi")]
     AprsFi(aprs_fi::AprsFiQuery),

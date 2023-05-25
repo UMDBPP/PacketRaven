@@ -8,11 +8,6 @@ pub fn retrieve_locations(
     let mut messages = Vec::<(chrono::DateTime<chrono::Local>, String, log::Level)>::new();
 
     for connection in connections {
-        messages.push((
-            chrono::Local::now(),
-            format!("retrieving packets from {:?}", connection),
-            log::Level::Debug,
-        ));
         match connection.retrieve_packets() {
             Ok(packets) => new_packets.extend(packets),
             Err(error) => {
@@ -121,7 +116,7 @@ pub fn retrieve_locations(
             messages.push((
                 chrono::Local::now(),
                 format!(
-                    "skipped {:} time-lagged duplicate packet",
+                    "skipped {:} time-lagged duplicate packet(s)",
                     num_time_lagged_duplicates
                 ),
                 log::Level::Debug,

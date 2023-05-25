@@ -179,10 +179,6 @@ impl PacketravenApp {
                                 connection.callsigns = Some(callsigns.to_owned());
                             }
                         }
-                        instance.add_log_message(
-                            format!("opened port {:}@{:}", connection.port, connection.baud_rate),
-                            log::Level::Info,
-                        );
                         crate::connection::Connection::AprsSerial(connection)
                     }
                 };
@@ -263,12 +259,16 @@ impl PacketravenApp {
 
         instance.add_log_message(
             format!(
-                "listening for packets every {:} from {:} source(s)",
+                "listening for packets every {:} from {:} connection(s)",
                 crate::utilities::duration_string(&instance.configuration.time.interval),
                 instance.connections.len(),
             ),
             log::Level::Info,
         );
+
+        for connection in instance.connections.to_owned() {
+            instance.add_log_message(format!("{:?}", connection), log::Level::Debug);
+        }
 
         instance
     }
