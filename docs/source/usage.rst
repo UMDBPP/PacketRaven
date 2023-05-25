@@ -11,6 +11,10 @@ For instance, to listen to a TNC-equipped radio plugged into USB COM3, poll http
 .. literalinclude:: ../../examples/example_2.yaml
    :language: yaml
 
+.. note::
+   To define a connection with no options (i.e. the ``sondehub`` entry, above), use YAML's empty flow mapping syntax ``sondehub: {}``.
+   The empty block mapping syntax (``sondehub: ``) is equivalent to ``sondehub: null`` and will not initiate the connection.
+
 or to watch text file(s) for new lines containing raw APRS frames:
 
 .. literalinclude:: ../../examples/example_1.yaml

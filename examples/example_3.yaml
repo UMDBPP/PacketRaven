@@ -25,6 +25,7 @@ log:
   filename: example_3.log
 
 packets:
+  sondehub: {}
   text:
     - port: /dev/ttyUSB0
       baud_rate: 9600
