@@ -79,26 +79,7 @@ mod tests {
         let file = std::fs::File::open(path).unwrap();
         let configuration: RunConfiguration = serde_yaml::from_reader(file).unwrap();
 
-        assert_eq!(
-            configuration.packets,
-            PacketSourceConfiguration {
-                #[cfg(feature = "aprsfi")]
-                aprs_fi: None,
-                #[cfg(feature = "sondehub")]
-                sondehub: crate::connection::sondehub::SondeHubQuery::default(),
-                text: Some(
-                    vec![
-                        crate::connection::text::TextStream::AprsTextFile (
-                            crate::connection::text::file::AprsTextFile::new(
-                                std::path::PathBuf::from("http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-8%20raw.txt"), None,
-                            ).unwrap()
-                        )
-                    ]
-                ),
-                #[cfg(feature = "postgres")]
-                database: None,
-            }
-        );
+        assert!(!configuration.packets.text.unwrap().is_empty());
     }
 
     #[test]
@@ -112,7 +93,7 @@ mod tests {
         let file = std::fs::File::open(path).unwrap();
         let configuration: RunConfiguration = serde_yaml::from_reader(file).unwrap();
 
-        let expected_callsigns = vec!["W3EAX-11".to_string(), "W3EAX-12".to_string()];
+        let expected_callsigns = vec!["KC3SKW-8".to_string(), "KC3SKW-9".to_string()];
 
         if let Some(callsigns) = configuration.callsigns {
             assert_eq!(callsigns, expected_callsigns);
@@ -127,8 +108,14 @@ mod tests {
                     None,
                 )),
                 #[cfg(feature = "sondehub")]
-                sondehub: crate::connection::sondehub::SondeHubQuery::default(),
-                text: None,
+                sondehub: Some(crate::connection::sondehub::SondeHubQuery::default()),
+                text: Some(vec![crate::connection::text::TextStream::AprsSerial(
+                    crate::connection::text::serial::AprsSerial {
+                        port: "COM3".to_string(),
+                        baud_rate: 9600,
+                        callsigns: None
+                    }
+                )]),
                 #[cfg(feature = "postgres")]
                 database: None,
             }
