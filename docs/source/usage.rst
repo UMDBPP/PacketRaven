@@ -1,15 +1,7 @@
-Usage
-=====
+Usage Examples
+==============
 
-``packetraven`` is run from the command line. It accepts a single argument, which is the filename of the configuration file.
-
-.. code-block:: shell
-
-    packetraven examples/example_1.yaml
-
-.. program-output:: packetraven -h
-
-The program can read a YAML configuration file in the following format:
+``packetraven`` can read a YAML configuration file in the following format:
 
 .. literalinclude:: ../../examples/example_3.yaml
    :language: yaml

@@ -1,7 +1,7 @@
 [package]
 name = "packetraven"
 authors = ["Zach Burnett <zachary.r.burnett@gmail.com>"]
-description = "track high-altitude balloon telemetry with a TNC-equipped radio connected via USB, or from https://amateur.sondehub.org / https://aprs.fi"
+description = "track high-altitude balloon telemetry with a TNC-equipped radio connected via USB, or from https://amateur.sondehub.org or https://aprs.fi"
 version = "3.0.0"
 edition = "2021"
 readme = "README.md"

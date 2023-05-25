@@ -1,19 +1,19 @@
-# PacketRaven
+# `packetraven`
 
 [![tests](https://github.com/UMDBPP/PacketRaven/workflows/tests/badge.svg)](https://github.com/UMDBPP/PacketRaven/actions?query=workflow%3Atests)
-[![build](https://github.com/UMDBPP/PacketRaven/workflows/build/badge.svg)](https://github.com/UMDBPP/PacketRaven/actions?query=workflow%3Abuild)
+[![docs](https://readthedocs.org/projects/packetraven/badge/?version=latest)](https://packetraven.readthedocs.io/en/latest/?badge=latest)
 [![license](https://img.shields.io/github/license/umdbpp/packetraven)](https://opensource.org/licenses/MIT)
 
-PacketRaven is a dashboard built to track high-altitude balloon flights from their location telemetry.
+track high-altitude balloon telemetry with a TNC-equipped radio connected via USB, or from https://amateur.sondehub.org or https://aprs.fi
 
 ## Installation
 
-retrieve the latest binary from the [Releases page](https://github.com/UMDBPP/PacketRaven/releases)
+retrieve the latest compiled executable from the [Releases page](https://github.com/UMDBPP/PacketRaven/releases)
 
 ---
 **NOTE**
 
-Alternatively, you may download the source code and build the program with Cargo:
+Alternatively, you may download the source code and compile the program yourself:
 
 ```shell
 git clone https://github.com/UMDBPP/PacketRaven.git
@@ -21,47 +21,15 @@ cd packetraven
 cargo build
 ```
 
----
-
 ## Usage
 
-PacketRaven reads a configuration file to determine which connections to set up, how to parse your packets, which callsigns to filter, etc.
+To run ``packetraven``, open a terminal window and type the path to the executable file. 
+The program accepts a single argument; the configuration filename.
 
+For example, to run ``packetraven`` on ``examples/example_1.yaml``, run the following:
+   
 ```shell
 packetraven examples/example_1.yaml
 ```
 
-## Examples
-
-#### listen to a TNC sending raw APRS strings over USB port COM4
-
-```yaml
-packets:
-    text:
-        - port: COM4
-          baud_rate: 9600
-```
-
-#### listen to APRS.fi, watching specific callsigns
-
-you need an API key to connect to APRS.fi; you can get one from https://aprs.fi/page/api
-
-```yaml
-callsigns:
-    - W3EAX-8
-    - W3EAX-14
-
-packets:
-    aprs_fi:
-        api_key: 123456.abcdefhijklmnop
-```
-
-#### watch text file(s) for new lines containing raw APRS strings
-
-```yaml
-packets:
-    text:
-        - path: http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-10/W3EAX-10_raw_NS95.txt
-        - path: http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-11/W3EAX-11_raw_NS95.txt
-```
-
+For usage examples, see the `examples/` directory or [view the documentation on ReadTheDocs](https://packetraven.readthedocs.io/usage).

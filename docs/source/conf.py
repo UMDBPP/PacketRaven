@@ -12,6 +12,7 @@
 import os
 from os import PathLike
 from pathlib import Path
+from datetime import datetime
 import sys
 
 import tomllib
@@ -34,18 +35,13 @@ ROOT = repository_root()
 sys.path.insert(0, str(ROOT))
 
 # -- Project information -----------------------------------------------------
-with open(repository_root / "Cargo.toml", "rb") as configuration_file:
+with open(repository_root() / "Cargo.toml", "rb") as configuration_file:
     metadata = tomllib.load(configuration_file)["package"]
 
 project = metadata["name"]
 author = metadata["authors"][0]
 copyright = f"{datetime.now():%Y-%m-%d}, {author}"
-
-# The full version, including alpha/beta/rc tags
-try:
-    release = Version.from_any_vcs().serialize()
-except RuntimeError:
-    release = os.environ.get("VERSION")
+release = metadata["version"]
 
 # -- General configuration ---------------------------------------------------
 
@@ -66,12 +62,6 @@ napoleon_use_rtype = False  # More legible
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "sphinxcontrib.programoutput",
-    # Need the autodoc and autosummary packages to generate our docs.
-    "sphinx.ext.autodoc",
-    "sphinx.ext.autosummary",
-    # The Napoleon extension allows for nicer argument formatting.
-    "sphinx.ext.napoleon",
     "m2r2",
 ]
 
@@ -88,12 +78,12 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
+html_theme = "alabaster"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
+html_static_path = []
 
 # -- Extension configuration -------------------------------------------------
 source_suffix = [".rst", ".md"]
