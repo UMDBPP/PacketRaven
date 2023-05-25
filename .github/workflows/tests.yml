@@ -8,6 +8,9 @@ on:
       - '**.rs'
       - '.github/workflows/tests.yml'
   pull_request:
+  release:
+    types:
+      - published
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -44,7 +47,7 @@ jobs:
             target
           key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('Cargo.lock') }}
       - run: cargo install cargo2junit grcov
-      - run: cargo test $CARGO_OPTIONS -- -Z unstable-options --format json | cargo2junit > results.xml
+      - run: cargo test -- -Z unstable-options --format json | cargo2junit > results.xml
       - run: zip -0 ccov.zip `find . \( -name "packetraven*.gc*" \) -print`
       - run: grcov ccov.zip -s . -t lcov --llvm --ignore-not-existing --ignore "/*" --ignore "tests/*" -o lcov.info
       - uses: codecov/codecov-action@v1
@@ -102,4 +105,8 @@ jobs:
         with:
           name: packetraven
           path: target/release/packetraven
+      - if: (github.event_name == 'release' && github.event.action == 'published')
+        uses: svenstaro/upload-release-action@v2
+        with:
+          file: target/release/packetraven
 
