@@ -13,7 +13,7 @@ retrieve the latest binary from the [Releases page](https://github.com/UMDBPP/Pa
 ---
 **NOTE**
 
-Alternatively, you may download the source code and build from source:
+Alternatively, you may download the source code and build the program with Cargo:
 
 ```shell
 git clone https://github.com/UMDBPP/PacketRaven.git
@@ -27,72 +27,8 @@ cargo build
 
 PacketRaven reads a configuration file to determine which connections to set up, how to parse your packets, which callsigns to filter, etc.
 
-```bash
-packetraven /path/to/config.yaml
-```
-
-The configuration is in YAML format. Here is an example configuration:
-
-```yaml
-# config.yaml
-
-callsigns:
-    - W3EAX-9
-    - W3EAX-11
-    - W3EAX-12
-
-time:
-    start: 2022-03-05
-    end: 2022-03-06
-    interval: 30
-
-output:
-    filename: ns110.geojson
-
-log:
-    filename: ns110.log
-
-packets:
-    aprs_fi:
-        api_key: 123456.abcdefhijklmnop
-    text:
-        locations:
-            - /dev/ttyUSB0
-            - ~/packets.txt
-    database:
-        hostname: localhost
-        port: 5432
-        database: nearspace
-        table: ns110
-        username: user1
-        password: password1
-        tunnel:
-            hostname: bpp.umd.edu
-            port: 22
-            username: user1
-            password: password2
-
-prediction:
-    start:
-        location:
-            - -78.4987
-            - 40.0157
-        time: 2022-03-05 10:36:00
-    profile:
-        ascent_rate: 6.5
-        burst_altitude: 25000
-        sea_level_descent_rate: 9
-    output:
-        filename: ns110_prediction.geojson
-```
-
-### start the graphical user interface (GUI)
-
-to start the GUI, add `--gui` to any `packetraven` command
-
 ```shell
-packetraven --gui
-packetraven config.yaml --gui
+packetraven examples/example_1.yaml
 ```
 
 ## Examples
@@ -100,23 +36,10 @@ packetraven config.yaml --gui
 #### listen to a TNC sending raw APRS strings over USB port COM4
 
 ```yaml
-# config.yaml
-
 packets:
     text:
-        locations:
-            - COM4
-```
-
-you can also set the location to `auto` to try the first open USB port
-
-```yaml
-# config.yaml
-
-packets:
-    text:
-        locations:
-            - auto
+        - port: COM4
+          baud_rate: 9600
 ```
 
 #### listen to APRS.fi, watching specific callsigns
@@ -124,8 +47,6 @@ packets:
 you need an API key to connect to APRS.fi; you can get one from https://aprs.fi/page/api
 
 ```yaml
-# config.yaml
-
 callsigns:
     - W3EAX-8
     - W3EAX-14
@@ -135,63 +56,12 @@ packets:
         api_key: 123456.abcdefhijklmnop
 ```
 
-#### listen to a PostGIS database table
-
-```yaml
-# config.yaml
-
-callsigns:
-    - W3EAX-8
-    - W3EAX-14
-
-packets:
-    database:
-        hostname: bpp.umd.edu
-        port: 5432
-        database: nearspace
-        table: ns110
-        username: user1
-        password: password1
-```
-
 #### watch text file(s) for new lines containing raw APRS strings
 
 ```yaml
-# config.yaml
-
 packets:
     text:
-        locations:
-            - http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-10/W3EAX-10_raw_NS95.txt
-            - http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-11/W3EAX-11_raw_NS95.txt
+        - path: http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-10/W3EAX-10_raw_NS95.txt
+        - path: http://bpp.umd.edu/archives/Launches/NS-95_2020-11-07/APRS/W3EAX-11/W3EAX-11_raw_NS95.txt
 ```
-
-#### listen to a TNC on COM3, watching specific callsigns, and synchronize new packets with a database table via SSH tunnel
-
-```yaml
-# config.yaml
-
-callsigns:
-    - W3EAX-8
-    - W3EAX-14
-
-packets:
-    text:
-        locations:
-            - COM3
-    database:
-        hostname: localhost
-        port: 5432
-        database: nearspace
-        table: ns110
-        username: user1
-        password: password1
-        tunnel:
-            hostname: bpp.umd.edu
-            port: 22
-            username: user1
-            password: password2
-```
-
-
 

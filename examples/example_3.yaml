@@ -7,8 +7,6 @@
 #  3. retrieve CUSF prediction information with the given parameters
 #  4. output packets to a GeoJSON file at `./example_3.geojson`
 #  3. output information to the console and to `./example_3.log`
-#
-# you can run this configuration with the following: `packetraven examples/example_3.yaml`
 
 callsigns:
   - W3EAX-9
