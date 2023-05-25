@@ -179,12 +179,16 @@ impl TawhiriQuery {
             _ => {
                 let status = &response.status();
                 // https://tawhiri.readthedocs.io/en/latest/api.html#error-fragment
-                let tawhiri_error: TawhiriErrorResponse = response.json().unwrap();
-                Err(TawhiriError::HttpError {
-                    status: status.as_u16(),
-                    description: tawhiri_error.error.description,
-                    url,
-                })
+                match response.json::<TawhiriErrorResponse>() {
+                    Ok(tawhiri_error) => Err(TawhiriError::HttpError {
+                        status: status.as_u16(),
+                        description: tawhiri_error.error.description,
+                        url,
+                    }),
+                    Err(error) => Err(TawhiriError::ParsingError {
+                        message: error.to_string(),
+                    }),
+                }
             }
         }
     }
@@ -228,6 +232,7 @@ custom_error::custom_error! {pub TawhiriError
     NoFloatStage ="server did not return a float stage",
     NoDescentStage = "server did not return a descent stage",
     HttpError { status: u16, description: String, url: String } = "HTTP error {status} - {description} - {url}",
+    ParsingError { message: String } = "{message}"
 }
 
 // https://tawhiri.readthedocs.io/en/latest/api.html#responses

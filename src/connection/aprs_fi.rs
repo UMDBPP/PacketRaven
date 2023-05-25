@@ -24,7 +24,7 @@ impl AprsFiQuery {
 }
 
 impl AprsFiQuery {
-    fn url(&self) -> String {
+    fn url(&self) -> Result<String, super::ConnectionError> {
         if let Some(callsigns) = &self.callsigns {
             let parameters = vec![
                 format!("name={:}", callsigns.join(",")),
@@ -32,9 +32,15 @@ impl AprsFiQuery {
                 format!("apikey={:}", self.api_key),
                 format!("format={:}", "json"),
             ];
-            format!("https://api.aprs.fi/api/get?{:}", parameters.join("&"))
+            Ok(format!(
+                "https://api.aprs.fi/api/get?{:}",
+                parameters.join("&")
+            ))
         } else {
-            panic!("APRS.fi requires a list of callsigns");
+            Err(super::ConnectionError::FailedToEstablish {
+                connection: "APRS.fi".to_string(),
+                message: "the API requires a list of callsigns".to_string(),
+            })
         }
     }
 
@@ -57,7 +63,7 @@ impl AprsFiQuery {
             .build()
             .unwrap();
 
-        let url = self.url();
+        let url = self.url()?;
         let response = client.get(&url).send().expect(&url);
 
         self.last_access = Some(now);

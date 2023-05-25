@@ -63,8 +63,8 @@ impl SondeHubQuery {
             Ok(urls)
         } else {
             Err(crate::connection::ConnectionError::FailedToEstablish {
-                connection: "APRS.fi".to_string(),
-                message: "SondeHub requires a list of callsigns".to_string(),
+                connection: "SondeHub".to_string(),
+                message: "the API requires a list of callsigns".to_string(),
             })
         }
     }
