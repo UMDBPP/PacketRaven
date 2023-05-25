@@ -15,7 +15,10 @@ from pathlib import Path
 from datetime import datetime
 import sys
 
-import tomllib
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
 
 def repository_root(path: PathLike = None) -> Path:
     if path is None:
@@ -35,28 +38,16 @@ ROOT = repository_root()
 sys.path.insert(0, str(ROOT))
 
 # -- Project information -----------------------------------------------------
-with open(repository_root() / "Cargo.toml", "rb") as configuration_file:
+with open(ROOT / "Cargo.toml", "rb") as configuration_file:
     metadata = tomllib.load(configuration_file)["package"]
 
 project = metadata["name"]
-author = metadata["authors"][0]
-copyright = f"{datetime.now():%Y-%m-%d}, {author}"
-release = metadata["version"]
+author = ", ".join(metadata["authors"])
+copyright = ", ".join(f"{datetime.now():%Y-%m-%d}, {author}" for author in metadata["authors"])
+version = metadata["version"]
+release = version
 
 # -- General configuration ---------------------------------------------------
-
-autoclass_content = "both"  # include both class docstring and __init__
-autodoc_default_options = {
-    # Make sure that any autodoc declarations show the right members
-    "members": True,
-    "inherited-members": True,
-    "private-members": True,
-    "member-order": "bysource",
-    "exclude-members": "__weakref__",
-}
-autosummary_generate = True  # Make _autosummary files and include them
-napoleon_numpy_docstring = False  # Force consistency, leave only Google
-napoleon_use_rtype = False  # More legible
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -72,6 +63,8 @@ templates_path = ["_templates"]
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
+
+root_doc = "source/index"
 
 # -- Options for HTML output -------------------------------------------------
 

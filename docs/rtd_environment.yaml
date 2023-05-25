@@ -1,0 +1,7 @@
+name: rtd311
+channels:
+  - conda-forge
+dependencies:
+  - python
+  - sphinx
+  - m2r2

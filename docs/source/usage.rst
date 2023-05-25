@@ -11,7 +11,7 @@ For instance, to listen to a TNC-equipped radio plugged into USB COM3, poll http
 .. literalinclude:: ../../examples/example_2.yaml
    :language: yaml
 
-or to watch text file(s) for new lines containing raw APRS strings:
+or to watch text file(s) for new lines containing raw APRS frames:
 
 .. literalinclude:: ../../examples/example_1.yaml
    :language: yaml
