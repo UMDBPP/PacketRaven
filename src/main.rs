@@ -29,6 +29,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let configuration: crate::configuration::RunConfiguration =
         serde_yaml::from_reader(configuration_file).expect("error reading configuration");
 
-    tui::run(&configuration, *LOG_LEVEL)?;
+    tui::run(configuration, *LOG_LEVEL)?;
     Ok(())
 }

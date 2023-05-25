@@ -213,7 +213,7 @@ pub mod optional_u64_string {
     }
 }
 
-pub fn duration_string(duration: chrono::Duration) -> String {
+pub fn duration_string(duration: &chrono::Duration) -> String {
     let mut parts = vec![];
 
     let weeks = duration.num_weeks().abs();
@@ -242,7 +242,7 @@ pub fn duration_string(duration: chrono::Duration) -> String {
         parts.push(format!("{:}s", seconds));
     }
 
-    if duration < chrono::Duration::zero() {
+    if duration < &chrono::Duration::zero() {
         parts.push("ago".to_string());
     }
 

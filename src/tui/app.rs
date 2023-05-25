@@ -1,5 +1,5 @@
-pub struct PacketravenApp<'a> {
-    pub configuration: &'a crate::configuration::RunConfiguration,
+pub struct PacketravenApp {
+    pub configuration: crate::configuration::RunConfiguration,
     pub connections: Vec<crate::connection::Connection>,
     pub tracks: Vec<crate::location::track::BalloonTrack>,
     pub tab_index: usize,
@@ -7,15 +7,14 @@ pub struct PacketravenApp<'a> {
     pub log_messages: Vec<(chrono::DateTime<chrono::Local>, String, log::Level)>,
     pub log_messages_scroll_offset: u16,
     pub log_level: log::Level,
-    pub should_not_retrieve: Vec<String>,
     pub should_quit: bool,
 }
 
-impl<'a> PacketravenApp<'a> {
+impl PacketravenApp {
     pub fn new(
-        configuration: &'a crate::configuration::RunConfiguration,
+        configuration: crate::configuration::RunConfiguration,
         log_level: log::Level,
-    ) -> PacketravenApp<'a> {
+    ) -> PacketravenApp {
         let program_start_time = chrono::Local::now();
 
         let mut instance = PacketravenApp {
@@ -27,11 +26,10 @@ impl<'a> PacketravenApp<'a> {
             log_messages: vec![],
             log_messages_scroll_offset: 0,
             log_level,
-            should_not_retrieve: Vec::<String>::new(),
             should_quit: false,
         };
 
-        if let Some(output) = &instance.configuration.log {
+        if let Some(output) = &instance.configuration.log.to_owned() {
             // TODO
             instance.add_log_message(
                 "logging to file is not implemented".to_owned(),
@@ -50,7 +48,7 @@ impl<'a> PacketravenApp<'a> {
             }
         }
 
-        if let Some(output) = &instance.configuration.output {
+        if let Some(output) = &instance.configuration.output.to_owned() {
             // TODO
             instance.add_log_message(
                 "file output is not implemented".to_owned(),
@@ -69,7 +67,7 @@ impl<'a> PacketravenApp<'a> {
             }
         }
 
-        if let Some(output) = &instance.configuration.output {
+        if let Some(output) = &instance.configuration.output.to_owned() {
             // TODO
             instance.add_log_message(
                 "file output is not implemented".to_owned(),
@@ -115,7 +113,7 @@ impl<'a> PacketravenApp<'a> {
 
         instance.add_log_message(filter_message, log::Level::Info);
 
-        if let Some(callsigns) = &instance.configuration.callsigns {
+        if let Some(callsigns) = &instance.configuration.callsigns.to_owned() {
             if !callsigns.is_empty() {
                 let mut aprs_fi_url =
                     format!("https://aprs.fi/#!call=a%2F{:}", callsigns.join("%2Ca%2F"));
@@ -142,40 +140,50 @@ impl<'a> PacketravenApp<'a> {
             }
         }
 
-        if let Some(text_configuration) = &instance.configuration.packets.text {
+        if let Some(text_configuration) = &instance.configuration.packets.text.to_owned() {
             for text_stream in text_configuration {
                 let connection = match text_stream {
-                    crate::connection::text::TextStream::GeoJsonFile(geojson_file) => {
+                    crate::connection::text::TextStream::GeoJsonFile(connection) => {
+                        let connection = connection.to_owned();
                         instance.add_log_message(
                             format!(
                                 "reading GeoJSON file: {:}",
-                                geojson_file.path.to_str().unwrap()
+                                connection.path.to_str().unwrap()
                             ),
                             log::Level::Info,
                         );
 
-                        crate::connection::Connection::GeoJsonFile(geojson_file.to_owned())
+                        crate::connection::Connection::GeoJsonFile(connection)
                     }
-                    crate::connection::text::TextStream::AprsTextFile(aprs_text_file) => {
+                    crate::connection::text::TextStream::AprsTextFile(connection) => {
+                        let mut connection = connection.to_owned();
+                        if connection.callsigns.is_none() {
+                            if let Some(callsigns) = &instance.configuration.callsigns {
+                                connection.callsigns = Some(callsigns.to_owned());
+                            }
+                        }
                         instance.add_log_message(
                             format!(
                                 "reading text file of APRS frames: {:}",
-                                aprs_text_file.path.to_str().unwrap()
+                                connection.path.to_str().unwrap()
                             ),
                             log::Level::Info,
                         );
-                        crate::connection::Connection::AprsTextFile(aprs_text_file.to_owned())
+                        crate::connection::Connection::AprsTextFile(connection)
                     }
                     #[cfg(feature = "serial")]
-                    crate::connection::text::TextStream::AprsSerial(aprs_serial) => {
+                    crate::connection::text::TextStream::AprsSerial(connection) => {
+                        let mut connection = connection.to_owned();
+                        if connection.callsigns.is_none() {
+                            if let Some(callsigns) = &instance.configuration.callsigns {
+                                connection.callsigns = Some(callsigns.to_owned());
+                            }
+                        }
                         instance.add_log_message(
-                            format!(
-                                "opened port {:}@{:}",
-                                aprs_serial.port, aprs_serial.baud_rate
-                            ),
+                            format!("opened port {:}@{:}", connection.port, connection.baud_rate),
                             log::Level::Info,
                         );
-                        crate::connection::Connection::AprsSerial(aprs_serial.to_owned())
+                        crate::connection::Connection::AprsSerial(connection)
                     }
                 };
                 instance.connections.push(connection);
@@ -186,7 +194,9 @@ impl<'a> PacketravenApp<'a> {
         if let Some(aprs_fi_query) = &instance.configuration.packets.aprs_fi {
             if let Some(callsigns) = &instance.configuration.callsigns {
                 let mut connection = aprs_fi_query.to_owned();
-                connection.callsigns = Some(callsigns.to_owned());
+                if connection.callsigns.is_none() {
+                    connection.callsigns = Some(callsigns.to_owned());
+                }
                 instance
                     .connections
                     .push(crate::connection::Connection::AprsFi(connection));
@@ -201,7 +211,15 @@ impl<'a> PacketravenApp<'a> {
         #[cfg(feature = "sondehub")]
         if let Some(callsigns) = &instance.configuration.callsigns {
             let mut connection = instance.configuration.packets.sondehub.to_owned();
-            connection.callsigns = Some(callsigns.to_owned());
+            if connection.callsigns.is_none() {
+                connection.callsigns = Some(callsigns.to_owned());
+            }
+            if connection.start.is_none() {
+                connection.start = instance.configuration.time.start;
+            }
+            if connection.end.is_none() {
+                connection.end = instance.configuration.time.end;
+            }
             instance
                 .connections
                 .push(crate::connection::Connection::SondeHub(connection));
@@ -244,7 +262,7 @@ impl<'a> PacketravenApp<'a> {
         instance.add_log_message(
             format!(
                 "listening for packets every {:} from {:} source(s)",
-                crate::utilities::duration_string(instance.configuration.time.interval),
+                crate::utilities::duration_string(&instance.configuration.time.interval),
                 instance.connections.len(),
             ),
             log::Level::Info,
@@ -331,40 +349,33 @@ impl<'a> PacketravenApp<'a> {
         )) = &self.configuration.prediction
         {
             for track in tracks {
-                if !self.should_not_retrieve.contains(&track.name) {
-                    let prediction = track
-                        .prediction(&prediction_configuration.to_tawhiri_query().query.profile);
+                let prediction =
+                    track.prediction(&prediction_configuration.to_tawhiri_query().query.profile);
 
-                    match prediction {
-                        Ok(prediction) => {
-                            let landing_location = prediction.last().unwrap();
-                            messages.push((
-                                chrono::Local::now(),
-                                format!(
-                                    "{:} - predicted landing location: ({:.2}, {:.2}) at {:} ({:})",
-                                    track.name,
-                                    landing_location.location.coord.x,
-                                    landing_location.location.coord.y,
-                                    landing_location
-                                        .location
-                                        .time
-                                        .format(&crate::DATETIME_FORMAT),
-                                    crate::utilities::duration_string(
-                                        chrono::Local::now() - landing_location.location.time
-                                    )
-                                ),
-                                log::Level::Info,
-                            ));
-                            track.prediction = Some(prediction);
-                        }
-                        Err(error) => {
-                            self.should_not_retrieve.push(track.name.to_owned());
-                            messages.push((
-                                chrono::Local::now(),
-                                error.to_string(),
-                                log::Level::Error,
-                            ));
-                        }
+                match prediction {
+                    Ok(prediction) => {
+                        let landing_location = prediction.last().unwrap();
+                        messages.push((
+                            chrono::Local::now(),
+                            format!(
+                                "{:} - predicted landing location: ({:.2}, {:.2}) at {:} ({:})",
+                                track.name,
+                                landing_location.location.coord.x,
+                                landing_location.location.coord.y,
+                                landing_location
+                                    .location
+                                    .time
+                                    .format(&crate::DATETIME_FORMAT),
+                                crate::utilities::duration_string(
+                                    &(chrono::Local::now() - landing_location.location.time)
+                                )
+                            ),
+                            log::Level::Info,
+                        ));
+                        track.prediction = Some(prediction);
+                    }
+                    Err(error) => {
+                        messages.push((chrono::Local::now(), error.to_string(), log::Level::Error));
                     }
                 }
             }

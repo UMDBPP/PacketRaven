@@ -8,7 +8,6 @@ pub struct AprsSerial {
     pub port: String,
     #[serde(default = "default_baud_rate")]
     pub baud_rate: u32,
-    #[serde(skip)]
     pub callsigns: Option<Vec<String>>,
 }
 

@@ -4,7 +4,7 @@ fn default_name() -> String {
     String::from("unnamed_flight")
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Clone)]
 pub struct RunConfiguration {
     #[serde(default = "default_name")]
     pub name: String,
@@ -18,7 +18,7 @@ pub struct RunConfiguration {
     pub prediction: Option<crate::configuration::prediction::PredictionConfiguration>,
 }
 
-#[derive(serde::Deserialize, PartialEq, Debug)]
+#[derive(serde::Deserialize, PartialEq, Debug, Clone)]
 pub struct PathConfiguration {
     pub filename: std::path::PathBuf,
 }
@@ -28,7 +28,7 @@ fn default_interval() -> chrono::Duration {
 }
 
 #[serde_with::serde_as]
-#[derive(PartialEq, Debug, serde::Deserialize)]
+#[derive(PartialEq, Debug, serde::Deserialize, Clone)]
 pub struct TimeConfiguration {
     #[serde(default)]
     #[serde(with = "crate::utilities::optional_local_datetime_string")]
@@ -51,7 +51,7 @@ impl Default for TimeConfiguration {
     }
 }
 
-#[derive(Default, serde::Deserialize, PartialEq, Debug)]
+#[derive(Default, serde::Deserialize, PartialEq, Debug, Clone)]
 pub struct PacketSourceConfiguration {
     #[cfg(feature = "aprsfi")]
     pub aprs_fi: Option<crate::connection::aprs_fi::AprsFiQuery>,

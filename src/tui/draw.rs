@@ -1,5 +1,5 @@
 lazy_static::lazy_static! {
-    pub static ref CHARTS: Vec<String> = vec!["altitude / time".to_string(), "ascent rate / time".to_string(), "ground speed / altitude".to_string(), "coordinates (unprojected)".to_string()];
+    pub static ref CHARTS: Vec<String> = vec!["altitude / time".to_string(), "ascent rate / time".to_string(), "altitude / ground speed".to_string(), "coordinates (unprojected)".to_string()];
 }
 
 pub fn draw<B: ratatui::backend::Backend>(
@@ -47,14 +47,6 @@ pub fn draw<B: ratatui::backend::Backend>(
     let bold_style = ratatui::style::Style::default().add_modifier(ratatui::style::Modifier::BOLD);
 
     if app.tab_index == 0 {
-        let num_messages = app.log_messages.len() as u16;
-        let paragraph_height = areas[1].height;
-        if num_messages < paragraph_height {
-            0
-        } else {
-            num_messages - paragraph_height + 2
-        };
-
         let log = ratatui::widgets::Paragraph::new(
             app.log_messages
                 .iter()
@@ -87,7 +79,7 @@ pub fn draw<B: ratatui::backend::Backend>(
             .direction(ratatui::layout::Direction::Vertical)
             .constraints(
                 [
-                    ratatui::layout::Constraint::Min(10),
+                    ratatui::layout::Constraint::Min(11),
                     ratatui::layout::Constraint::Min(10),
                 ]
                 .as_ref(),
@@ -173,16 +165,18 @@ pub fn draw<B: ratatui::backend::Backend>(
         let mut last_location_info = vec![ratatui::text::Spans::from(vec![
             ratatui::text::Span::styled("time: ", bold_style),
             ratatui::text::Span::raw(format!(
-                "{:}",
-                last_location.location.time.format(&crate::DATETIME_FORMAT)
+                "{:} ({:})",
+                crate::utilities::duration_string(
+                    &(last_location.location.time - chrono::Local::now())
+                ),
+                last_location.location.time.format(&crate::DATETIME_FORMAT),
             )),
         ])];
         if track.locations.len() > 1 {
             last_location_info.push(ratatui::text::Spans::from(vec![
                 ratatui::text::Span::styled("since prev.: ", bold_style),
-                ratatui::text::Span::raw(format!(
-                    "{:.2} s",
-                    intervals.last().unwrap().num_seconds(),
+                ratatui::text::Span::raw(crate::utilities::duration_string(
+                    intervals.last().unwrap(),
                 )),
             ]));
         }
@@ -222,11 +216,13 @@ pub fn draw<B: ratatui::backend::Backend>(
                 ]),
             ]);
         }
-        let last_location_info = ratatui::widgets::Paragraph::new(last_location_info).block(
-            ratatui::widgets::Block::default()
-                .borders(ratatui::widgets::Borders::ALL)
-                .title(format!("Location #{:}", track.locations.len())),
-        );
+        let last_location_info = ratatui::widgets::Paragraph::new(last_location_info)
+            .block(
+                ratatui::widgets::Block::default()
+                    .borders(ratatui::widgets::Borders::ALL)
+                    .title(format!("Location #{:}", track.locations.len())),
+            )
+            .wrap(ratatui::widgets::Wrap { trim: true });
         frame.render_widget(last_location_info, track_info_areas[0]);
 
         if track.locations.len() > 1 {
@@ -262,9 +258,10 @@ pub fn draw<B: ratatui::backend::Backend>(
                 ]),
                 ratatui::text::Spans::from(vec![
                     ratatui::text::Span::styled("time interval: ", bold_style),
-                    ratatui::text::Span::raw(format!(
-                        "{:.2} s",
-                        total_interval.num_seconds() as f64 / intervals.len() as f64,
+                    ratatui::text::Span::raw(crate::utilities::duration_string(
+                        &chrono::Duration::seconds(
+                            (total_interval.num_seconds() as f64 / intervals.len() as f64) as i64,
+                        ),
                     )),
                 ]),
             ])
@@ -272,43 +269,51 @@ pub fn draw<B: ratatui::backend::Backend>(
                 ratatui::widgets::Block::default()
                     .borders(ratatui::widgets::Borders::ALL)
                     .title("Averages"),
-            );
+            )
+            .wrap(ratatui::widgets::Wrap { trim: true });
             frame.render_widget(track_info, track_info_areas[1]);
         }
 
-        let mut landing_estimate = vec![];
-        if let Some(estimated_time_to_ground) = track.estimated_time_to_ground() {
-            let landing_time = last_location.location.time + estimated_time_to_ground;
-            let time_to_ground_from_now = landing_time - chrono::Local::now();
+        let mut descent_info = vec![];
+        if track.descending() {
+            descent_info.push(ratatui::text::Spans::from(vec![
+                ratatui::text::Span::styled("max altitude: ", bold_style),
+                ratatui::text::Span::raw(format!("{:.2} m", altitude_range[1])),
+            ]));
 
-            landing_estimate.extend([
-                ratatui::text::Spans::from(vec![
-                    ratatui::text::Span::styled("max altitude: ", bold_style),
-                    ratatui::text::Span::raw(format!("{:.2} m", altitude_range[1])),
-                ]),
-                ratatui::text::Spans::from(vec![
+            if let Some(estimated_time_to_ground) = track.estimated_time_to_ground() {
+                let landing_time = last_location.location.time + estimated_time_to_ground;
+
+                descent_info.push(ratatui::text::Spans::from(vec![
                     ratatui::text::Span::styled("est. landing: ", bold_style),
-                    ratatui::text::Span::raw(crate::utilities::duration_string(
-                        time_to_ground_from_now,
-                    )),
-                ]),
-                ratatui::text::Spans::from(vec![
-                    ratatui::text::Span::styled("est. landing time: ", bold_style),
                     ratatui::text::Span::raw(format!(
-                        "{:}",
+                        "{:} ({:})",
+                        crate::utilities::duration_string(&(landing_time - chrono::Local::now())),
                         landing_time.format(&crate::DATETIME_FORMAT),
                     )),
-                ]),
-            ]);
+                ]));
+            }
+            if let Some(freefall_estimate) = track.falling() {
+                let landing_time = last_location.location.time + freefall_estimate.time_to_ground;
+
+                descent_info.push(ratatui::text::Spans::from(vec![
+                    ratatui::text::Span::styled("@ term. vel.: ", bold_style),
+                    ratatui::text::Span::raw(format!(
+                        "{:} ({:})",
+                        crate::utilities::duration_string(&(landing_time - chrono::Local::now())),
+                        landing_time.format(&crate::DATETIME_FORMAT),
+                    )),
+                ]));
+            }
         }
 
         if let Some(prediction) = &track.prediction {
             let predicted_landing_location = prediction.last().unwrap();
-            landing_estimate.extend([
+            descent_info.extend([
                 ratatui::text::Spans::from(vec![
                     ratatui::text::Span::styled("pred. landing: ", bold_style),
                     ratatui::text::Span::raw(crate::utilities::duration_string(
-                        predicted_landing_location.location.time - chrono::Local::now(),
+                        &(predicted_landing_location.location.time - chrono::Local::now()),
                     )),
                 ]),
                 ratatui::text::Spans::from(vec![
@@ -332,13 +337,65 @@ pub fn draw<B: ratatui::backend::Backend>(
             ]);
         }
 
-        if !landing_estimate.is_empty() {
-            let landing_estimate = ratatui::widgets::Paragraph::new(landing_estimate).block(
-                ratatui::widgets::Block::default()
-                    .borders(ratatui::widgets::Borders::ALL)
-                    .title("Descent"),
-            );
-            frame.render_widget(landing_estimate, track_info_areas[2]);
+        if !descent_info.is_empty() {
+            let descent_info = ratatui::widgets::Paragraph::new(descent_info)
+                .block(
+                    ratatui::widgets::Block::default()
+                        .borders(ratatui::widgets::Borders::ALL)
+                        .title("Descent"),
+                )
+                .wrap(ratatui::widgets::Wrap { trim: true });
+            frame.render_widget(descent_info, track_info_areas[2]);
+        } else if track.ascending() {
+            if let Some(prediction) = &track.prediction {
+                let locations_with_altitudes = crate::location::track::with_altitude(prediction);
+                let mut predicted_max_altitude_location: &crate::location::Location =
+                    &locations_with_altitudes.last().unwrap().location;
+                for location in &locations_with_altitudes {
+                    if location.location.altitude.unwrap()
+                        > predicted_max_altitude_location.altitude.unwrap()
+                    {
+                        predicted_max_altitude_location = &location.location;
+                    }
+                }
+
+                let estimated_time_to_max_altitude = chrono::Duration::seconds(
+                    ((positive_ascent_rates.iter().sum::<f64>()
+                        / positive_ascent_rates.len() as f64)
+                        / predicted_max_altitude_location.altitude.unwrap())
+                        as i64,
+                );
+                let ascent_info = ratatui::widgets::Paragraph::new(vec![
+                    ratatui::text::Spans::from(vec![
+                        ratatui::text::Span::styled("est. max alt. at: ", bold_style),
+                        ratatui::text::Span::raw(format!(
+                            "{:} ({:})",
+                            (chrono::Local::now() + estimated_time_to_max_altitude)
+                                .format(&crate::DATETIME_FORMAT),
+                            crate::utilities::duration_string(&estimated_time_to_max_altitude)
+                        )),
+                    ]),
+                    ratatui::text::Spans::from(vec![
+                        ratatui::text::Span::styled("pred. max alt. at: ", bold_style),
+                        ratatui::text::Span::raw(format!(
+                            "{:} ({:})",
+                            predicted_max_altitude_location
+                                .time
+                                .format(&crate::DATETIME_FORMAT),
+                            crate::utilities::duration_string(
+                                &(predicted_max_altitude_location.time - chrono::Local::now())
+                            )
+                        )),
+                    ]),
+                ])
+                .block(
+                    ratatui::widgets::Block::default()
+                        .borders(ratatui::widgets::Borders::ALL)
+                        .title("Ascent"),
+                )
+                .wrap(ratatui::widgets::Wrap { trim: true });
+                frame.render_widget(ascent_info, track_info_areas[2]);
+            }
         }
 
         let mut datasets = vec![];
@@ -404,8 +461,9 @@ pub fn draw<B: ratatui::backend::Backend>(
             }
 
             x_range = [0.0, (end_time - start_time).num_seconds() as f64];
-            y_range = altitude_range;
             x_labels = time_labels;
+
+            y_range = altitude_range;
             y_labels = [
                 y_range[0],
                 y_range[0] + ((y_range[1] - y_range[0]) / 2.0),
@@ -429,22 +487,15 @@ pub fn draw<B: ratatui::backend::Backend>(
                     .graph_type(ratatui::widgets::GraphType::Scatter),
             );
             if let Some(prediction) = &track.prediction {
-                let locations_with_altitude: Vec<&crate::location::BalloonLocation> = prediction
-                    .iter()
-                    .filter(|location| location.location.altitude.is_some())
-                    .collect();
+                let locations_with_altitude = crate::location::track::with_altitude(prediction);
                 let start_time = locations_with_altitude.first().unwrap().location.time;
                 let seconds_since_start: Vec<f64> = locations_with_altitude
                     .iter()
                     .map(|location| (location.location.time - start_time).num_seconds() as f64)
                     .collect();
 
-                let ascent_rates = crate::location::track::ascent_rates(
-                    &locations_with_altitude
-                        .into_iter()
-                        .map(|location| location.to_owned())
-                        .collect(),
-                );
+                let ascent_rates =
+                    crate::location::track::ascent_rates(locations_with_altitude.as_slice());
 
                 predicted_data = seconds_since_start
                     .iter()
@@ -462,6 +513,8 @@ pub fn draw<B: ratatui::backend::Backend>(
             }
 
             x_range = [0.0, (end_time - start_time).num_seconds() as f64];
+            x_labels = time_labels;
+
             y_range = [
                 ascent_rates
                     .iter()
@@ -474,7 +527,6 @@ pub fn draw<B: ratatui::backend::Backend>(
                     .unwrap()
                     .to_owned(),
             ];
-            x_labels = time_labels;
             y_labels = [
                 y_range[0],
                 y_range[0] + ((y_range[1] - y_range[0]) / 2.0),
@@ -483,7 +535,7 @@ pub fn draw<B: ratatui::backend::Backend>(
             .iter()
             .map(|value| ratatui::text::Span::raw(format!("{:.1} m/s", value)))
             .collect();
-        } else if chart_name == "ground speed / altitude" {
+        } else if chart_name == "altitude / ground speed" {
             telemetry_data = altitudes
                 .iter()
                 .zip(ground_speeds.iter())
@@ -516,6 +568,15 @@ pub fn draw<B: ratatui::backend::Backend>(
             }
 
             x_range = altitude_range;
+            x_labels = [
+                x_range[0],
+                x_range[0] + ((x_range[1] - x_range[0]) / 2.0),
+                x_range[1],
+            ]
+            .iter()
+            .map(|value| ratatui::text::Span::raw(format!("{:.1} m", value)))
+            .collect();
+
             y_range = [
                 ground_speeds
                     .iter()
@@ -528,14 +589,6 @@ pub fn draw<B: ratatui::backend::Backend>(
                     .unwrap()
                     .to_owned(),
             ];
-            x_labels = [
-                x_range[0],
-                x_range[0] + ((x_range[1] - x_range[0]) / 2.0),
-                x_range[1],
-            ]
-            .iter()
-            .map(|value| ratatui::text::Span::raw(format!("{:.1} m", value)))
-            .collect();
             y_labels = [
                 y_range[0],
                 y_range[0] + ((y_range[1] - y_range[0]) / 2.0),

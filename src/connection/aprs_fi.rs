@@ -7,7 +7,6 @@ lazy_static::lazy_static! {
 #[derive(serde::Deserialize, Debug, PartialEq, Clone)]
 pub struct AprsFiQuery {
     pub api_key: String,
-    #[serde(skip)]
     pub callsigns: Option<Vec<String>>,
     #[serde(skip)]
     last_access: Option<chrono::DateTime<chrono::Local>>,
@@ -52,7 +51,7 @@ impl AprsFiQuery {
             if now - last_access_time < *MINIMUM_ACCESS_INTERVAL {
                 return Err(crate::connection::ConnectionError::TooFrequent {
                     connection: "APRS.fi".to_string(),
-                    seconds: (*MINIMUM_ACCESS_INTERVAL).num_seconds(),
+                    duration: crate::utilities::duration_string(&MINIMUM_ACCESS_INTERVAL),
                 });
             }
         }

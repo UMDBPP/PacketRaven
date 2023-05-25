@@ -5,7 +5,6 @@ use chrono::{TimeZone, Timelike};
 #[derive(serde::Deserialize, Debug, PartialEq, Clone)]
 pub struct AprsTextFile {
     pub path: std::path::PathBuf,
-    #[serde(skip)]
     pub callsigns: Option<Vec<String>>,
 }
 

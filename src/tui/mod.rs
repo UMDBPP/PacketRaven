@@ -2,7 +2,7 @@ mod app;
 mod draw;
 
 pub fn run(
-    configuration: &crate::configuration::RunConfiguration,
+    configuration: crate::configuration::RunConfiguration,
     log_level: log::Level,
 ) -> Result<(), Box<dyn std::error::Error>> {
     crossterm::terminal::enable_raw_mode()?;
@@ -36,7 +36,7 @@ pub fn run(
     terminal.show_cursor()?;
 
     if let Err(err) = result {
-        println!("{:?}", err)
+        eprintln!("{:?}", err)
     }
 
     Ok(())
