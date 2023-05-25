@@ -241,7 +241,9 @@ impl AprsFiLocationRecord {
                 altitude: self.altitude,
             },
             data: crate::location::BalloonData::new(
+                None,
                 Some(aprs_packet),
+                None,
                 None,
                 crate::location::LocationSource::AprsFi,
             ),

@@ -57,21 +57,36 @@ pub struct BalloonLocation {
 
 #[derive(Clone, Default, Debug, PartialEq)]
 pub struct BalloonData {
+    pub callsign: Option<String>,
     pub aprs_packet: Option<aprs_parser::AprsPacket>,
     pub ais: Option<ais::AisData>,
     pub source: LocationSource,
+    pub raw: Option<String>,
     pub status: PacketStatus,
 }
 
 impl BalloonData {
     pub fn new(
+        callsign: Option<String>,
         aprs_packet: Option<aprs_parser::AprsPacket>,
         ais: Option<ais::AisData>,
+        raw: Option<String>,
         source: LocationSource,
     ) -> Self {
+        let mut callsign = callsign;
+        if callsign.is_none() {
+            if let Some(aprs_packet) = &aprs_packet {
+                callsign = Some(aprs_packet.from.to_string());
+            } else if let Some(ais) = &ais {
+                callsign = Some(ais.mmsi.to_owned());
+            }
+        }
+
         Self {
+            callsign,
             aprs_packet,
             ais,
+            raw,
             source,
             status: PacketStatus::None,
         }

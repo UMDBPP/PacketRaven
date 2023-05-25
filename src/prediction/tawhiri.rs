@@ -324,6 +324,8 @@ impl TawhiriLocation {
             data: crate::location::BalloonData::new(
                 None,
                 None,
+                None,
+                None,
                 crate::location::LocationSource::Prediction,
             ),
         }

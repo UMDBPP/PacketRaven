@@ -174,8 +174,10 @@ impl SondeHubLocation {
                 altitude: Some(self.alt),
             },
             data: crate::location::BalloonData::new(
+                Some(self.payload_callsign.to_owned()),
                 aprs_packet,
                 None,
+                self.raw.to_owned(),
                 crate::location::LocationSource::AprsFi,
             ),
         }

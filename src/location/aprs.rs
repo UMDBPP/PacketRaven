@@ -141,8 +141,10 @@ impl crate::location::BalloonLocation {
                 altitude: Some(altitude),
             },
             data: crate::location::BalloonData::new(
+                None,
                 Some(packet),
                 None,
+                Some(String::from_utf8(frame.to_vec()).unwrap()),
                 crate::location::LocationSource::None,
             ),
         })
@@ -181,7 +183,7 @@ mod tests {
 
         match packet.data.aprs_packet {
             Some(aprs_parser::AprsPacket { from, via, data }) => {
-                assert_eq!(from.call(), "W3EAX");
+                assert_eq!(from.to_string(), "W3EAX-13");
                 assert_eq!(
                     via,
                     vec![
@@ -241,7 +243,7 @@ mod tests {
 
         match packet.data.aprs_packet {
             Some(aprs_parser::AprsPacket { from, via, data }) => {
-                assert_eq!(from.call(), "W3EAX");
+                assert_eq!(from.to_string(), "W3EAX-8");
                 assert_eq!(
                     via,
                     vec![
@@ -303,7 +305,7 @@ mod tests {
 
         match packet.data.aprs_packet {
             Some(aprs_parser::AprsPacket { from, via, data }) => {
-                assert_eq!(from.call(), "ICA3D2");
+                assert_eq!(from.to_string(), "ICA3D2");
                 assert_eq!(
                     via,
                     vec![

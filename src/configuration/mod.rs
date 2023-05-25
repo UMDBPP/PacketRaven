@@ -57,7 +57,7 @@ pub struct PacketSourceConfiguration {
     pub aprs_fi: Option<crate::connection::aprs_fi::AprsFiQuery>,
     #[cfg(feature = "sondehub")]
     #[serde(default)]
-    pub sondehub: crate::connection::sondehub::SondeHubQuery,
+    pub sondehub: Option<crate::connection::sondehub::SondeHubQuery>,
     pub text: Option<Vec<crate::connection::text::TextStream>>,
     #[cfg(feature = "postgres")]
     pub database: Option<crate::connection::postgres::DatabaseCredentials>,

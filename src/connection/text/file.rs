@@ -112,16 +112,7 @@ impl AprsTextFile {
             }
 
             if let Some(callsigns) = &self.callsigns {
-                if !callsigns.contains(
-                    &location
-                        .data
-                        .aprs_packet
-                        .to_owned()
-                        .unwrap()
-                        .from
-                        .call()
-                        .to_string(),
-                ) {
+                if !callsigns.contains(&location.data.callsign.to_owned().unwrap()) {
                     continue;
                 }
             }
@@ -227,8 +218,13 @@ impl GeoJsonFile {
                                 altitude,
                             },
                             data: crate::location::BalloonData::new(
+                                None,
                                 aprs_packet,
                                 None,
+                                match properties.get("raw").unwrap() {
+                                    serde_json::Value::String(raw) => Some(raw.to_owned()),
+                                    _ => None,
+                                },
                                 crate::location::LocationSource::TextFile(self.path.to_owned()),
                             ),
                         };

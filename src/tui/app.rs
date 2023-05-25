@@ -209,25 +209,27 @@ impl PacketravenApp {
         }
 
         #[cfg(feature = "sondehub")]
-        if let Some(callsigns) = &instance.configuration.callsigns {
-            let mut connection = instance.configuration.packets.sondehub.to_owned();
-            if connection.callsigns.is_none() {
-                connection.callsigns = Some(callsigns.to_owned());
+        if let Some(connection) = &instance.configuration.packets.sondehub {
+            if let Some(callsigns) = &instance.configuration.callsigns {
+                let mut connection = connection.to_owned();
+                if connection.callsigns.is_none() {
+                    connection.callsigns = Some(callsigns.to_owned());
+                }
+                if connection.start.is_none() {
+                    connection.start = instance.configuration.time.start;
+                }
+                if connection.end.is_none() {
+                    connection.end = instance.configuration.time.end;
+                }
+                instance
+                    .connections
+                    .push(crate::connection::Connection::SondeHub(connection));
+            } else {
+                instance.add_log_message(
+                    "SondeHub requires a list of callsigns".to_string(),
+                    log::Level::Error,
+                );
             }
-            if connection.start.is_none() {
-                connection.start = instance.configuration.time.start;
-            }
-            if connection.end.is_none() {
-                connection.end = instance.configuration.time.end;
-            }
-            instance
-                .connections
-                .push(crate::connection::Connection::SondeHub(connection));
-        } else {
-            instance.add_log_message(
-                "SondeHub requires a list of callsigns".to_string(),
-                log::Level::Error,
-            );
         }
 
         #[cfg(feature = "postgres")]
