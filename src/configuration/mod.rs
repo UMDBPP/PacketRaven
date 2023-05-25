@@ -88,7 +88,7 @@ mod tests {
                 sondehub: crate::connection::sondehub::SondeHubQuery::default(),
                 text: Some(
                     vec![
-                        crate::connection::text::TextStream::AprsTextFile ( 
+                        crate::connection::text::TextStream::AprsTextFile (
                             crate::connection::text::file::AprsTextFile::new(
                                 std::path::PathBuf::from("http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-8%20raw.txt"), None,
                             ).unwrap()
@@ -115,17 +115,14 @@ mod tests {
         let expected_callsigns = vec!["W3EAX-11".to_string(), "W3EAX-12".to_string()];
 
         if let Some(callsigns) = configuration.callsigns {
-            assert_eq!(
-                callsigns,
-                expected_callsigns
-            );
+            assert_eq!(callsigns, expected_callsigns);
         }
 
         assert_eq!(
             configuration.packets,
             PacketSourceConfiguration {
                 #[cfg(feature = "aprsfi")]
-                aprs_fi: Some(crate::connection::aprs_fi::AprsFiQuery::new( 
+                aprs_fi: Some(crate::connection::aprs_fi::AprsFiQuery::new(
                     String::from("123456.abcdefhijklmnop"),
                     None,
                 )),
@@ -149,15 +146,19 @@ mod tests {
         let file = std::fs::File::open(path).unwrap();
         let configuration: RunConfiguration = serde_yaml::from_reader(file).unwrap();
 
-        let expected_callsigns = vec!["W3EAX-9".to_string(), "W3EAX-11".to_string(), "W3EAX-12".to_string()];
+        let expected_callsigns = vec![
+            "W3EAX-9".to_string(),
+            "W3EAX-11".to_string(),
+            "W3EAX-12".to_string(),
+        ];
 
         assert_eq!(
-            configuration.callsigns.to_owned().unwrap(), 
+            configuration.callsigns.to_owned().unwrap(),
             expected_callsigns
         );
 
         assert_eq!(
-            configuration.callsigns.to_owned().unwrap(), 
+            configuration.callsigns.to_owned().unwrap(),
             expected_callsigns
         );
 
@@ -211,7 +212,7 @@ mod tests {
                 prediction,
                 crate::configuration::prediction::Prediction {
                     name: String::from("prediction"),
-                    start: crate::location::Location{
+                    start: crate::location::Location {
                         coord: geo::coord! { x: -78.4987, y: 40.0157 },
                         altitude: None,
                         time: chrono::Local
