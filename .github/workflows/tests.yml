@@ -26,9 +26,7 @@ jobs:
       APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
     steps:
       - if: runner.os == 'Linux'
-        run: |
-          sudo apt install -y pkg-config libusb-1.0-0-dev libftdi1-dev
-          sudo apt install libudev-dev
+        run: sudo apt install -y pkg-config libusb-1.0-0-dev libftdi1-dev libudev-dev
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
