@@ -26,36 +26,55 @@ impl AprsTextFile {
 
 fn read_lines(path: &String) -> Result<Vec<String>, crate::connection::ConnectionError> {
     let mut lines: Vec<String> = vec![];
-    match url::Url::parse(path) {
-        Ok(url) => {
-            let response = reqwest::blocking::get(url).expect("error retrieving remote file");
-            let text = response.text().expect("error parsing remote file");
-            for line in text.split('\n') {
-                lines.push(line.to_string());
+    if std::path::Path::new(path).exists() {
+        match std::fs::File::open(path) {
+            Ok(file) => {
+                let reader = std::io::BufReader::new(file);
+                for line in reader.lines() {
+                    lines.push(line.unwrap());
+                }
             }
-        }
-        Err(error) => match error {
-            url::ParseError::RelativeUrlWithoutBase => match std::fs::File::open(path) {
-                Ok(file) => {
-                    let reader = std::io::BufReader::new(file);
-                    for line in reader.lines() {
-                        lines.push(line.unwrap());
-                    }
-                }
-                Err(error) => {
-                    return Err(crate::connection::ConnectionError::FailedToEstablish {
-                        connection: path.to_owned(),
-                        message: error.to_string(),
-                    });
-                }
-            },
-            _ => {
+            Err(error) => {
                 return Err(crate::connection::ConnectionError::FailedToEstablish {
                     connection: path.to_owned(),
                     message: error.to_string(),
                 });
             }
-        },
+        }
+    } else {
+        match url::Url::parse(path) {
+            Ok(url) => {
+                let response = match reqwest::blocking::get(url.to_owned()) {
+                    Ok(response) => response,
+                    Err(error) => {
+                        return Err(crate::connection::ConnectionError::ReadFailure {
+                            connection: url.to_string(),
+                            message: error.to_string(),
+                        });
+                    }
+                };
+
+                let text = match response.text() {
+                    Ok(text) => text,
+                    Err(error) => {
+                        return Err(crate::connection::ConnectionError::ReadFailure {
+                            connection: url.to_string(),
+                            message: error.to_string(),
+                        })
+                    }
+                };
+
+                for line in text.split('\n') {
+                    lines.push(line.to_string());
+                }
+            }
+            Err(error) => {
+                return Err(crate::connection::ConnectionError::FailedToEstablish {
+                    connection: path.to_owned(),
+                    message: error.to_string(),
+                });
+            }
+        }
     }
 
     Ok(lines)
