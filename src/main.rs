@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused_assignments)]
+
 mod configuration;
 mod connection;
 mod location;

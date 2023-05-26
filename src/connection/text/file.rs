@@ -4,31 +4,29 @@ use chrono::{TimeZone, Timelike};
 
 #[derive(serde::Deserialize, Debug, PartialEq, Clone)]
 pub struct AprsTextFile {
-    pub path: std::path::PathBuf,
+    pub path: String,
     pub callsigns: Option<Vec<String>>,
 }
 
 impl AprsTextFile {
     pub fn new(
-        path: std::path::PathBuf,
+        path: String,
         callsigns: Option<Vec<String>>,
     ) -> Result<Self, crate::connection::ConnectionError> {
-        if path.exists() || url::Url::parse(path.to_str().unwrap()).is_ok() {
+        if std::path::Path::new(&path).exists() || url::Url::parse(&path).is_ok() {
             Ok(Self { path, callsigns })
         } else {
             Err(crate::connection::ConnectionError::FailedToEstablish {
-                connection: path.to_str().unwrap().to_string(),
+                connection: path,
                 message: "path does not exist".to_string(),
             })
         }
     }
 }
 
-fn read_lines(
-    path: &std::path::PathBuf,
-) -> Result<Vec<String>, crate::connection::ConnectionError> {
+fn read_lines(path: &String) -> Result<Vec<String>, crate::connection::ConnectionError> {
     let mut lines: Vec<String> = vec![];
-    match url::Url::parse(path.to_str().unwrap()) {
+    match url::Url::parse(path) {
         Ok(url) => {
             let response = reqwest::blocking::get(url).expect("error retrieving remote file");
             let text = response.text().expect("error parsing remote file");
@@ -46,14 +44,14 @@ fn read_lines(
                 }
                 Err(error) => {
                     return Err(crate::connection::ConnectionError::FailedToEstablish {
-                        connection: path.to_str().unwrap().to_string(),
+                        connection: path.to_owned(),
                         message: error.to_string(),
                     });
                 }
             },
             _ => {
                 return Err(crate::connection::ConnectionError::FailedToEstablish {
-                    connection: path.to_str().unwrap().to_string(),
+                    connection: path.to_owned(),
                     message: error.to_string(),
                 });
             }
@@ -124,12 +122,19 @@ impl AprsTextFile {
 
 #[derive(serde::Deserialize, Debug, PartialEq, Clone)]
 pub struct GeoJsonFile {
-    pub path: std::path::PathBuf,
+    pub path: String,
 }
 
 impl GeoJsonFile {
-    pub fn new(path: std::path::PathBuf) -> Self {
-        Self { path }
+    pub fn new(path: String) -> Result<Self, crate::connection::ConnectionError> {
+        if std::path::Path::new(&path).exists() || url::Url::parse(&path).is_ok() {
+            Ok(Self { path })
+        } else {
+            Err(crate::connection::ConnectionError::FailedToEstablish {
+                connection: path,
+                message: "path does not exist".to_string(),
+            })
+        }
     }
 }
 
@@ -245,9 +250,8 @@ mod tests {
     #[test]
     #[ignore]
     fn test_aprs_from_url() {
-        let url = std::path::PathBuf::from(
-            "http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-11%20raw.txt",
-        );
+        let url = "http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-11%20raw.txt"
+            .to_string();
 
         let connection = AprsTextFile::new(url, None).unwrap();
 
@@ -258,11 +262,11 @@ mod tests {
 
     #[test]
     fn test_aprs_from_file() {
-        let path = std::path::PathBuf::from(format!(
+        let path = format!(
             "{:}/{:}",
             env!("CARGO_MANIFEST_DIR"),
             "data/aprs/W3EAX-8_raw_NS-111.txt"
-        ));
+        );
 
         let connection = AprsTextFile::new(path, None).unwrap();
 

@@ -97,8 +97,8 @@ impl BalloonData {
 pub enum LocationSource {
     AprsFi,
     Serial(String),
-    TextFile(std::path::PathBuf),
-    GeoJsonFile(std::path::PathBuf),
+    TextFile(String),
+    GeoJsonFile(String),
     Database(String),
     Prediction,
     #[default]

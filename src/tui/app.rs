@@ -146,10 +146,7 @@ impl PacketravenApp {
                     crate::connection::text::TextStream::GeoJsonFile(connection) => {
                         let connection = connection.to_owned();
                         instance.add_log_message(
-                            format!(
-                                "reading GeoJSON file: {:}",
-                                connection.path.to_str().unwrap()
-                            ),
+                            format!("reading GeoJSON file: {:}", connection.path),
                             log::Level::Info,
                         );
 
@@ -163,10 +160,7 @@ impl PacketravenApp {
                             }
                         }
                         instance.add_log_message(
-                            format!(
-                                "reading text file of APRS frames: {:}",
-                                connection.path.to_str().unwrap()
-                            ),
+                            format!("reading text file of APRS frames: {:}", connection.path),
                             log::Level::Info,
                         );
                         crate::connection::Connection::AprsTextFile(connection)
@@ -246,7 +240,7 @@ impl PacketravenApp {
                         .connections
                         .push(crate::connection::Connection::GeoJsonFile(
                             crate::connection::text::file::GeoJsonFile {
-                                path: output.filename.to_owned(),
+                                path: output.filename.to_str().unwrap().to_owned(),
                             },
                         ));
                     instance.add_log_message(
