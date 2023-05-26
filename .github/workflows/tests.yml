@@ -48,6 +48,10 @@ jobs:
           key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('Cargo.lock') }}
       - run: cargo install cargo2junit grcov
       - run: cargo test -- -Z unstable-options --format json | cargo2junit > results.xml
+      - uses: test-summary/action@v2
+        with:
+          paths: "results.xml"
+        if: always()
       - run: zip -0 ccov.zip `find . \( -name "packetraven*.gc*" \) -print`
       - run: grcov ccov.zip -s . -t lcov --llvm --ignore-not-existing --ignore "/*" --ignore "tests/*" -o lcov.info
       - uses: codecov/codecov-action@v1
