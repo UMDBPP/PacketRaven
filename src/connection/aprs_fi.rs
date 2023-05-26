@@ -23,18 +23,15 @@ impl AprsFiQuery {
 }
 
 impl AprsFiQuery {
-    fn url(&self) -> Result<String, super::ConnectionError> {
+    fn parameters(&self) -> Result<Vec<(&str, String)>, super::ConnectionError> {
         if let Some(callsigns) = &self.callsigns {
             let parameters = vec![
-                format!("name={:}", callsigns.join(",")),
-                format!("what={:}", "loc"),
-                format!("apikey={:}", self.api_key),
-                format!("format={:}", "json"),
+                ("name", callsigns.join(",")),
+                ("what", "loc".to_string()),
+                ("apikey", self.api_key.to_owned()),
+                ("format", "json".to_string()),
             ];
-            Ok(format!(
-                "https://api.aprs.fi/api/get?{:}",
-                parameters.join("&")
-            ))
+            Ok(parameters)
         } else {
             Err(super::ConnectionError::FailedToEstablish {
                 connection: "APRS.fi".to_string(),
@@ -62,8 +59,13 @@ impl AprsFiQuery {
             .build()
             .unwrap();
 
-        let url = self.url()?;
-        let response = client.get(&url).send().expect(&url);
+        let parameters = self.parameters()?;
+        let response = client
+            .get("https://api.aprs.fi/api/get")
+            .query(&parameters)
+            .send()
+            .expect(&format!("{:?}", parameters));
+        let url = response.url().to_string();
 
         self.last_access = Some(now);
 
@@ -305,6 +307,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn test_api() {
         if let Ok(api_key) = std::env::var("APRS_FI_API_KEY") {
             let callsigns = vec![
@@ -315,7 +318,6 @@ mod tests {
             ];
 
             let mut connection = AprsFiQuery::new(api_key, Some(&callsigns));
-            println!("{:?}", connection.url());
             let packets = connection.retrieve_aprs_from_aprsfi().unwrap();
 
             assert!(!packets.is_empty());
@@ -515,6 +517,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_api_wrong_key() {
         let api_key = String::from("123456.abcdefghijklmno");
         let callsigns = vec![
@@ -525,7 +528,6 @@ mod tests {
         ];
 
         let mut connection = AprsFiQuery::new(api_key, Some(&callsigns));
-        println!("{:?}", connection.url());
         assert!(connection.retrieve_aprs_from_aprsfi().is_err());
     }
 }

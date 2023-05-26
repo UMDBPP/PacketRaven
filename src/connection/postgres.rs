@@ -53,6 +53,22 @@ pub struct PacketDatabase {
     credentials: DatabaseCredentials,
     client: postgres::Client,
 }
+
+impl Clone for PacketDatabase {
+    fn clone(&self) -> Self {
+        Self {
+            credentials: self.credentials.clone(),
+            client: self.credentials.client(),
+        }
+    }
+}
+
+impl std::fmt::Debug for PacketDatabase {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(fmt, "{:?}", self.credentials)
+    }
+}
+
 impl Default for PacketDatabase {
     fn default() -> Self {
         Self::new(
@@ -100,7 +116,7 @@ impl PacketDatabase {
 
     pub fn retrieve_locations_from_database(
         &mut self,
-    ) -> Result<Vec<crate::location::BalloonLocation>, crate::connection::Error> {
+    ) -> Result<Vec<crate::location::BalloonLocation>, crate::connection::ConnectionError> {
         let mut locations: Vec<crate::location::BalloonLocation> = vec![];
 
         self.client
@@ -129,10 +145,14 @@ impl PacketDatabase {
             .unwrap()
         {
             locations.push(crate::location::BalloonLocation {
-                time: chrono::Local.timestamp_opt(row.get(0), 0).unwrap(),
-                location: geo::coord! { x: row.get(1), y: row.get(2) },
-                altitude: Some(row.get(3)),
+                location: crate::location::Location {
+                    time: chrono::Local.timestamp_opt(row.get(0), 0).unwrap(),
+                    coord: geo::coord! { x: row.get(1), y: row.get(2) },
+                    altitude: Some(row.get(3)),
+                },
                 data: crate::location::BalloonData::new(
+                    None,
+                    None,
                     None,
                     None,
                     crate::location::LocationSource::Database(format!(
@@ -168,8 +188,8 @@ pub struct SshCredentials {
 mod tests {
     use super::*;
 
-    #[ignore]
     #[test]
+    #[ignore]
     fn test_database() {
         if let Ok(hostname) = std::env::var("POSTGRES_HOSTNAME") {
             let port = match std::env::var("POSTGRES_PORT") {
@@ -240,7 +260,7 @@ mod tests {
             // );
 
             let mut connection = super::super::Connection::PacketDatabase(database);
-            let packets = connection.retrieve_packets();
+            let packets = connection.retrieve_packets().unwrap();
 
             // database.table_exists(&table_name);
             // database.client.execute("DROP TABLE table;", &[&table_name]);

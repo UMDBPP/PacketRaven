@@ -243,6 +243,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn test_aprs_from_url() {
         let url = std::path::PathBuf::from(
             "http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-11%20raw.txt",

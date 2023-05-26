@@ -28,44 +28,24 @@ impl SondeHubQuery {
 }
 
 impl SondeHubQuery {
-    fn urls(&self) -> Result<Vec<String>, crate::connection::ConnectionError> {
-        if let Some(callsigns) = &self.callsigns {
-            let mut parameters = vec![];
+    fn parameters(&self) -> Vec<(&str, String)> {
+        let mut parameters = vec![];
 
-            if let Some(end) = self.end {
-                parameters.push(format!("datetime={:}", end.to_rfc3339()));
-            }
-
-            if let Some(last) = self.start.map(|start| {
-                if let Some(end) = self.end {
-                    end - start
-                } else {
-                    chrono::Local::now() - start
-                }
-            }) {
-                parameters.push(format!("last={:}", last.num_seconds()));
-            }
-
-            let mut urls = vec![];
-            for callsign in callsigns {
-                let mut url = format!(
-                    "https://api.v2.sondehub.org/amateur/telemetry/{:}",
-                    callsign
-                );
-                if !parameters.is_empty() {
-                    url += &format!("?{:}", parameters.join("&"));
-                }
-
-                urls.push(url);
-            }
-
-            Ok(urls)
-        } else {
-            Err(crate::connection::ConnectionError::FailedToEstablish {
-                connection: "SondeHub".to_string(),
-                message: "the API requires a list of callsigns".to_string(),
-            })
+        if let Some(end) = self.end {
+            parameters.push(("datetime", end.to_rfc3339()));
         }
+
+        if let Some(last) = self.start.map(|start| {
+            if let Some(end) = self.end {
+                end - start
+            } else {
+                chrono::Local::now() - start
+            }
+        }) {
+            parameters.push(("last", format!("{:}", last.num_seconds())));
+        }
+
+        parameters
     }
 
     pub fn retrieve_locations_from_sondehub(
@@ -89,33 +69,49 @@ impl SondeHubQuery {
             .build()
             .unwrap();
 
-        let urls = self.urls()?;
-        for url in &urls {
-            let response = client.get(url).send().expect(url);
+        let parameters = self.parameters();
+        if let Some(callsigns) = &self.callsigns {
+            for callsign in callsigns {
+                let response = client
+                    .get(format!(
+                        "https://api.v2.sondehub.org/amateur/telemetry/{:}",
+                        callsign
+                    ))
+                    .query(&parameters)
+                    .send()
+                    .unwrap_or_else(|error| panic!("{:} - {:?}", error, parameters));
 
-            match response.status() {
-                reqwest::StatusCode::OK => {
-                    // deserialize JSON into struct
-                    let locations: Vec<SondeHubLocation> = match response.json() {
-                        Ok(object) => object,
-                        Err(error) => {
-                            return Err(crate::connection::ConnectionError::ApiError {
-                                message: format!("{:?}", error),
-                                url: url.to_owned(),
-                            });
+                let url = response.url().to_string().to_owned();
+
+                match response.status() {
+                    reqwest::StatusCode::OK => {
+                        // deserialize JSON into struct
+                        let locations: Vec<SondeHubLocation> = match response.json() {
+                            Ok(object) => object,
+                            Err(error) => {
+                                return Err(crate::connection::ConnectionError::ApiError {
+                                    message: format!("{:?}", error),
+                                    url,
+                                });
+                            }
+                        };
+                        for location in locations {
+                            balloon_locations.push(location.to_balloon_location());
                         }
-                    };
-                    for location in locations {
-                        balloon_locations.push(location.to_balloon_location());
+                    }
+                    other => {
+                        return Err(crate::connection::ConnectionError::ApiError {
+                            message: other.to_string(),
+                            url,
+                        });
                     }
                 }
-                other => {
-                    return Err(crate::connection::ConnectionError::ApiError {
-                        message: other.to_string(),
-                        url: url.to_owned(),
-                    });
-                }
             }
+        } else {
+            return Err(crate::connection::ConnectionError::FailedToEstablish {
+                connection: "SondeHub".to_string(),
+                message: "the API requires a list of callsigns".to_string(),
+            });
         }
 
         self.last_access = Some(now);
@@ -189,6 +185,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn test_api() {
         let callsigns = vec![
             String::from("N1YIP-11"),
@@ -315,6 +312,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_api_nonexistent_callsign() {
         let callsigns = vec![String::from("nonexistent")];
 

@@ -26,7 +26,7 @@ impl TawhiriQuery {
         }
     }
 
-    fn url(&self) -> String {
+    fn parameters(&self) -> Vec<(&str, String)> {
         // CUSF API requires longitude in 0-360 format
         let mut start_location = self.query.start.coord;
         if start_location.x < 0.0 {
@@ -45,51 +45,54 @@ impl TawhiriQuery {
         };
 
         let mut parameters = vec![
-            format!("launch_longitude={:}", start_location.x),
-            format!("launch_latitude={:}", start_location.y),
-            format!("launch_datetime={:}", self.query.start.time.to_rfc3339()),
-            format!("ascent_rate={:.2}", self.query.profile.ascent_rate),
-            format!("burst_altitude={:.2}", burst_altitude),
-            format!(
-                "descent_rate={:.2}",
-                self.query.profile.sea_level_descent_rate,
+            ("launch_longitude", format!("{:}", start_location.x)),
+            ("launch_latitude", format!("{:}", start_location.y)),
+            ("launch_datetime", self.query.start.time.to_rfc3339()),
+            (
+                "ascent_rate",
+                format!("{:.2}", self.query.profile.ascent_rate),
+            ),
+            ("burst_altitude", format!("{:.2}", burst_altitude)),
+            (
+                "descent_rate",
+                format!("{:.2}", self.query.profile.sea_level_descent_rate,),
             ),
         ];
 
         if let Some(altitude) = self.query.start.altitude {
-            parameters.push(format!("launch_altitude={:.2}", altitude));
+            parameters.push(("launch_altitude", format!("{:.2}", altitude)));
         }
         if let Some(dataset_time) = self.dataset_time {
-            parameters.push(format!("dataset={:}", dataset_time.to_rfc3339()));
+            parameters.push(("dataset", format!("{:}", dataset_time.to_rfc3339())));
         }
         if let Some(version) = self.version {
-            parameters.push(format!("version={:}", version));
+            parameters.push(("version", format!("{:}", version)));
         }
 
         if let Some(float_duration) = self.query.profile.float_duration {
             if !self.query.descent_only {
-                parameters.push("profile=float_profile".to_string());
+                parameters.push(("profile", "float_profile".to_string()));
                 let float_altitude = self
                     .query
                     .profile
                     .float_altitude
                     .unwrap_or(self.query.profile.burst_altitude);
-                parameters.push(format!("float_altitude={:.2}", float_altitude));
+                parameters.push(("float_altitude", format!("{:.2}", float_altitude)));
                 let start_altitude = self.query.start.altitude.unwrap_or(0.0);
                 let float_start_time = self.query.start.time
                     + chrono::Duration::seconds(
                         (float_altitude - start_altitude / self.query.profile.ascent_rate) as i64,
                     );
-                parameters.push(format!(
-                    "stop_datetime={:}",
-                    (float_start_time + float_duration).to_rfc3339()
+                parameters.push((
+                    "stop_datetime",
+                    format!("{:}", (float_start_time + float_duration).to_rfc3339()),
                 ));
             }
         } else {
-            parameters.push("profile=standard_profile".to_string());
+            parameters.push(("profile", "standard_profile".to_string()));
         }
 
-        format!("{:}?{:}", self.query.api_url, parameters.join("&"))
+        parameters
     }
 
     fn get(&self) -> Result<TawhiriResponse, TawhiriError> {
@@ -99,11 +102,13 @@ impl TawhiriQuery {
             .build()
             .unwrap();
 
-        let url = self.url();
+        let parameters = self.parameters();
         let response = client
-            .get(&url)
+            .get(&self.query.api_url)
+            .query(&parameters)
             .send()
             .expect("error retrieving prediction");
+        let url = response.url().to_string();
 
         match &response.status() {
             &reqwest::StatusCode::OK => {
@@ -337,6 +342,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn test_ground_prediction() {
         let start = crate::location::Location {
             time: chrono::Local::now(),
@@ -346,7 +352,6 @@ mod tests {
         let profile = crate::prediction::FlightProfile::new_standard(5.5, 28000.0, 9.0);
 
         let query = TawhiriQuery::new(&start, &profile, None, None, None, false);
-        println!("{:}", query.url());
 
         let response = query.get().unwrap();
         let prediction = query.retrieve_prediction();
@@ -364,6 +369,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_ascending_prediction() {
         let start = crate::location::Location {
             time: chrono::Local::now(),
@@ -373,7 +379,6 @@ mod tests {
         let profile = crate::prediction::FlightProfile::new_standard(5.5, 28000.0, 9.0);
 
         let query = TawhiriQuery::new(&start, &profile, None, None, None, false);
-        println!("{:}", query.url());
 
         let response = query.get().unwrap();
         let prediction = query.retrieve_prediction();
@@ -391,6 +396,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_descending_prediction() {
         let start = crate::location::Location {
             time: chrono::Local::now(),
@@ -401,7 +407,6 @@ mod tests {
             crate::prediction::FlightProfile::new_standard(5.5, start.altitude.unwrap(), 9.0);
 
         let query = TawhiriQuery::new(&start, &profile, None, None, None, true);
-        println!("{:}", query.url());
 
         let response = query.get().unwrap();
         let prediction = query.retrieve_prediction();
@@ -417,6 +422,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_float_prediction() {
         let start = crate::location::Location {
             time: chrono::Local::now(),
@@ -433,7 +439,6 @@ mod tests {
         );
 
         let query = TawhiriQuery::new(&start, &profile, None, None, None, false);
-        println!("{:}", query.url());
 
         let response = query.get().unwrap();
         let prediction = query.retrieve_prediction();
