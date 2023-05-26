@@ -31,21 +31,7 @@ jobs:
       - if: runner.os == 'Linux'
         run: sudo apt install -y pkg-config libusb-1.0-0-dev libftdi1-dev libudev-dev
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - uses: actions/cache@v2
-        env:
-          cache-name: cache-dependencies
-        with:
-          path: |
-            ~/.cargo/.crates.toml
-            ~/.cargo/.crates2.json
-            ~/.cargo/bin
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            target
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('Cargo.lock') }}
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo install cargo2junit
       - run: cargo test -- -Z unstable-options --format json | cargo2junit > results.xml
       - uses: test-summary/action@v2
@@ -70,10 +56,6 @@ jobs:
           - 5432:5432
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     env:
-      CARGO_INCREMENTAL: 0
-      RUSTFLAGS: -Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort
-      RUSTDOCFLAGS: -Cpanic=abort
-      POSTGRES_HOSTNAME: localhost
       POSTGRES_PORT: 5432
       POSTGRES_DATABASE: test_database
       POSTGRES_USERNAME: postgres
@@ -84,21 +66,7 @@ jobs:
       - if: runner.os == 'Linux'
         run: sudo apt install -y pkg-config libusb-1.0-0-dev libftdi1-dev libudev-dev
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - uses: actions/cache@v2
-        env:
-          cache-name: cache-dependencies
-        with:
-          path: |
-            ~/.cargo/.crates.toml
-            ~/.cargo/.crates2.json
-            ~/.cargo/bin
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            target
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('Cargo.lock') }}
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo install cargo2junit grcov
       - run: cargo test --all-features -- -Z unstable-options --format json | cargo2junit > results.xml
       - uses: test-summary/action@v2
@@ -120,11 +88,7 @@ jobs:
         runs-on: [ "ubuntu-latest", "macos-latest", "windows-latest" ]
     steps:
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo build --release
       - uses: actions/upload-artifact@v2
         with:
