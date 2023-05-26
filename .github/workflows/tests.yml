@@ -24,9 +24,6 @@ jobs:
       fail-fast: false
       matrix:
         runs-on: [ ubuntu-latest, macos-latest, windows-latest ]
-    env:
-      APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
-      APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
     steps:
       - if: runner.os == 'Linux'
         run: sudo apt install -y pkg-config libusb-1.0-0-dev libftdi1-dev libudev-dev
@@ -38,8 +35,8 @@ jobs:
         with:
           paths: "results.xml"
         if: always()
-  test_with_coverage:
-    name: test with coverage (${{ matrix.runs-on }})
+  test_all_features:
+    name: test all features (${{ matrix.runs-on }})
     runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
@@ -66,18 +63,12 @@ jobs:
         run: sudo apt install -y pkg-config libusb-1.0-0-dev libftdi1-dev libudev-dev
       - uses: actions/checkout@v3
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: cargo install cargo2junit grcov
+      - run: cargo install cargo2junit
       - run: cargo test --all-features -- --include-ignored -Z unstable-options --format json | cargo2junit > results.xml
       - uses: test-summary/action@v2
         with:
           paths: "results.xml"
         if: always()
-      - run: zip -0 ccov.zip `find . \( -name "packetraven*.gc*" \) -print`
-      - run: grcov ccov.zip -s . -t lcov --llvm --ignore-not-existing --ignore "/*" --ignore "tests/*" -o lcov.info
-      - uses: codecov/codecov-action@v1
-        with:
-          files: ./lcov.info
-          fail_ci_if_error: true
   build:
     runs-on: ${{ matrix.runs-on }}
     strategy:
@@ -87,10 +78,10 @@ jobs:
     steps:
       - if: runner.os == 'Linux'
         run: sudo apt install -y pkg-config libusb-1.0-0-dev libftdi1-dev libudev-dev
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo build --release
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: packetraven
           path: target/release/packetraven
