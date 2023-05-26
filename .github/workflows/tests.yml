@@ -84,10 +84,10 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: packetraven-${{ runner.os }}
-          path: target/release/packetraven
+          path: target/release/packetraven*
       - if: (github.event_name == 'release' && github.event.action == 'published')
         uses: svenstaro/upload-release-action@v2
         with:
           name: packetraven-${{ runner.os }}
-          file: target/release/packetraven
+          file: target/release/packetraven*
 
