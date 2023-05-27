@@ -141,3 +141,8 @@ dmypy.json
 .idea/
 credentials.yaml
 tests/data/output
+
+
+# Added by cargo
+
+/target

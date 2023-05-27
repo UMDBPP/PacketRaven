@@ -5,70 +5,43 @@ on:
     branches:
       - main
     paths:
-      - '**.py'
+      - '**.rs'
       - '.github/workflows/tests.yml'
-      - 'pyproject.toml'
-      - 'tests/**'
   pull_request:
+  release:
+    types:
+      - published
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  check:
-    name: ${{ matrix.toxenv }}
-    runs-on: ${{ matrix.os }}
+  test:
+    name: test (${{ matrix.runs-on }})
+    runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
       matrix:
-        toxenv: [ check-style, check-build ]
-        python: [ '3.11' ]
-        os: [ ubuntu-latest ]
+        runs-on: [ ubuntu-latest, macos-latest, windows-latest ]
     steps:
+      - if: runner.os == 'Linux'
+        run: sudo apt install -y pkg-config libusb-1.0-0-dev libftdi1-dev libudev-dev
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: cargo install cargo2junit
+      - run: cargo test -- -Z unstable-options --format json | cargo2junit > results.xml
+      - uses: test-summary/action@v2
         with:
-          python-version: ${{ matrix.python }}
-          cache: 'pip'
-          cache-dependency-path: 'pyproject.toml'
-      - run: pip install "tox>=4.0"
-      - run: tox -e ${{ matrix.toxenv }}
-  test_without_postgres:
-    name: ${{ matrix.toxenv }} (Python ${{ matrix.python }}, ${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+          paths: "results.xml"
+        if: always()
+  test_all_features:
+    name: test all features (${{ matrix.runs-on }})
+    runs-on: ${{ matrix.runs-on }}
     strategy:
+      fail-fast: false
       matrix:
-        toxenv: [ test-xdist ]
-        os: [ macos-latest, windows-latest ]
-        python: [ '3.8', '3.9', '3.10', '3.11' ]
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python }}
-          cache: 'pip'
-          cache-dependency-path: 'pyproject.toml'
-      - run: pip install "tox>=4.0"
-      - run: tox -e ${{ matrix.toxenv }}
-        env:
-          APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
-          APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
-      - if: ${{ contains(matrix.toxenv,'-cov') }}
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage.xml
-          flags: unit
-          fail_ci_if_error: true
-  test_with_postgres:
-    name: ${{ matrix.toxenv }} (Python ${{ matrix.python }}, ${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        toxenv: [ test-xdist ]
-        os: [ ubuntu-latest ]
-        python: [ '3.8', '3.9', '3.10', '3.11' ]
-        include:
-          - toxenv: test-cov-xdist
-            os: ubuntu-latest
-            python: '3.11'
+        runs-on: [ ubuntu-latest ]
     services:
       postgres:
         image: postgis/postgis:latest
@@ -78,27 +51,43 @@ jobs:
         ports:
           - 5432:5432
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      POSTGRES_PORT: 5432
+      POSTGRES_DATABASE: test_database
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: test_password
+      APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
+      APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
     steps:
+      - if: runner.os == 'Linux'
+        run: sudo apt install -y pkg-config libusb-1.0-0-dev libftdi1-dev libudev-dev
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: cargo install cargo2junit
+      - run: cargo test --all-features -- --include-ignored -Z unstable-options --format json | cargo2junit > results.xml
+      - uses: test-summary/action@v2
         with:
-          python-version: ${{ matrix.python }}
-          cache: 'pip'
-          cache-dependency-path: 'pyproject.toml'
-      - run: pip install "tox>=4.0"
-      - run: tox -e ${{ matrix.toxenv }}
-        env:
-          APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
-          APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
-          POSTGRES_HOSTNAME: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_DATABASE: test_database
-          POSTGRES_USERNAME: postgres
-          POSTGRES_PASSWORD: test_password
-      - if: ${{ contains(matrix.toxenv,'-cov') }}
-        uses: codecov/codecov-action@v3
+          paths: "results.xml"
+        if: always()
+  build:
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: [ "ubuntu-latest", "macos-latest", "windows-latest" ]
+    steps:
+      - if: runner.os == 'Linux'
+        run: sudo apt install -y pkg-config libusb-1.0-0-dev libftdi1-dev libudev-dev
+      - uses: actions/checkout@v3
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: cargo build --release
+      - uses: actions/upload-artifact@v3
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage.xml
-          flags: unit
-          fail_ci_if_error: true
+          name: packetraven-${{ runner.os }}
+          path: target/release/packetraven*
+      - if: (github.event_name == 'release' && github.event.action == 'published')
+        uses: svenstaro/upload-release-action@v2
+        with:
+          name: packetraven-${{ runner.os }}
+          file: target/release/packetraven*
+

@@ -3,6 +3,4 @@
 .. toctree::
    :hidden:
 
-   installation
    usage
-   python_api
