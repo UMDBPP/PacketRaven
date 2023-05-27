@@ -235,14 +235,12 @@ impl PacketravenApp {
         }
 
         #[cfg(feature = "postgres")]
-        if let Some(database_credentials) = &configuration.packets.database {
-            instance
-                .connections
-                .push(crate::connection::Connection::PacketDatabase(
-                    crate::connection::postgres::PacketDatabase::from_credentials(
-                        &database_credentials,
-                    ),
-                ));
+        if let Some(database_credentials) = &configuration.connections.database {
+            connections.push(crate::connection::Connection::PacketDatabase(
+                crate::connection::postgres::PacketDatabase::from_credentials(
+                    &database_credentials,
+                ),
+            ));
         }
 
         if !connections.is_empty() {
