@@ -89,5 +89,5 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           asset_name: packetraven-${{ runner.os }}
-          file: target/release/&{{ runner.os == 'Windows' && 'packetraven.exe' || 'packetraven' }}
+          file: target/release/${{ runner.os == 'Windows' && 'packetraven.exe' || 'packetraven' }}
 
