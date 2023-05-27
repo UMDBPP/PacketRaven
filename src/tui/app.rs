@@ -425,66 +425,20 @@ impl PacketravenApp {
                     }
 
                     if let Some(path) = &prediction_configuration.output_file {
-                        let features: Vec<geojson::FeatureCollection> = self
-                            .tracks
-                            .iter()
-                            .filter_map(|track| track.prediction.to_owned())
-                            .map(|locations| {
-                                locations
-                                    .iter()
-                                    .map(|location| {
-                                        let geometry =
-                                            geojson::Geometry::new(geojson::Value::Point(vec![
-                                                location.location.coord.x,
-                                                location.location.coord.y,
-                                            ]));
-                                        let mut properties = geojson::JsonObject::new();
-                                        if let Some(aprs_packet) = &location.data.aprs_packet {
-                                            properties.insert(
-                                                "from".to_string(),
-                                                geojson::JsonValue::String(
-                                                    aprs_packet.from.to_string(),
-                                                ),
-                                            );
+                        let mut locations = vec![];
+                        for track in &self.tracks {
+                            if let Some(prediction) = &track.prediction {
+                                let track_locations: Vec<&crate::location::BalloonLocation> =
+                                    prediction.iter().collect();
+                                locations.extend(track_locations);
+                            }
+                        }
+                        let feature_collection =
+                            crate::connection::text::file::locations_geojson_featurecollection(
+                                locations,
+                            );
 
-                                            if let aprs_parser::AprsData::Position(data) =
-                                                &aprs_packet.data
-                                            {
-                                                properties.insert(
-                                                    "to".to_string(),
-                                                    geojson::JsonValue::String(data.to.to_string()),
-                                                );
-                                                properties.insert(
-                                                    "comment".to_string(),
-                                                    geojson::JsonValue::String(
-                                                        String::from_utf8(data.comment.to_owned())
-                                                            .unwrap(),
-                                                    ),
-                                                );
-                                            }
-                                        }
-
-                                        geojson::Feature {
-                                            bbox: None,
-                                            geometry: Some(geometry),
-                                            id: None,
-                                            properties: Some(properties),
-                                            foreign_members: None,
-                                        }
-                                    })
-                                    .collect()
-                            })
-                            .collect();
-
-                        let collection_strings: Vec<String> = features
-                            .iter()
-                            .map(|feature_collection| feature_collection.to_string())
-                            .collect();
-
-                        match std::fs::write(
-                            path,
-                            format!("[\n{:}\n]", collection_strings.join(",\n")),
-                        ) {
+                        match std::fs::write(path, feature_collection.to_string()) {
                             Ok(_) => messages.push((
                                 chrono::Local::now(),
                                 format!("wrote predictions to {:}", path.to_string_lossy()),
@@ -508,57 +462,16 @@ impl PacketravenApp {
         }
 
         if let Some(path) = &self.configuration.output_file {
-            let features: Vec<geojson::FeatureCollection> = self
-                .tracks
-                .iter()
-                .map(|track| track.locations.to_owned())
-                .map(|locations| {
-                    locations
-                        .iter()
-                        .map(|location| {
-                            let geometry = geojson::Geometry::new(geojson::Value::Point(vec![
-                                location.location.coord.x,
-                                location.location.coord.y,
-                            ]));
-                            let mut properties = geojson::JsonObject::new();
-                            if let Some(aprs_packet) = &location.data.aprs_packet {
-                                properties.insert(
-                                    "from".to_string(),
-                                    geojson::JsonValue::String(aprs_packet.from.to_string()),
-                                );
+            let mut locations = vec![];
+            for track in &self.tracks {
+                let track_locations: Vec<&crate::location::BalloonLocation> =
+                    track.locations.iter().collect();
+                locations.extend(track_locations);
+            }
+            let feature_collection =
+                crate::connection::text::file::locations_geojson_featurecollection(locations);
 
-                                if let aprs_parser::AprsData::Position(data) = &aprs_packet.data {
-                                    properties.insert(
-                                        "to".to_string(),
-                                        geojson::JsonValue::String(data.to.to_string()),
-                                    );
-                                    properties.insert(
-                                        "comment".to_string(),
-                                        geojson::JsonValue::String(
-                                            String::from_utf8(data.comment.to_owned()).unwrap(),
-                                        ),
-                                    );
-                                }
-                            }
-
-                            geojson::Feature {
-                                bbox: None,
-                                geometry: Some(geometry),
-                                id: None,
-                                properties: Some(properties),
-                                foreign_members: None,
-                            }
-                        })
-                        .collect()
-                })
-                .collect();
-
-            let collection_strings: Vec<String> = features
-                .iter()
-                .map(|feature_collection| feature_collection.to_string())
-                .collect();
-
-            match std::fs::write(path, format!("[\n{:}\n]", collection_strings.join(",\n"))) {
+            match std::fs::write(path, feature_collection.to_string()) {
                 Ok(_) => messages.push((
                     chrono::Local::now(),
                     format!("wrote telemetry to {:}", path.to_string_lossy()),

@@ -310,3 +310,47 @@ mod tests {
         assert!(!packets.is_empty());
     }
 }
+
+pub fn locations_geojson_featurecollection(
+    locations: Vec<&crate::location::BalloonLocation>,
+) -> geojson::FeatureCollection {
+    let features: Vec<geojson::Feature> = locations
+        .iter()
+        .map(|location| {
+            let geometry = geojson::Geometry::new(geojson::Value::Point(vec![
+                location.location.coord.x,
+                location.location.coord.y,
+            ]));
+            let mut properties = geojson::JsonObject::new();
+            if let Some(aprs_packet) = &location.data.aprs_packet {
+                properties.insert(
+                    "from".to_string(),
+                    geojson::JsonValue::String(aprs_packet.from.to_string()),
+                );
+
+                if let aprs_parser::AprsData::Position(data) = &aprs_packet.data {
+                    properties.insert(
+                        "to".to_string(),
+                        geojson::JsonValue::String(data.to.to_string()),
+                    );
+                    properties.insert(
+                        "comment".to_string(),
+                        geojson::JsonValue::String(
+                            String::from_utf8(data.comment.to_owned()).unwrap(),
+                        ),
+                    );
+                }
+            }
+
+            geojson::Feature {
+                bbox: None,
+                geometry: Some(geometry),
+                id: None,
+                properties: Some(properties),
+                foreign_members: None,
+            }
+        })
+        .collect();
+
+    geojson::FeatureCollection::from_iter(features)
+}
