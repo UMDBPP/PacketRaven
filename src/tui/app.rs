@@ -487,7 +487,7 @@ impl PacketravenApp {
                         ) {
                             Ok(_) => messages.push((
                                 chrono::Local::now(),
-                                format!("wrote predicted tracks to {:}", path.to_string_lossy()),
+                                format!("wrote predictions to {:}", path.to_string_lossy()),
                                 log::Level::Debug,
                             )),
                             Err(error) => messages.push((
@@ -561,7 +561,7 @@ impl PacketravenApp {
             match std::fs::write(path, format!("[\n{:}\n]", collection_strings.join(",\n"))) {
                 Ok(_) => messages.push((
                     chrono::Local::now(),
-                    format!("wrote predicted tracks to {:}", path.to_string_lossy()),
+                    format!("wrote telemetry to {:}", path.to_string_lossy()),
                     log::Level::Debug,
                 )),
                 Err(error) => {
