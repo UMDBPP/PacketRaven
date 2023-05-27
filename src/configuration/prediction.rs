@@ -19,7 +19,7 @@ pub struct Prediction {
     pub start: crate::location::Location,
     pub profile: StandardProfile,
     pub float: Option<FloatProfile>,
-    pub output: Option<crate::configuration::PathConfiguration>,
+    pub output_file: Option<std::path::PathBuf>,
     pub api_url: Option<String>,
     #[serde(default = "default_name")]
     pub name: String,

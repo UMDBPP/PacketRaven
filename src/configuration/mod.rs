@@ -11,16 +11,11 @@ pub struct RunConfiguration {
     pub callsigns: Option<Vec<String>>,
     #[serde(default)]
     pub time: TimeConfiguration,
-    pub output: Option<PathConfiguration>,
-    pub log: Option<PathConfiguration>,
+    pub output_file: Option<std::path::PathBuf>,
+    pub log_file: Option<std::path::PathBuf>,
     #[serde(default)]
-    pub packets: PacketSourceConfiguration,
+    pub connections: ConnectionConfiguration,
     pub prediction: Option<crate::configuration::prediction::PredictionConfiguration>,
-}
-
-#[derive(serde::Deserialize, PartialEq, Debug, Clone)]
-pub struct PathConfiguration {
-    pub filename: std::path::PathBuf,
 }
 
 fn default_interval() -> chrono::Duration {
@@ -52,13 +47,13 @@ impl Default for TimeConfiguration {
 }
 
 #[derive(Default, serde::Deserialize, PartialEq, Debug, Clone)]
-pub struct PacketSourceConfiguration {
-    #[cfg(feature = "aprsfi")]
-    pub aprs_fi: Option<crate::connection::aprs_fi::AprsFiQuery>,
+pub struct ConnectionConfiguration {
+    pub text: Option<Vec<crate::connection::text::TextStream>>,
     #[cfg(feature = "sondehub")]
     #[serde(default)]
     pub sondehub: Option<crate::connection::sondehub::SondeHubQuery>,
-    pub text: Option<Vec<crate::connection::text::TextStream>>,
+    #[cfg(feature = "aprsfi")]
+    pub aprs_fi: Option<crate::connection::aprs_fi::AprsFiQuery>,
     #[cfg(feature = "postgres")]
     pub database: Option<crate::connection::postgres::DatabaseCredentials>,
 }
@@ -79,7 +74,7 @@ mod tests {
         let file = std::fs::File::open(path).unwrap();
         let configuration: RunConfiguration = serde_yaml::from_reader(file).unwrap();
 
-        assert!(!configuration.packets.text.unwrap().is_empty());
+        assert!(!configuration.connections.text.unwrap().is_empty());
     }
 
     #[test]
@@ -100,8 +95,8 @@ mod tests {
         }
 
         assert_eq!(
-            configuration.packets,
-            PacketSourceConfiguration {
+            configuration.connections,
+            ConnectionConfiguration {
                 #[cfg(feature = "aprsfi")]
                 aprs_fi: Some(crate::connection::aprs_fi::AprsFiQuery::new(
                     String::from("123456.abcdefhijklmnop"),
@@ -177,20 +172,16 @@ mod tests {
         );
 
         assert_eq!(
-            configuration.output.unwrap(),
-            PathConfiguration {
-                filename: std::path::PathBuf::from("example_3.geojson")
-            }
+            configuration.output_file.unwrap(),
+            std::path::PathBuf::from("example_3.geojson".to_string())
         );
 
         assert_eq!(
-            configuration.log.unwrap(),
-            PathConfiguration {
-                filename: std::path::PathBuf::from("example_3.log")
-            }
+            configuration.log_file.unwrap(),
+            std::path::PathBuf::from("example_3.log".to_string())
         );
 
-        assert!(configuration.packets.text.is_some());
+        assert!(configuration.connections.text.is_some());
 
         if let Some(crate::configuration::prediction::PredictionConfiguration::Single(prediction)) =
             configuration.prediction
@@ -214,9 +205,9 @@ mod tests {
                     },
                     float: None,
                     api_url: None,
-                    output: Some(PathConfiguration {
-                        filename: std::path::PathBuf::from("example_3_prediction.geojson"),
-                    })
+                    output_file: Some(std::path::PathBuf::from(
+                        "example_3_prediction.geojson".to_string()
+                    ))
                 }
             );
         }

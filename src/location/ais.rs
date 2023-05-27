@@ -1,5 +1,5 @@
 #[serde_with::serde_as]
-#[derive(serde::Deserialize, Clone, Debug, PartialEq)]
+#[derive(serde::Deserialize, Clone, Debug, PartialEq, serde::Serialize)]
 pub struct AisData {
     pub mmsi: String,
     pub imo: Option<String>,

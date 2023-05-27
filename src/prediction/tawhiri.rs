@@ -45,8 +45,8 @@ impl TawhiriQuery {
         };
 
         let mut parameters = vec![
-            ("launch_longitude", format!("{:}", start_location.x)),
-            ("launch_latitude", format!("{:}", start_location.y)),
+            ("launch_longitude", format!("{:.2}", start_location.x)),
+            ("launch_latitude", format!("{:.2}", start_location.y)),
             ("launch_datetime", self.query.start.time.to_rfc3339()),
             (
                 "ascent_rate",

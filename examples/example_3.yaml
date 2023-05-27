@@ -18,13 +18,13 @@ time:
   end: 2022-03-06 00:00:00
   interval: 120
 
-output:
+output_file:
   filename: example_3.geojson
 
-log:
+log_file:
   filename: example_3.log
 
-packets:
+connections:
   sondehub: {}
   text:
     - port: /dev/ttyUSB0
@@ -41,5 +41,5 @@ prediction:
     ascent_rate: 6.5
     burst_altitude: 25000
     sea_level_descent_rate: 9
-  output:
+  output_file:
     filename: example_3_prediction.geojson

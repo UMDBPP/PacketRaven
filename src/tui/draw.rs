@@ -399,8 +399,8 @@ pub fn draw<B: ratatui::backend::Backend>(
         }
 
         let mut datasets = vec![];
-        let x_range;
-        let y_range;
+        let mut x_range;
+        let mut y_range;
         let x_labels;
         let y_labels;
 
@@ -436,14 +436,49 @@ pub fn draw<B: ratatui::backend::Backend>(
                     .graph_type(ratatui::widgets::GraphType::Scatter),
             );
 
+            x_range = [0.0, (end_time - start_time).num_seconds() as f64];
+            y_range = altitude_range;
+
             if let Some(prediction) = &track.prediction {
                 let with_altitude = crate::location::track::with_altitude(prediction);
-                let start_time = with_altitude.first().unwrap().location.time;
                 let seconds_since_start: Vec<f64> = with_altitude
                     .iter()
                     .map(|location| (location.location.time - start_time).num_seconds() as f64)
                     .collect();
                 let altitudes = crate::location::track::altitudes(&with_altitude);
+
+                let min_x = seconds_since_start
+                    .iter()
+                    .min_by(|a, b| a.total_cmp(b))
+                    .unwrap()
+                    .to_owned();
+                let max_x = seconds_since_start
+                    .iter()
+                    .max_by(|a, b| a.total_cmp(b))
+                    .unwrap()
+                    .to_owned();
+                if min_x < x_range[0] {
+                    x_range[0] = min_x;
+                }
+                if max_x > x_range[1] {
+                    x_range[1] = max_x;
+                }
+                let min_y = altitudes
+                    .iter()
+                    .min_by(|a, b| a.total_cmp(b))
+                    .unwrap()
+                    .to_owned();
+                let max_y = altitudes
+                    .iter()
+                    .max_by(|a, b| a.total_cmp(b))
+                    .unwrap()
+                    .to_owned();
+                if min_y < y_range[0] {
+                    y_range[0] = min_y;
+                }
+                if max_y > y_range[1] {
+                    y_range[1] = max_y;
+                }
 
                 predicted_data = seconds_since_start
                     .iter()
@@ -460,10 +495,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                 );
             }
 
-            x_range = [0.0, (end_time - start_time).num_seconds() as f64];
             x_labels = time_labels;
-
-            y_range = altitude_range;
             y_labels = [
                 y_range[0],
                 y_range[0] + ((y_range[1] - y_range[0]) / 2.0),
@@ -486,35 +518,8 @@ pub fn draw<B: ratatui::backend::Backend>(
                     .name("telemetry")
                     .graph_type(ratatui::widgets::GraphType::Scatter),
             );
-            if let Some(prediction) = &track.prediction {
-                let locations_with_altitude = crate::location::track::with_altitude(prediction);
-                let start_time = locations_with_altitude.first().unwrap().location.time;
-                let seconds_since_start: Vec<f64> = locations_with_altitude
-                    .iter()
-                    .map(|location| (location.location.time - start_time).num_seconds() as f64)
-                    .collect();
-
-                let ascent_rates =
-                    crate::location::track::ascent_rates(locations_with_altitude.as_slice());
-
-                predicted_data = seconds_since_start
-                    .iter()
-                    .zip(ascent_rates.iter())
-                    .map(|tuple| (tuple.0.to_owned(), tuple.1.to_owned()))
-                    .collect();
-                datasets.push(
-                    ratatui::widgets::Dataset::default()
-                        .marker(ratatui::symbols::Marker::Braille)
-                        .style(ratatui::style::Style::default().fg(ratatui::style::Color::Red))
-                        .data(&predicted_data)
-                        .name("prediction")
-                        .graph_type(ratatui::widgets::GraphType::Scatter),
-                );
-            }
 
             x_range = [0.0, (end_time - start_time).num_seconds() as f64];
-            x_labels = time_labels;
-
             y_range = [
                 ascent_rates
                     .iter()
@@ -527,6 +532,65 @@ pub fn draw<B: ratatui::backend::Backend>(
                     .unwrap()
                     .to_owned(),
             ];
+
+            if let Some(prediction) = &track.prediction {
+                let locations_with_altitude = crate::location::track::with_altitude(prediction);
+                let seconds_since_start: Vec<f64> = locations_with_altitude
+                    .iter()
+                    .map(|location| (location.location.time - start_time).num_seconds() as f64)
+                    .collect();
+
+                let ascent_rates =
+                    crate::location::track::ascent_rates(locations_with_altitude.as_slice());
+
+                let min_x = seconds_since_start
+                    .iter()
+                    .min_by(|a, b| a.total_cmp(b))
+                    .unwrap()
+                    .to_owned();
+                let max_x = seconds_since_start
+                    .iter()
+                    .max_by(|a, b| a.total_cmp(b))
+                    .unwrap()
+                    .to_owned();
+                if min_x < x_range[0] {
+                    x_range[0] = min_x;
+                }
+                if max_x > x_range[1] {
+                    x_range[1] = max_x;
+                }
+                let min_y = ascent_rates
+                    .iter()
+                    .min_by(|a, b| a.total_cmp(b))
+                    .unwrap()
+                    .to_owned();
+                let max_y = ascent_rates
+                    .iter()
+                    .max_by(|a, b| a.total_cmp(b))
+                    .unwrap()
+                    .to_owned();
+                if min_y < y_range[0] {
+                    y_range[0] = min_y;
+                }
+                if max_y > y_range[1] {
+                    y_range[1] = max_y;
+                }
+
+                predicted_data = seconds_since_start
+                    .into_iter()
+                    .zip(ascent_rates.into_iter())
+                    .collect();
+                datasets.push(
+                    ratatui::widgets::Dataset::default()
+                        .marker(ratatui::symbols::Marker::Braille)
+                        .style(ratatui::style::Style::default().fg(ratatui::style::Color::Red))
+                        .data(&predicted_data)
+                        .name("prediction")
+                        .graph_type(ratatui::widgets::GraphType::Scatter),
+                );
+            }
+
+            x_labels = time_labels;
             y_labels = [
                 y_range[0],
                 y_range[0] + ((y_range[1] - y_range[0]) / 2.0),
@@ -537,9 +601,8 @@ pub fn draw<B: ratatui::backend::Backend>(
             .collect();
         } else if chart_name == "altitude / ground speed" {
             telemetry_data = altitudes
-                .iter()
-                .zip(ground_speeds.iter())
-                .map(|tuple| (tuple.0.to_owned(), tuple.1.to_owned()))
+                .into_iter()
+                .zip(ground_speeds.clone().into_iter())
                 .collect();
             datasets.push(
                 ratatui::widgets::Dataset::default()
@@ -549,34 +612,8 @@ pub fn draw<B: ratatui::backend::Backend>(
                     .name("telemetry")
                     .graph_type(ratatui::widgets::GraphType::Scatter),
             );
-            if let Some(prediction) = &track.prediction {
-                let ground_speeds = crate::location::track::ground_speeds(prediction);
-
-                predicted_data = altitudes
-                    .iter()
-                    .zip(ground_speeds.iter())
-                    .map(|tuple| (tuple.0.to_owned(), tuple.1.to_owned()))
-                    .collect();
-                datasets.push(
-                    ratatui::widgets::Dataset::default()
-                        .marker(ratatui::symbols::Marker::Braille)
-                        .style(ratatui::style::Style::default().fg(ratatui::style::Color::Red))
-                        .data(&predicted_data)
-                        .name("prediction")
-                        .graph_type(ratatui::widgets::GraphType::Scatter),
-                );
-            }
 
             x_range = altitude_range;
-            x_labels = [
-                x_range[0],
-                x_range[0] + ((x_range[1] - x_range[0]) / 2.0),
-                x_range[1],
-            ]
-            .iter()
-            .map(|value| ratatui::text::Span::raw(format!("{:.1} m", value)))
-            .collect();
-
             y_range = [
                 ground_speeds
                     .iter()
@@ -589,6 +626,67 @@ pub fn draw<B: ratatui::backend::Backend>(
                     .unwrap()
                     .to_owned(),
             ];
+
+            if let Some(prediction) = &track.prediction {
+                let with_altitude = crate::location::track::with_altitude(prediction);
+                let altitudes = crate::location::track::altitudes(&with_altitude);
+                let ground_speeds = crate::location::track::ground_speeds(&with_altitude);
+
+                let min_x = altitudes
+                    .iter()
+                    .min_by(|a, b| a.total_cmp(b))
+                    .unwrap()
+                    .to_owned();
+                let max_x = altitudes
+                    .iter()
+                    .max_by(|a, b| a.total_cmp(b))
+                    .unwrap()
+                    .to_owned();
+                if min_x < x_range[0] {
+                    x_range[0] = min_x;
+                }
+                if max_x > x_range[1] {
+                    x_range[1] = max_x;
+                }
+                let min_y = ground_speeds
+                    .iter()
+                    .min_by(|a, b| a.total_cmp(b))
+                    .unwrap()
+                    .to_owned();
+                let max_y = ground_speeds
+                    .iter()
+                    .max_by(|a, b| a.total_cmp(b))
+                    .unwrap()
+                    .to_owned();
+                if min_y < y_range[0] {
+                    y_range[0] = min_y;
+                }
+                if max_y > y_range[1] {
+                    y_range[1] = max_y;
+                }
+
+                predicted_data = altitudes
+                    .into_iter()
+                    .zip(ground_speeds.into_iter())
+                    .collect();
+                datasets.push(
+                    ratatui::widgets::Dataset::default()
+                        .marker(ratatui::symbols::Marker::Braille)
+                        .style(ratatui::style::Style::default().fg(ratatui::style::Color::Red))
+                        .data(&predicted_data)
+                        .name("prediction")
+                        .graph_type(ratatui::widgets::GraphType::Scatter),
+                );
+            }
+
+            x_labels = [
+                x_range[0],
+                x_range[0] + ((x_range[1] - x_range[0]) / 2.0),
+                x_range[1],
+            ]
+            .iter()
+            .map(|value| ratatui::text::Span::raw(format!("{:.1} m", value)))
+            .collect();
             y_labels = [
                 y_range[0],
                 y_range[0] + ((y_range[1] - y_range[0]) / 2.0),
@@ -611,20 +709,6 @@ pub fn draw<B: ratatui::backend::Backend>(
                     .name("telemetry")
                     .graph_type(ratatui::widgets::GraphType::Scatter),
             );
-            if let Some(prediction) = &track.prediction {
-                predicted_data = prediction
-                    .iter()
-                    .map(|location| location.location.coord.x_y())
-                    .collect();
-                datasets.push(
-                    ratatui::widgets::Dataset::default()
-                        .marker(ratatui::symbols::Marker::Braille)
-                        .style(ratatui::style::Style::default().fg(ratatui::style::Color::Red))
-                        .data(&predicted_data)
-                        .name("prediction")
-                        .graph_type(ratatui::widgets::GraphType::Scatter),
-                );
-            }
 
             x_range = [
                 telemetry_data
@@ -650,6 +734,64 @@ pub fn draw<B: ratatui::backend::Backend>(
                     .max_by(|a, b| a.total_cmp(b))
                     .unwrap(),
             ];
+
+            if let Some(prediction) = &track.prediction {
+                let predicted_x: Vec<f64> = prediction
+                    .iter()
+                    .map(|location| location.location.coord.x)
+                    .collect();
+                let predicted_y: Vec<f64> = prediction
+                    .iter()
+                    .map(|location| location.location.coord.y)
+                    .collect();
+
+                let min_x = predicted_x
+                    .iter()
+                    .min_by(|a, b| a.total_cmp(b))
+                    .unwrap()
+                    .to_owned();
+                let max_x = predicted_x
+                    .iter()
+                    .max_by(|a, b| a.total_cmp(b))
+                    .unwrap()
+                    .to_owned();
+                if min_x < x_range[0] {
+                    x_range[0] = min_x;
+                }
+                if max_x > x_range[1] {
+                    x_range[1] = max_x;
+                }
+                let min_y = predicted_y
+                    .iter()
+                    .min_by(|a, b| a.total_cmp(b))
+                    .unwrap()
+                    .to_owned();
+                let max_y = predicted_y
+                    .iter()
+                    .max_by(|a, b| a.total_cmp(b))
+                    .unwrap()
+                    .to_owned();
+                if min_y < y_range[0] {
+                    y_range[0] = min_y;
+                }
+                if max_y > y_range[1] {
+                    y_range[1] = max_y;
+                }
+
+                predicted_data = predicted_x
+                    .into_iter()
+                    .zip(predicted_y.into_iter())
+                    .collect();
+                datasets.push(
+                    ratatui::widgets::Dataset::default()
+                        .marker(ratatui::symbols::Marker::Braille)
+                        .style(ratatui::style::Style::default().fg(ratatui::style::Color::Red))
+                        .data(&predicted_data)
+                        .name("prediction")
+                        .graph_type(ratatui::widgets::GraphType::Scatter),
+                );
+            }
+
             x_labels = [
                 x_range[0],
                 x_range[0] + ((x_range[1] - x_range[0]) / 2.0),

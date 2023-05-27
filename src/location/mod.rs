@@ -2,7 +2,7 @@ pub mod ais;
 pub mod aprs;
 pub mod track;
 
-#[derive(serde::Deserialize, Clone, Debug)]
+#[derive(serde::Deserialize, Clone, Debug, serde::Serialize)]
 pub struct Location {
     #[serde(with = "crate::utilities::local_datetime_string")]
     pub time: chrono::DateTime<chrono::Local>,
@@ -49,15 +49,16 @@ impl Location {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize)]
 pub struct BalloonLocation {
     pub location: Location,
     pub data: BalloonData,
 }
 
-#[derive(Clone, Default, Debug, PartialEq)]
+#[derive(Clone, Default, Debug, PartialEq, serde::Serialize)]
 pub struct BalloonData {
     pub callsign: Option<String>,
+    #[serde(skip)]
     pub aprs_packet: Option<aprs_parser::AprsPacket>,
     pub ais: Option<ais::AisData>,
     pub source: LocationSource,
@@ -93,7 +94,7 @@ impl BalloonData {
     }
 }
 
-#[derive(Clone, Default, Debug, PartialEq)]
+#[derive(Clone, Default, Debug, PartialEq, serde::Serialize)]
 pub enum LocationSource {
     AprsFi,
     Serial(String),
@@ -105,7 +106,7 @@ pub enum LocationSource {
     None,
 }
 
-#[derive(Clone, Default, Debug, PartialEq)]
+#[derive(Clone, Default, Debug, PartialEq, serde::Serialize)]
 pub enum PacketStatus {
     Duplicate,
     TimeLaggedDuplicate,

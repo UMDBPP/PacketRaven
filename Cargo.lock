@@ -1131,6 +1131,7 @@ dependencies = [
  "crossterm",
  "custom_error",
  "geo",
+ "geo-types",
  "geojson",
  "lazy_static",
  "log",

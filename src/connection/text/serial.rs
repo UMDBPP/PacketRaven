@@ -145,7 +145,7 @@ fn first_available_port() -> String {
                     }
                 }
             }
-            panic!("{:}", "ports list is empty when it should not be");
+            panic!("{:}", "no open ports");
         }
         Err(error) => {
             panic!("{:}", error);

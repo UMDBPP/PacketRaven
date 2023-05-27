@@ -125,9 +125,11 @@ struct SondeHubLocation {
     software_name: String,
     software_version: String,
     uploader_callsign: String,
-    time_received: chrono::DateTime<chrono::Local>,
+    #[serde(with = "crate::utilities::utc_datetime_string")]
+    time_received: chrono::DateTime<chrono::Utc>,
     payload_callsign: String,
-    datetime: chrono::DateTime<chrono::Local>,
+    #[serde(with = "crate::utilities::utc_datetime_string")]
+    datetime: chrono::DateTime<chrono::Utc>,
     lat: f64,
     lon: f64,
     alt: f64,

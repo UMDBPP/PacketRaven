@@ -17,78 +17,81 @@ impl PacketravenApp {
     ) -> PacketravenApp {
         let program_start_time = chrono::Local::now();
 
-        let mut instance = PacketravenApp {
-            configuration,
-            connections: vec![],
-            tracks: vec![],
-            tab_index: 0,
-            chart_index: 0,
-            log_messages: vec![],
-            log_messages_scroll_offset: 0,
-            log_level,
-            should_quit: false,
-        };
+        let mut configuration = configuration;
+        let mut log_messages = vec![];
+        let mut connections = vec![];
+        let mut tracks = vec![];
 
-        if let Some(output) = &instance.configuration.log.to_owned() {
+        if let Some(path) = &mut configuration.log_file {
             // TODO
-            instance.add_log_message(
+            log_messages.push((
+                chrono::Local::now(),
                 "logging to file is not implemented".to_owned(),
                 log::Level::Warn,
-            );
-            let mut filename: std::path::PathBuf;
-            if output.filename.is_file() {
-                filename = output.filename.to_owned();
-            } else {
-                filename = std::path::PathBuf::from(".");
-                filename.push(format!(
+            ));
+            if path.is_dir() {
+                path.push(format!(
                     "{:}_log_{:}.txt",
-                    instance.configuration.name,
+                    configuration.name,
                     program_start_time.format(&crate::DATETIME_FORMAT),
                 ));
             }
         }
 
-        if let Some(output) = &instance.configuration.output.to_owned() {
-            // TODO
-            instance.add_log_message(
-                "file output is not implemented".to_owned(),
-                log::Level::Warn,
-            );
-            let mut filename: std::path::PathBuf;
-            if output.filename.is_file() {
-                filename = output.filename.to_owned();
-            } else {
-                filename = std::path::PathBuf::from(".");
-                filename.push(format!(
+        if let Some(path) = &mut configuration.output_file {
+            if path.is_dir() {
+                path.push(format!(
                     "{:}_{:}.geojson",
-                    instance.configuration.name,
+                    configuration.name,
                     program_start_time.format(&crate::DATETIME_FORMAT)
                 ));
             }
+            // read from an existing output file
+            if path.exists() {
+                log_messages.push((
+                    chrono::Local::now(),
+                    format!("reading existing output file: {:}", path.to_string_lossy()),
+                    log::Level::Debug,
+                ));
+                crate::retrieve::retrieve_locations(
+                    &mut vec![crate::connection::Connection::GeoJsonFile(
+                        crate::connection::text::file::GeoJsonFile {
+                            path: format!("{:}", path.to_string_lossy()),
+                        },
+                    )],
+                    &mut tracks,
+                    configuration.time.start,
+                    configuration.time.end,
+                );
+            }
         }
 
-        if let Some(output) = &instance.configuration.output.to_owned() {
-            // TODO
-            instance.add_log_message(
-                "file output is not implemented".to_owned(),
-                log::Level::Warn,
-            );
-            let mut filename: std::path::PathBuf;
-            if output.filename.is_file() {
-                filename = output.filename.to_owned();
-            } else {
-                filename = std::path::PathBuf::from(".");
-                filename.push(format!(
-                    "{:}_predict_{:}.geojson",
-                    instance.configuration.name,
-                    program_start_time.format(&crate::DATETIME_FORMAT)
-                ));
+        if let Some(prediction) = &mut configuration.prediction {
+            match prediction {
+                crate::configuration::prediction::PredictionConfiguration::Single(prediction) => {
+                    if let Some(path) = &mut prediction.output_file {
+                        if path.is_dir() {
+                            path.push(format!(
+                                "{:}_predict_{:}.geojson",
+                                configuration.name,
+                                program_start_time.format(&crate::DATETIME_FORMAT)
+                            ));
+                        }
+                    }
+                }
+                crate::configuration::prediction::PredictionConfiguration::Cloud { .. } => {
+                    log_messages.push((
+                        chrono::Local::now(),
+                        "cloud prediction not implemented".to_string(),
+                        log::Level::Error,
+                    ))
+                }
             }
         }
 
         let mut filter_message = "retrieving packets".to_string();
-        if let Some(start) = instance.configuration.time.start {
-            if let Some(end) = instance.configuration.time.end {
+        if let Some(start) = configuration.time.start {
+            if let Some(end) = configuration.time.end {
                 filter_message += &format!(
                     " sent between {:} and {:}",
                     start.format(&crate::DATETIME_FORMAT),
@@ -98,10 +101,10 @@ impl PacketravenApp {
                 filter_message +=
                     &format!(" sent after {:}", start.format(&crate::DATETIME_FORMAT),);
             }
-        } else if let Some(end) = instance.configuration.time.end {
+        } else if let Some(end) = configuration.time.end {
             filter_message += &format!(" sent before {:}", end.format(&crate::DATETIME_FORMAT));
         }
-        if let Some(callsigns) = &instance.configuration.callsigns {
+        if let Some(callsigns) = &configuration.callsigns {
             if !callsigns.is_empty() {
                 filter_message += &format!(
                     " from {:} callsign(s): {:}",
@@ -111,23 +114,27 @@ impl PacketravenApp {
             }
         }
 
-        instance.add_log_message(filter_message, log::Level::Info);
+        log_messages.push((chrono::Local::now(), filter_message, log::Level::Info));
 
-        if let Some(callsigns) = &instance.configuration.callsigns.to_owned() {
+        if let Some(callsigns) = &configuration.callsigns.to_owned() {
             if !callsigns.is_empty() {
                 let mut aprs_fi_url =
                     format!("https://aprs.fi/#!call=a%2F{:}", callsigns.join("%2Ca%2F"));
-                if let Some(start) = instance.configuration.time.start {
+                if let Some(start) = configuration.time.start {
                     aprs_fi_url += &format!("&ts={:}", start.timestamp());
                 }
-                if let Some(end) = instance.configuration.time.end {
+                if let Some(end) = configuration.time.end {
                     aprs_fi_url += &format!("&te={:}", end.timestamp());
                 }
-                instance.add_log_message(format!("tracking: {:}", aprs_fi_url), log::Level::Info);
+                log_messages.push((
+                    chrono::Local::now(),
+                    format!("tracking: {:}", aprs_fi_url),
+                    log::Level::Info,
+                ));
 
                 let mut sondehub_url =
                     format!("https://amateur.sondehub.org/#!q={:}", callsigns.join(","));
-                if let Some(start) = instance.configuration.time.start {
+                if let Some(start) = configuration.time.start {
                     let duration = chrono::Local::now() - start;
                     sondehub_url += &if duration < chrono::Duration::days(1) {
                         format!("&qm={:}d", duration.num_days())
@@ -136,94 +143,99 @@ impl PacketravenApp {
                     }
                 }
 
-                instance.add_log_message(format!("tracking: {:}", sondehub_url), log::Level::Info);
+                log_messages.push((
+                    chrono::Local::now(),
+                    format!("tracking: {:}", sondehub_url),
+                    log::Level::Info,
+                ));
             }
         }
 
-        if let Some(text_configuration) = &instance.configuration.packets.text.to_owned() {
+        if let Some(text_configuration) = &configuration.connections.text.to_owned() {
             for text_stream in text_configuration {
                 let connection = match text_stream {
                     crate::connection::text::TextStream::GeoJsonFile(connection) => {
                         let connection = connection.to_owned();
-                        instance.add_log_message(
+                        log_messages.push((
+                            chrono::Local::now(),
                             format!("reading GeoJSON file: {:}", connection.path),
                             log::Level::Info,
-                        );
+                        ));
 
                         crate::connection::Connection::GeoJsonFile(connection)
                     }
                     crate::connection::text::TextStream::AprsTextFile(connection) => {
                         let mut connection = connection.to_owned();
                         if connection.callsigns.is_none() {
-                            if let Some(callsigns) = &instance.configuration.callsigns {
+                            if let Some(callsigns) = &configuration.callsigns {
                                 connection.callsigns = Some(callsigns.to_owned());
                             }
                         }
-                        instance.add_log_message(
+                        log_messages.push((
+                            chrono::Local::now(),
                             format!("reading text file of APRS frames: {:}", connection.path),
                             log::Level::Info,
-                        );
+                        ));
                         crate::connection::Connection::AprsTextFile(connection)
                     }
                     #[cfg(feature = "serial")]
                     crate::connection::text::TextStream::AprsSerial(connection) => {
                         let mut connection = connection.to_owned();
                         if connection.callsigns.is_none() {
-                            if let Some(callsigns) = &instance.configuration.callsigns {
+                            if let Some(callsigns) = &configuration.callsigns {
                                 connection.callsigns = Some(callsigns.to_owned());
                             }
                         }
                         crate::connection::Connection::AprsSerial(connection)
                     }
                 };
-                instance.connections.push(connection);
+                connections.push(connection);
             }
         }
 
         #[cfg(feature = "aprsfi")]
-        if let Some(aprs_fi_query) = &instance.configuration.packets.aprs_fi {
-            if let Some(callsigns) = &instance.configuration.callsigns {
+        if let Some(aprs_fi_query) = &configuration.connections.aprs_fi {
+            if let Some(callsigns) = &configuration.callsigns {
                 let mut connection = aprs_fi_query.to_owned();
                 if connection.callsigns.is_none() {
                     connection.callsigns = Some(callsigns.to_owned());
                 }
-                instance
-                    .connections
-                    .push(crate::connection::Connection::AprsFi(connection));
+                connections.push(crate::connection::Connection::AprsFi(connection));
             } else {
-                instance.add_log_message(
+                log_messages.push((
+                    chrono::Local::now(),
                     "APRS.fi requires a list of callsigns".to_string(),
                     log::Level::Error,
-                );
+                ));
             }
         }
 
         #[cfg(feature = "sondehub")]
-        if let Some(connection) = &instance.configuration.packets.sondehub {
-            if let Some(callsigns) = &instance.configuration.callsigns {
+        if let Some(connection) = &configuration.connections.sondehub {
+            if let Some(callsigns) = &configuration.callsigns {
                 let mut connection = connection.to_owned();
                 if connection.callsigns.is_none() {
                     connection.callsigns = Some(callsigns.to_owned());
                 }
                 if connection.start.is_none() {
-                    connection.start = instance.configuration.time.start;
+                    connection.start = configuration.time.start;
                 }
                 if connection.end.is_none() {
-                    connection.end = instance.configuration.time.end;
+                    connection.end = configuration.time.end;
                 }
-                instance
-                    .connections
-                    .push(crate::connection::Connection::SondeHub(connection));
+
+                connections.push(crate::connection::Connection::SondeHub(connection));
             } else {
-                instance.add_log_message(
+                log_messages.push((
+                    chrono::Local::now(),
                     "SondeHub requires a list of callsigns".to_string(),
                     log::Level::Error,
-                );
+                ));
             }
         }
 
         #[cfg(feature = "postgres")]
-        if let Some(database_credentials) = &instance.configuration.packets.database {
+        if let Some(database_credentials) = &configuration.packets.database {
             instance
                 .connections
                 .push(crate::connection::Connection::PacketDatabase(
@@ -233,44 +245,43 @@ impl PacketravenApp {
                 ));
         }
 
-        if instance.connections.is_empty() {
-            if let Some(output) = &instance.configuration.output {
-                if output.filename.exists() {
-                    instance
-                        .connections
-                        .push(crate::connection::Connection::GeoJsonFile(
-                            crate::connection::text::file::GeoJsonFile {
-                                path: output.filename.to_str().unwrap().to_owned(),
-                            },
-                        ));
-                    instance.add_log_message(
-                        format!(
-                            "reading existing output file: {:}",
-                            output.filename.to_str().unwrap()
-                        ),
-                        log::Level::Debug,
-                    );
-                }
-            } else {
-                instance
-                    .add_log_message("no connections were started".to_string(), log::Level::Error);
+        if !connections.is_empty() {
+            log_messages.push((
+                chrono::Local::now(),
+                format!(
+                    "listening for packets every {:} from {:} connection(s)",
+                    crate::utilities::duration_string(&configuration.time.interval),
+                    connections.len(),
+                ),
+                log::Level::Info,
+            ));
+
+            for connection in &connections {
+                log_messages.push((
+                    chrono::Local::now(),
+                    format!("{:?}", connection),
+                    log::Level::Debug,
+                ));
             }
+        } else {
+            log_messages.push((
+                chrono::Local::now(),
+                "no connections started".to_string(),
+                log::Level::Error,
+            ));
         }
 
-        instance.add_log_message(
-            format!(
-                "listening for packets every {:} from {:} connection(s)",
-                crate::utilities::duration_string(&instance.configuration.time.interval),
-                instance.connections.len(),
-            ),
-            log::Level::Info,
-        );
-
-        for connection in instance.connections.to_owned() {
-            instance.add_log_message(format!("{:?}", connection), log::Level::Debug);
+        PacketravenApp {
+            configuration,
+            connections,
+            tracks,
+            tab_index: 0,
+            chart_index: 0,
+            log_messages,
+            log_messages_scroll_offset: 0,
+            log_level,
+            should_quit: false,
         }
-
-        instance
     }
 
     pub fn add_log_message(&mut self, message: String, level: log::Level) {
@@ -346,20 +357,48 @@ impl PacketravenApp {
             self.configuration.time.end,
         );
 
-        if let Some(crate::configuration::prediction::PredictionConfiguration::Single(
-            prediction_configuration,
-        )) = &self.configuration.prediction
-        {
-            for track in tracks {
-                let prediction =
-                    track.prediction(&prediction_configuration.to_tawhiri_query().query.profile);
+        if let Some(prediction_configuration) = &self.configuration.prediction {
+            match prediction_configuration {
+                crate::configuration::prediction::PredictionConfiguration::Single(
+                    prediction_configuration,
+                ) => {
+                    let existing_prediction =
+                        if let Some(path) = &prediction_configuration.output_file {
+                            // read from an existing prediction output file
+                            if path.exists() {
+                                let mut connection = crate::connection::Connection::GeoJsonFile(
+                                    crate::connection::text::file::GeoJsonFile {
+                                        path: format!("{:}", path.to_string_lossy()),
+                                    },
+                                );
+                                messages.push((
+                                    chrono::Local::now(),
+                                    format!(
+                                        "reading existing prediction output file: {:}",
+                                        path.to_string_lossy()
+                                    ),
+                                    log::Level::Debug,
+                                ));
+                                match connection.retrieve_packets() {
+                                    Ok(prediction) => Some(prediction),
+                                    Err(_) => None,
+                                }
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        };
 
-                match prediction {
-                    Ok(prediction) => {
-                        let landing_location = prediction.last().unwrap();
-                        messages.push((
-                            chrono::Local::now(),
-                            format!(
+                    for track in tracks {
+                        track.prediction = match track
+                            .prediction(&prediction_configuration.to_tawhiri_query().query.profile)
+                        {
+                            Ok(retrieved_prediction) => {
+                                let landing_location = retrieved_prediction.last().unwrap();
+                                messages.push((
+                                    chrono::Local::now(),
+                                    format!(
                                 "{:} - predicted landing location: ({:.2}, {:.2}) at {:} ({:})",
                                 track.name,
                                 landing_location.location.coord.x,
@@ -372,15 +411,165 @@ impl PacketravenApp {
                                     &(chrono::Local::now() - landing_location.location.time)
                                 )
                             ),
-                            log::Level::Info,
-                        ));
-                        track.prediction = Some(prediction);
+                                    log::Level::Info,
+                                ));
+                                Some(retrieved_prediction)
+                            }
+                            Err(error) => {
+                                messages.push((
+                                    chrono::Local::now(),
+                                    error.to_string(),
+                                    log::Level::Error,
+                                ));
+                                existing_prediction.to_owned()
+                            }
+                        };
                     }
-                    Err(error) => {
-                        messages.push((chrono::Local::now(), error.to_string(), log::Level::Error));
+
+                    if let Some(path) = &prediction_configuration.output_file {
+                        let features: Vec<geojson::FeatureCollection> = self
+                            .tracks
+                            .iter()
+                            .filter_map(|track| track.prediction.to_owned())
+                            .map(|locations| {
+                                locations
+                                    .iter()
+                                    .map(|location| {
+                                        let geometry =
+                                            geojson::Geometry::new(geojson::Value::Point(vec![
+                                                location.location.coord.x,
+                                                location.location.coord.y,
+                                            ]));
+                                        let mut properties = geojson::JsonObject::new();
+                                        if let Some(aprs_packet) = &location.data.aprs_packet {
+                                            properties.insert(
+                                                "from".to_string(),
+                                                geojson::JsonValue::String(
+                                                    aprs_packet.from.to_string(),
+                                                ),
+                                            );
+
+                                            if let aprs_parser::AprsData::Position(data) =
+                                                &aprs_packet.data
+                                            {
+                                                properties.insert(
+                                                    "to".to_string(),
+                                                    geojson::JsonValue::String(data.to.to_string()),
+                                                );
+                                                properties.insert(
+                                                    "comment".to_string(),
+                                                    geojson::JsonValue::String(
+                                                        String::from_utf8(data.comment.to_owned())
+                                                            .unwrap(),
+                                                    ),
+                                                );
+                                            }
+                                        }
+
+                                        geojson::Feature {
+                                            bbox: None,
+                                            geometry: Some(geometry),
+                                            id: None,
+                                            properties: Some(properties),
+                                            foreign_members: None,
+                                        }
+                                    })
+                                    .collect()
+                            })
+                            .collect();
+
+                        let collection_strings: Vec<String> = features
+                            .iter()
+                            .map(|feature_collection| feature_collection.to_string())
+                            .collect();
+
+                        match std::fs::write(
+                            path,
+                            format!("[\n{:}\n]", collection_strings.join(",\n")),
+                        ) {
+                            Ok(_) => messages.push((
+                                chrono::Local::now(),
+                                format!("wrote predicted tracks to {:}", path.to_string_lossy()),
+                                log::Level::Debug,
+                            )),
+                            Err(error) => messages.push((
+                                chrono::Local::now(),
+                                error.to_string(),
+                                log::Level::Error,
+                            )),
+                        };
                     }
                 }
+                crate::configuration::prediction::PredictionConfiguration::Cloud { .. } => {
+                    self.add_log_message(
+                        "cloud prediction not implemented".to_string(),
+                        log::Level::Error,
+                    );
+                }
             }
+        }
+
+        if let Some(path) = &self.configuration.output_file {
+            let features: Vec<geojson::FeatureCollection> = self
+                .tracks
+                .iter()
+                .map(|track| track.locations.to_owned())
+                .map(|locations| {
+                    locations
+                        .iter()
+                        .map(|location| {
+                            let geometry = geojson::Geometry::new(geojson::Value::Point(vec![
+                                location.location.coord.x,
+                                location.location.coord.y,
+                            ]));
+                            let mut properties = geojson::JsonObject::new();
+                            if let Some(aprs_packet) = &location.data.aprs_packet {
+                                properties.insert(
+                                    "from".to_string(),
+                                    geojson::JsonValue::String(aprs_packet.from.to_string()),
+                                );
+
+                                if let aprs_parser::AprsData::Position(data) = &aprs_packet.data {
+                                    properties.insert(
+                                        "to".to_string(),
+                                        geojson::JsonValue::String(data.to.to_string()),
+                                    );
+                                    properties.insert(
+                                        "comment".to_string(),
+                                        geojson::JsonValue::String(
+                                            String::from_utf8(data.comment.to_owned()).unwrap(),
+                                        ),
+                                    );
+                                }
+                            }
+
+                            geojson::Feature {
+                                bbox: None,
+                                geometry: Some(geometry),
+                                id: None,
+                                properties: Some(properties),
+                                foreign_members: None,
+                            }
+                        })
+                        .collect()
+                })
+                .collect();
+
+            let collection_strings: Vec<String> = features
+                .iter()
+                .map(|feature_collection| feature_collection.to_string())
+                .collect();
+
+            match std::fs::write(path, format!("[\n{:}\n]", collection_strings.join(",\n"))) {
+                Ok(_) => messages.push((
+                    chrono::Local::now(),
+                    format!("wrote predicted tracks to {:}", path.to_string_lossy()),
+                    log::Level::Debug,
+                )),
+                Err(error) => {
+                    messages.push((chrono::Local::now(), error.to_string(), log::Level::Error))
+                }
+            };
         }
 
         match self.log_level {

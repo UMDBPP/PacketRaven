@@ -101,38 +101,33 @@ impl AprsTextFile {
 
         let mut locations: Vec<crate::location::BalloonLocation> = vec![];
         for line in lines {
-            let location: crate::location::BalloonLocation;
+            let frame;
+            let time;
             if line.contains(": ") {
                 let mut parts = vec![];
                 parts.extend(line.splitn(2, ": "));
-                match chrono::DateTime::parse_from_rfc3339(parts[0]) {
-                    Ok(time) => {
-                        location = crate::location::BalloonLocation::from_aprs_frame(
-                            parts[1].as_bytes(),
-                            Some(time.with_timezone(&chrono::Local)),
-                        )
-                        .unwrap();
-                    }
-                    Err(_) => {
-                        location = match crate::location::BalloonLocation::from_aprs_frame(
-                            parts[1].as_bytes(),
-                            None,
-                        ) {
-                            Ok(location) => location,
-                            Err(_) => continue,
-                        };
-                    }
-                }
+                time = match chrono::NaiveDateTime::parse_from_str(parts[0], "%Y-%m-%d %H:%M:%S %Z")
+                {
+                    Ok(time) => Some(time.and_local_timezone(chrono::Local).unwrap()),
+                    Err(_) => None,
+                };
+                frame = parts[1];
             } else {
-                location = crate::location::BalloonLocation::from_aprs_frame(line.as_bytes(), None)
-                    .unwrap();
+                frame = &line;
+                time = None;
             }
+            let location =
+                match crate::location::BalloonLocation::from_aprs_frame(frame.as_bytes(), time) {
+                    Ok(location) => location,
+                    Err(_) => continue,
+                };
 
             if let Some(callsigns) = &self.callsigns {
                 if !callsigns.contains(&location.data.callsign.to_owned().unwrap()) {
                     continue;
                 }
             }
+
             locations.push(location);
         }
         Ok(locations)
@@ -163,7 +158,15 @@ impl GeoJsonFile {
     ) -> Result<Vec<crate::location::BalloonLocation>, crate::connection::ConnectionError> {
         let lines = read_lines(&self.path).unwrap();
         let contents = lines.join("\n");
-        let parsed = contents.parse::<geojson::GeoJson>().unwrap();
+        let parsed = match contents.parse::<geojson::GeoJson>() {
+            Ok(parsed) => parsed,
+            Err(error) => {
+                return Err(crate::connection::ConnectionError::ReadFailure {
+                    connection: self.path.to_owned(),
+                    message: error.to_string(),
+                })
+            }
+        };
 
         let mut locations: Vec<crate::location::BalloonLocation> = vec![];
         if let geojson::GeoJson::FeatureCollection(ref collection) = parsed {
@@ -174,9 +177,22 @@ impl GeoJsonFile {
 
                         let time = match properties.get("time").unwrap() {
                             serde_json::Value::String(time) => {
-                                chrono::DateTime::parse_from_rfc3339(time.as_ref())
-                                    .unwrap()
-                                    .with_timezone(&chrono::Local)
+                                match chrono::NaiveDateTime::parse_from_str(
+                                    time.as_str(),
+                                    "%Y%m%d%H%M%S",
+                                ) {
+                                    Ok(datetime) => {
+                                        datetime.and_local_timezone(chrono::Local).unwrap()
+                                    }
+                                    Err(error) => {
+                                        return Err(
+                                            crate::connection::ConnectionError::ReadFailure {
+                                                connection: self.path.to_owned(),
+                                                message: format!("{:} - {:}", time, error),
+                                            },
+                                        )
+                                    }
+                                }
                             }
                             serde_json::Value::Number(time) => chrono::Local
                                 .timestamp_opt(time.as_i64().unwrap(), 0)
@@ -245,8 +261,8 @@ impl GeoJsonFile {
                                 None,
                                 aprs_packet,
                                 None,
-                                match properties.get("raw").unwrap() {
-                                    serde_json::Value::String(raw) => Some(raw.to_owned()),
+                                match properties.get("raw") {
+                                    Some(serde_json::Value::String(raw)) => Some(raw.to_owned()),
                                     _ => None,
                                 },
                                 crate::location::LocationSource::TextFile(self.path.to_owned()),
