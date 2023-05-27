@@ -30,8 +30,9 @@ pub mod optional_local_datetime_string {
     {
         let value: Option<String> = Option::deserialize(deserializer)?;
         if let Some(value) = value {
-            return Ok(Some(
-                match chrono::Local.datetime_from_str(&value, FORMAT) {
+            return Ok(Some(match chrono::DateTime::parse_from_rfc3339(&value) {
+                Ok(datetime) => datetime.with_timezone(&chrono::Local),
+                Err(_) => match chrono::Local.datetime_from_str(&value, FORMAT) {
                     Ok(datetime) => datetime,
                     Err(_) => chrono::NaiveDate::parse_from_str(&value, "%Y-%m-%d")
                         .map_err(serde::de::Error::custom)?
@@ -40,7 +41,7 @@ pub mod optional_local_datetime_string {
                         .and_local_timezone(chrono::Local)
                         .unwrap(),
                 },
-            ));
+            }));
         }
 
         Ok(None)
@@ -69,15 +70,18 @@ pub mod utc_datetime_string {
         D: serde::Deserializer<'de>,
     {
         let value: String = String::deserialize(deserializer)?;
-        Ok(match chrono::Utc.datetime_from_str(&value, FORMAT) {
-            Ok(datetime) => datetime,
-            Err(_) => chrono::NaiveDate::parse_from_str(&value, "%Y-%m-%d")
-                .map_err(serde::de::Error::custom)?
-                .and_hms_opt(0, 0, 0)
-                .unwrap()
-                .and_local_timezone(chrono::Local)
-                .unwrap()
-                .with_timezone(&chrono::Utc),
+        Ok(match chrono::DateTime::parse_from_rfc3339(&value) {
+            Ok(datetime) => datetime.with_timezone(&chrono::Utc),
+            Err(_) => match chrono::Utc.datetime_from_str(&value, FORMAT) {
+                Ok(datetime) => datetime,
+                Err(_) => chrono::NaiveDate::parse_from_str(&value, "%Y-%m-%d")
+                    .map_err(serde::de::Error::custom)?
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap()
+                    .and_local_timezone(chrono::Local)
+                    .unwrap()
+                    .with_timezone(&chrono::Utc),
+            },
         })
     }
 }
@@ -104,14 +108,17 @@ pub mod local_datetime_string {
         D: serde::Deserializer<'de>,
     {
         let value: String = String::deserialize(deserializer)?;
-        Ok(match chrono::Local.datetime_from_str(&value, FORMAT) {
-            Ok(datetime) => datetime,
-            Err(_) => chrono::NaiveDate::parse_from_str(&value, "%Y-%m-%d")
-                .map_err(serde::de::Error::custom)?
-                .and_hms_opt(0, 0, 0)
-                .unwrap()
-                .and_local_timezone(chrono::Local)
-                .unwrap(),
+        Ok(match chrono::DateTime::parse_from_rfc3339(&value) {
+            Ok(datetime) => datetime.with_timezone(&chrono::Local),
+            Err(_) => match chrono::Local.datetime_from_str(&value, FORMAT) {
+                Ok(datetime) => datetime,
+                Err(_) => chrono::NaiveDate::parse_from_str(&value, "%Y-%m-%d")
+                    .map_err(serde::de::Error::custom)?
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap()
+                    .and_local_timezone(chrono::Local)
+                    .unwrap(),
+            },
         })
     }
 }
