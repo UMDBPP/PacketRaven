@@ -173,33 +173,38 @@ impl GeoJsonFile {
             for feature in &collection.features {
                 if let Some(ref geometry) = feature.geometry {
                     if let geojson::Value::Point(point) = &geometry.value {
-                        let properties = feature.properties.as_ref().unwrap();
-
-                        let time = match properties.get("time").unwrap() {
-                            serde_json::Value::String(time) => {
-                                match chrono::NaiveDateTime::parse_from_str(
-                                    time.as_str(),
-                                    "%Y%m%d%H%M%S",
-                                ) {
-                                    Ok(datetime) => {
-                                        datetime.and_local_timezone(chrono::Local).unwrap()
-                                    }
-                                    Err(error) => {
-                                        return Err(
-                                            crate::connection::ConnectionError::ReadFailure {
-                                                connection: self.path.to_owned(),
-                                                message: format!("{:} - {:}", time, error),
-                                            },
-                                        )
-                                    }
-                                }
-                            }
-                            serde_json::Value::Number(time) => chrono::Local
-                                .timestamp_opt(time.as_i64().unwrap(), 0)
-                                .unwrap()
-                                .with_timezone(&chrono::Local),
-                            _ => continue,
+                        let properties = match &feature.properties {
+                            Some(properties) => properties,
+                            None => continue,
                         };
+
+                        let time =
+                            match properties.get("time") {
+                                Some(value) => match value {
+                                    serde_json::Value::String(time) => {
+                                        match chrono::NaiveDateTime::parse_from_str(
+                                            time.as_str(),
+                                            "%Y%m%d%H%M%S",
+                                        ) {
+                                            Ok(datetime) => {
+                                                datetime.and_local_timezone(chrono::Local).unwrap()
+                                            }
+                                            Err(error) => return Err(
+                                                crate::connection::ConnectionError::ReadFailure {
+                                                    connection: self.path.to_owned(),
+                                                    message: format!("{:} - {:}", time, error),
+                                                },
+                                            ),
+                                        }
+                                    }
+                                    serde_json::Value::Number(time) => chrono::Local
+                                        .timestamp_opt(time.as_i64().unwrap(), 0)
+                                        .unwrap()
+                                        .with_timezone(&chrono::Local),
+                                    _ => continue,
+                                },
+                                None => continue,
+                            };
 
                         let altitude = if point.len() > 2 {
                             Some(point[2])

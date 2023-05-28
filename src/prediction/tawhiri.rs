@@ -12,6 +12,7 @@ impl TawhiriQuery {
         version: Option<f64>,
         name: Option<String>,
         descent_only: bool,
+        float_start: Option<chrono::DateTime<chrono::Local>>,
     ) -> TawhiriQuery {
         TawhiriQuery {
             query: crate::prediction::BalloonPredictionQuery::new(
@@ -20,6 +21,7 @@ impl TawhiriQuery {
                 profile,
                 name,
                 descent_only,
+                float_start,
             ),
             dataset_time,
             version,
@@ -47,7 +49,14 @@ impl TawhiriQuery {
         let mut parameters = vec![
             ("launch_longitude", format!("{:.2}", start_location.x)),
             ("launch_latitude", format!("{:.2}", start_location.y)),
-            ("launch_datetime", self.query.start.time.to_rfc3339()),
+            (
+                "launch_datetime",
+                self.query
+                    .start
+                    .time
+                    .with_timezone(&chrono::Utc)
+                    .to_rfc3339(),
+            ),
             (
                 "ascent_rate",
                 format!("{:.2}", self.query.profile.ascent_rate),
@@ -59,11 +68,12 @@ impl TawhiriQuery {
             ),
         ];
 
-        if let Some(altitude) = self.query.start.altitude {
+        let launch_altitude = self.query.start.altitude;
+        if let Some(altitude) = launch_altitude {
             parameters.push(("launch_altitude", format!("{:.2}", altitude)));
         }
         if let Some(dataset_time) = self.dataset_time {
-            parameters.push(("dataset", format!("{:}", dataset_time.to_rfc3339())));
+            parameters.push(("dataset", dataset_time.to_rfc3339()));
         }
         if let Some(version) = self.version {
             parameters.push(("version", format!("{:}", version)));
@@ -72,20 +82,31 @@ impl TawhiriQuery {
         if let Some(float_duration) = self.query.profile.float_duration {
             if !self.query.descent_only {
                 parameters.push(("profile", "float_profile".to_string()));
-                let float_altitude = self
+                let mut float_altitude = self
                     .query
                     .profile
                     .float_altitude
                     .unwrap_or(self.query.profile.burst_altitude);
+                if let Some(launch_altitude) = launch_altitude {
+                    if float_altitude <= launch_altitude {
+                        float_altitude = launch_altitude + 1.0;
+                    }
+                }
+
                 parameters.push(("float_altitude", format!("{:.2}", float_altitude)));
-                let start_altitude = self.query.start.altitude.unwrap_or(0.0);
-                let float_start_time = self.query.start.time
-                    + chrono::Duration::seconds(
-                        (float_altitude - start_altitude / self.query.profile.ascent_rate) as i64,
-                    );
+
+                let float_start_time = self.query.float_start.unwrap_or({
+                    self.query.start.time
+                        + chrono::Duration::seconds(
+                            (float_altitude
+                                - self.query.start.altitude.unwrap_or(0.0)
+                                    / self.query.profile.ascent_rate)
+                                as i64,
+                        )
+                });
                 parameters.push((
                     "stop_datetime",
-                    format!("{:}", (float_start_time + float_duration).to_rfc3339()),
+                    (float_start_time + float_duration).to_rfc3339(),
                 ));
             }
         } else {
@@ -145,6 +166,7 @@ impl TawhiriQuery {
                                         self.version,
                                         None,
                                         true,
+                                        None,
                                     );
                                     let descent: TawhiriResponse = descent_query.get().unwrap();
                                     for stage in descent.prediction {
@@ -220,6 +242,23 @@ impl crate::location::track::BalloonTrack {
         &self,
         profile: &super::FlightProfile,
     ) -> Result<crate::location::track::LocationTrack, TawhiriError> {
+        let float_start = if let Some(float_altitude) = profile.float_altitude {
+            let mut locations_at_float_altitude: Vec<&crate::location::BalloonLocation> = self
+                .locations
+                .iter()
+                .filter(|location| match location.location.altitude {
+                    Some(altitude) => {
+                        (altitude - float_altitude).abs() <= profile.float_uncertainty
+                    }
+                    None => false,
+                })
+                .collect();
+            locations_at_float_altitude.sort_by_key(|location| location.location.time);
+            Some(locations_at_float_altitude.first().unwrap().location.time)
+        } else {
+            None
+        };
+
         let query = crate::prediction::tawhiri::TawhiriQuery::new(
             &self.locations.last().unwrap().location,
             profile,
@@ -227,6 +266,7 @@ impl crate::location::track::BalloonTrack {
             None,
             None,
             self.descending() || self.falling().is_some(),
+            float_start,
         );
 
         query.retrieve_prediction()
@@ -305,7 +345,7 @@ struct TawhiriPrediction {
 #[derive(serde::Deserialize, Clone)]
 struct TawhiriLocation {
     altitude: f64,
-    datetime: String,
+    datetime: chrono::DateTime<chrono::Utc>,
     latitude: f64,
     longitude: f64,
 }
@@ -320,9 +360,7 @@ impl TawhiriLocation {
 
         crate::location::BalloonLocation {
             location: crate::location::Location {
-                time: chrono::DateTime::parse_from_rfc3339(&self.datetime)
-                    .unwrap()
-                    .with_timezone(&chrono::Local),
+                time: self.datetime.with_timezone(&chrono::Local),
                 coord: geo::coord! { x: longitude, y: self.latitude },
                 altitude: Some(self.altitude),
             },
@@ -351,7 +389,7 @@ mod tests {
         };
         let profile = crate::prediction::FlightProfile::new_standard(5.5, 28000.0, 9.0);
 
-        let query = TawhiriQuery::new(&start, &profile, None, None, None, false);
+        let query = TawhiriQuery::new(&start, &profile, None, None, None, false, None);
 
         let response = query.get().unwrap();
         let prediction = query.retrieve_prediction();
@@ -378,7 +416,7 @@ mod tests {
         };
         let profile = crate::prediction::FlightProfile::new_standard(5.5, 28000.0, 9.0);
 
-        let query = TawhiriQuery::new(&start, &profile, None, None, None, false);
+        let query = TawhiriQuery::new(&start, &profile, None, None, None, false, None);
 
         let response = query.get().unwrap();
         let prediction = query.retrieve_prediction();
@@ -406,7 +444,7 @@ mod tests {
         let profile =
             crate::prediction::FlightProfile::new_standard(5.5, start.altitude.unwrap(), 9.0);
 
-        let query = TawhiriQuery::new(&start, &profile, None, None, None, true);
+        let query = TawhiriQuery::new(&start, &profile, None, None, None, true, None);
 
         let response = query.get().unwrap();
         let prediction = query.retrieve_prediction();
@@ -438,7 +476,7 @@ mod tests {
             9.0,
         );
 
-        let query = TawhiriQuery::new(&start, &profile, None, None, None, false);
+        let query = TawhiriQuery::new(&start, &profile, None, None, None, false, None);
 
         let response = query.get().unwrap();
         let prediction = query.retrieve_prediction();

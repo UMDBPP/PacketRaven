@@ -295,7 +295,6 @@ struct AprsFiWeather {
 #[derive(serde::Deserialize)]
 struct AprsFiMessage {
     messageid: String,
-    #[serde(with = "crate::utilities::utc_datetime_string")]
     time: chrono::DateTime<chrono::Utc>,
     srccall: String,
     dst: String,
