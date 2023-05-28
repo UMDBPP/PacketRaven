@@ -88,6 +88,6 @@ jobs:
       - if: (github.event_name == 'release' && github.event.action == 'published')
         uses: svenstaro/upload-release-action@v2
         with:
-          asset_name: packetraven-${{ runner.os }}
-          file: target/release/${{ runner.os == 'Windows' && 'packetraven.exe' || 'packetraven' }}
+          asset_name: packetraven_${{ runner.os }}${{ runner.os == 'Windows' && '.exe' || '' }}
+          file: target/release/packetraven${{ runner.os == 'Windows' && '.exe' || '' }}
 
