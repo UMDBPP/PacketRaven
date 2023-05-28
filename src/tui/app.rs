@@ -366,11 +366,12 @@ impl PacketravenApp {
                         if let Some(path) = &prediction_configuration.output_file {
                             // read from an existing prediction output file
                             if path.exists() {
-                                let mut connection = crate::connection::Connection::GeoJsonFile(
-                                    crate::connection::text::file::GeoJsonFile {
-                                        path: format!("{:}", path.to_string_lossy()),
-                                    },
-                                );
+                                let mut existing_prediction_file =
+                                    crate::connection::Connection::GeoJsonFile(
+                                        crate::connection::text::file::GeoJsonFile {
+                                            path: format!("{:}", path.to_string_lossy()),
+                                        },
+                                    );
                                 messages.push((
                                     chrono::Local::now(),
                                     format!(
@@ -379,8 +380,8 @@ impl PacketravenApp {
                                     ),
                                     log::Level::Debug,
                                 ));
-                                match connection.retrieve_packets() {
-                                    Ok(prediction) => Some(prediction),
+                                match existing_prediction_file.retrieve_locations() {
+                                    Ok(locations) => Some(locations),
                                     Err(_) => None,
                                 }
                             } else {
@@ -390,31 +391,10 @@ impl PacketravenApp {
                             None
                         };
 
+                    let profile = prediction_configuration.to_tawhiri_query().query.profile;
                     for track in tracks {
-                        track.prediction = match track
-                            .prediction(&prediction_configuration.to_tawhiri_query().query.profile)
-                        {
-                            Ok(retrieved_prediction) => {
-                                let landing_location = retrieved_prediction.last().unwrap();
-                                messages.push((
-                                    chrono::Local::now(),
-                                    format!(
-                                "{:} - predicted landing location: ({:.2}, {:.2}) at {:} ({:})",
-                                track.name,
-                                landing_location.location.coord.x,
-                                landing_location.location.coord.y,
-                                landing_location
-                                    .location
-                                    .time
-                                    .format(&crate::DATETIME_FORMAT),
-                                crate::utilities::duration_string(
-                                    &( landing_location.location.time- chrono::Local::now() )
-                                )
-                            ),
-                                    log::Level::Info,
-                                ));
-                                Some(retrieved_prediction)
-                            }
+                        track.prediction = match track.prediction(&profile) {
+                            Ok(retrieved_prediction) => Some(retrieved_prediction),
                             Err(error) => {
                                 messages.push((
                                     chrono::Local::now(),
@@ -435,6 +415,7 @@ impl PacketravenApp {
                                 locations.extend(track_locations);
                             }
                         }
+
                         let feature_collection =
                             crate::connection::text::file::locations_geojson_featurecollection(
                                 locations,

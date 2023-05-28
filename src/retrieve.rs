@@ -8,7 +8,7 @@ pub fn retrieve_locations(
     let mut messages = Vec::<(chrono::DateTime<chrono::Local>, String, log::Level)>::new();
 
     for connection in connections {
-        match connection.retrieve_packets() {
+        match connection.retrieve_locations() {
             Ok(packets) => new_packets.extend(packets),
             Err(error) => {
                 messages.push((chrono::Local::now(), error.to_string(), log::Level::Error));

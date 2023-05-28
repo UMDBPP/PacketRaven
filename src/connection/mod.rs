@@ -25,7 +25,7 @@ pub enum Connection {
 }
 
 impl Connection {
-    pub fn retrieve_packets(
+    pub fn retrieve_locations(
         &mut self,
     ) -> Result<Vec<crate::location::BalloonLocation>, ConnectionError> {
         match self {

@@ -242,19 +242,41 @@ impl crate::location::track::BalloonTrack {
         &self,
         profile: &super::FlightProfile,
     ) -> Result<crate::location::track::LocationTrack, TawhiriError> {
+        let mut descending = self.descending() || self.falling().is_some();
+
         let float_start = if let Some(float_altitude) = profile.float_altitude {
-            let mut locations_at_float_altitude: Vec<&crate::location::BalloonLocation> = self
+            let locations_at_float_altitude: Vec<&crate::location::BalloonLocation> = self
                 .locations
                 .iter()
                 .filter(|location| match location.location.altitude {
                     Some(altitude) => {
-                        (altitude - float_altitude).abs() <= profile.float_uncertainty
+                        (float_altitude - altitude).abs() <= profile.float_uncertainty
                     }
                     None => false,
                 })
                 .collect();
-            locations_at_float_altitude.sort_by_key(|location| location.location.time);
-            Some(locations_at_float_altitude.first().unwrap().location.time)
+
+            if !locations_at_float_altitude.is_empty() {
+                // mark as "not descending" if altitude is within float uncertainty
+                if descending
+                    && self.falling().is_none()
+                    && (locations_at_float_altitude
+                        .last()
+                        .unwrap()
+                        .location
+                        .altitude
+                        .unwrap()
+                        - float_altitude)
+                        .abs()
+                        <= profile.float_uncertainty
+                {
+                    descending = false;
+                }
+
+                Some(locations_at_float_altitude.first().unwrap().location.time)
+            } else {
+                None
+            }
         } else {
             None
         };
@@ -265,7 +287,7 @@ impl crate::location::track::BalloonTrack {
             None,
             None,
             None,
-            self.descending() || self.falling().is_some(),
+            descending,
             float_start,
         );
 
