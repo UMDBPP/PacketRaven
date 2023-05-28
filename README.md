@@ -32,4 +32,4 @@ For example, to run ``packetraven`` on ``examples/example_1.yaml``, run the foll
 packetraven examples/example_1.yaml
 ```
 
-For usage examples, see the `examples/` directory or [view the documentation on ReadTheDocs](https://packetraven.readthedocs.io/en/latest/usage.html).
+For usage examples, see the `examples/` directory or [read the documentation](https://packetraven.readthedocs.io).

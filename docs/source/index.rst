@@ -3,4 +3,4 @@
 .. toctree::
    :hidden:
 
-   usage
+   configuration
