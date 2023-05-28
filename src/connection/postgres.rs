@@ -260,7 +260,7 @@ mod tests {
             // );
 
             let mut connection = super::super::Connection::PacketDatabase(database);
-            let packets = connection.retrieve_packets().unwrap();
+            let packets = connection.retrieve_locations().unwrap();
 
             // database.table_exists(&table_name);
             // database.client.execute("DROP TABLE table;", &[&table_name]);
