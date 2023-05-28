@@ -312,19 +312,17 @@ pub fn draw<B: ratatui::backend::Backend>(
             descent_info.extend([
                 ratatui::text::Spans::from(vec![
                     ratatui::text::Span::styled("pred. landing: ", bold_style),
-                    ratatui::text::Span::raw(crate::utilities::duration_string(
-                        &(predicted_landing_location.location.time - chrono::Local::now()),
-                    )),
-                ]),
-                ratatui::text::Spans::from(vec![
-                    ratatui::text::Span::styled("pred. landing: ", bold_style),
-                    ratatui::text::Span::raw(
+                    ratatui::text::Span::raw(format!(
+                        "{:} ({:})",
+                        crate::utilities::duration_string(
+                            &(predicted_landing_location.location.time - chrono::Local::now()),
+                        ),
                         predicted_landing_location
                             .location
                             .time
                             .format(&crate::DATETIME_FORMAT)
-                            .to_string(),
-                    ),
+                            .to_string()
+                    )),
                 ]),
                 ratatui::text::Spans::from(vec![
                     ratatui::text::Span::styled("pred. landing: ", bold_style),

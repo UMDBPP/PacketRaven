@@ -22,10 +22,7 @@ impl PartialEq for Location {
                     }
                     None => false,
                 },
-                None => match other.altitude {
-                    None => true,
-                    _ => false,
-                },
+                None => other.altitude.is_none(),
             }
     }
 }

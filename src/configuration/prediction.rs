@@ -50,6 +50,7 @@ impl Prediction {
             None,
             None,
             false,
+            None,
         )
     }
 }

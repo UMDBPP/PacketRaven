@@ -73,6 +73,7 @@ pub struct BalloonPredictionQuery {
     pub profile: FlightProfile,
     pub name: Option<String>,
     pub descent_only: bool,
+    pub float_start: Option<chrono::DateTime<chrono::Local>>,
 }
 
 impl BalloonPredictionQuery {
@@ -82,6 +83,7 @@ impl BalloonPredictionQuery {
         profile: &FlightProfile,
         name: Option<String>,
         descent_only: bool,
+        float_start: Option<chrono::DateTime<chrono::Local>>,
     ) -> Self {
         Self {
             api_url,
@@ -89,6 +91,7 @@ impl BalloonPredictionQuery {
             profile: profile.to_owned(),
             name,
             descent_only,
+            float_start,
         }
     }
 }

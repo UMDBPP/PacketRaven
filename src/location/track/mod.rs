@@ -110,10 +110,24 @@ pub fn with_altitude(locations: &[super::BalloonLocation]) -> Vec<super::Balloon
 pub fn intervals(locations: &[super::BalloonLocation]) -> Vec<chrono::Duration> {
     let mut values = vec![];
 
-    for index in 0..(locations.len() - 1) {
-        let current = locations.get(index).unwrap();
-        let next = locations.get(index + 1).unwrap();
+    let mut index = 0;
+    let mut current = match locations.first() {
+        Some(first) => first,
+        None => return values,
+    };
+    let mut next;
+    loop {
+        next = match locations.get(index + 1) {
+            Some(next) => next,
+            None => {
+                break;
+            }
+        };
+
         values.push(next.location.time - current.location.time);
+
+        current = next;
+        index += 1;
     }
 
     values
@@ -130,7 +144,10 @@ pub fn ascents(locations: &[super::BalloonLocation]) -> Vec<f64> {
     let mut values = vec![];
 
     let mut index = 0;
-    let mut current = locations.first().unwrap();
+    let mut current = match locations.first() {
+        Some(first) => first,
+        None => return values,
+    };
     let mut next;
     loop {
         next = match locations.get(index + 1) {
@@ -158,14 +175,20 @@ pub fn ascent_rates(locations: &[super::BalloonLocation]) -> Vec<f64> {
         values.push(ascent / intervals.get(index).unwrap().num_seconds() as f64);
     }
 
-    values.into_iter().filter(|value| !value.is_nan()).collect()
+    values
+        .into_iter()
+        .filter(|value| value.is_finite())
+        .collect()
 }
 
 pub fn overground_distances(locations: &[super::BalloonLocation]) -> Vec<f64> {
     let mut values = vec![];
 
     let mut index = 0;
-    let mut current = locations.first().unwrap();
+    let mut current = match locations.first() {
+        Some(first) => first,
+        None => return values,
+    };
     let mut next;
     loop {
         next = match locations.get(index + 1) {
@@ -195,5 +218,8 @@ pub fn ground_speeds(locations: &[super::BalloonLocation]) -> Vec<f64> {
         values.push(distance / intervals.get(index).unwrap().num_seconds() as f64);
     }
 
-    values.into_iter().filter(|value| !value.is_nan()).collect()
+    values
+        .into_iter()
+        .filter(|value| value.is_finite())
+        .collect()
 }

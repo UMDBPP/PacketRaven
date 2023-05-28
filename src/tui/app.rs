@@ -304,8 +304,10 @@ impl PacketravenApp {
     }
 
     pub fn up(&mut self) {
-        if self.tab_index == 0 && self.log_messages_scroll_offset > 0 {
-            self.log_messages_scroll_offset -= 1;
+        if self.tab_index == 0 {
+            if self.log_messages_scroll_offset > 0 {
+                self.log_messages_scroll_offset -= 1;
+            }
         } else if self.chart_index < super::draw::CHARTS.len() - 1 {
             self.chart_index += 1;
         } else {
@@ -406,7 +408,7 @@ impl PacketravenApp {
                                     .time
                                     .format(&crate::DATETIME_FORMAT),
                                 crate::utilities::duration_string(
-                                    &(chrono::Local::now() - landing_location.location.time)
+                                    &( landing_location.location.time- chrono::Local::now() )
                                 )
                             ),
                                     log::Level::Info,

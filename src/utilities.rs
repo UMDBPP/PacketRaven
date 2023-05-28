@@ -48,44 +48,6 @@ pub mod optional_local_datetime_string {
     }
 }
 
-pub mod utc_datetime_string {
-    use chrono::TimeZone;
-    use serde::Deserialize;
-
-    const FORMAT: &str = "%Y-%m-%d %H:%M:%S";
-
-    pub fn serialize<S>(
-        date: &chrono::DateTime<chrono::Utc>,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let date = format!("{:}", date.format(FORMAT));
-        serializer.serialize_str(&date)
-    }
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<chrono::DateTime<chrono::Utc>, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let value: String = String::deserialize(deserializer)?;
-        Ok(match chrono::DateTime::parse_from_rfc3339(&value) {
-            Ok(datetime) => datetime.with_timezone(&chrono::Utc),
-            Err(_) => match chrono::Utc.datetime_from_str(&value, FORMAT) {
-                Ok(datetime) => datetime,
-                Err(_) => chrono::NaiveDate::parse_from_str(&value, "%Y-%m-%d")
-                    .map_err(serde::de::Error::custom)?
-                    .and_hms_opt(0, 0, 0)
-                    .unwrap()
-                    .and_local_timezone(chrono::Local)
-                    .unwrap()
-                    .with_timezone(&chrono::Utc),
-            },
-        })
-    }
-}
-
 pub mod local_datetime_string {
     use chrono::TimeZone;
     use serde::Deserialize;
