@@ -72,14 +72,17 @@ pub mod local_datetime_string {
         let value: String = String::deserialize(deserializer)?;
         Ok(match chrono::DateTime::parse_from_rfc3339(&value) {
             Ok(datetime) => datetime.with_timezone(&chrono::Local),
-            Err(_) => match chrono::Local.datetime_from_str(&value, FORMAT) {
-                Ok(datetime) => datetime,
-                Err(_) => chrono::NaiveDate::parse_from_str(&value, "%Y-%m-%d")
-                    .map_err(serde::de::Error::custom)?
-                    .and_hms_opt(0, 0, 0)
-                    .unwrap()
-                    .and_local_timezone(chrono::Local)
-                    .unwrap(),
+            Err(_) => match chrono::DateTime::parse_from_str(&value, "%Y-%m-%d %H:%M:%S %Z") {
+                Ok(datetime) => datetime.with_timezone(&chrono::Local),
+                Err(_) => match chrono::Local.datetime_from_str(&value, FORMAT) {
+                    Ok(datetime) => datetime,
+                    Err(_) => chrono::NaiveDate::parse_from_str(&value, "%Y-%m-%d")
+                        .map_err(serde::de::Error::custom)?
+                        .and_hms_opt(0, 0, 0)
+                        .unwrap()
+                        .and_local_timezone(chrono::Local)
+                        .unwrap(),
+                },
             },
         })
     }
