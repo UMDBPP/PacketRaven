@@ -1,5 +1,5 @@
 lazy_static::lazy_static! {
-    pub static ref CHARTS: Vec<String> = vec!["altitude / time".to_string(), "ascent rate / time".to_string(), "altitude / ground speed".to_string(), "coordinates (unprojected)".to_string()];
+    pub static ref CHARTS: Vec<String> = vec!["altitude / time".to_string(), "ascent rate / time".to_string(), "ground speed / altitude".to_string(), "coordinates (unprojected)".to_string()];
 }
 
 pub fn draw<B: ratatui::backend::Backend>(
@@ -657,7 +657,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                 .iter()
                 .map(|value| ratatui::text::Span::raw(format!("{:.1} m/s", value)))
                 .collect();
-            } else if chart_name == "altitude / ground speed"
+            } else if chart_name == "ground speed / altitude"
                 && has_altitude
                 && locations_with_altitude.len() > 1
             {
