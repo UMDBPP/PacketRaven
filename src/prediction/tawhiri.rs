@@ -28,7 +28,7 @@ impl TawhiriQuery {
         }
     }
 
-    fn parameters(&self) -> Vec<(&str, String)> {
+    fn parameters(&self) -> Result<Vec<(&str, String)>, TawhiriError> {
         // CUSF API requires longitude in 0-360 format
         let mut start_location = self.query.start.coord;
         if start_location.x < 0.0 {
@@ -37,11 +37,16 @@ impl TawhiriQuery {
 
         let burst_altitude = match self.query.descent_only {
             true => {
-                self.query
-                    .start
-                    .altitude
-                    .expect("no start altitude provided for descent prediction")
-                    + 0.1
+                let altitude = match self.query.start.altitude {
+                    Some(altitude) => altitude,
+                    None => {
+                        return Err(TawhiriError::RequestError {
+                            message: "no start altitude provided for descent prediction"
+                                .to_string(),
+                        });
+                    }
+                };
+                altitude + 0.1
             }
             false => self.query.profile.burst_altitude,
         };
@@ -113,7 +118,7 @@ impl TawhiriQuery {
             parameters.push(("profile", "standard_profile".to_string()));
         }
 
-        parameters
+        Ok(parameters)
     }
 
     fn get(&self) -> Result<TawhiriResponse, TawhiriError> {
@@ -126,7 +131,7 @@ impl TawhiriQuery {
         let parameters = self.parameters();
         let response = client
             .get(&self.query.api_url)
-            .query(&parameters)
+            .query(&parameters?)
             .send()
             .expect("error retrieving prediction");
         let url = response.url().to_string();
@@ -299,7 +304,8 @@ custom_error::custom_error! {pub TawhiriError
     NoFloatStage ="server did not return a float stage",
     NoDescentStage = "server did not return a descent stage",
     HttpError { status: u16, description: String, url: String } = "HTTP error {status} - {description} - {url}",
-    ParsingError { message: String } = "{message}"
+    ParsingError { message: String } = "{message}",
+    RequestError { message: String } = "{message}",
 }
 
 // https://tawhiri.readthedocs.io/en/latest/api.html#responses

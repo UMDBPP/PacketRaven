@@ -92,8 +92,8 @@ pub fn draw<B: ratatui::backend::Backend>(
                 .direction(ratatui::layout::Direction::Horizontal)
                 .constraints(
                     [
-                        ratatui::layout::Constraint::Min(33),
                         ratatui::layout::Constraint::Min(30),
+                        ratatui::layout::Constraint::Min(22),
                         ratatui::layout::Constraint::Min(30),
                     ]
                     .as_ref(),
