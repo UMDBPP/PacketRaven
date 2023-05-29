@@ -82,7 +82,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                 .constraints(
                     [
                         ratatui::layout::Constraint::Min(11),
-                        ratatui::layout::Constraint::Min(10),
+                        ratatui::layout::Constraint::Min(11),
                     ]
                     .as_ref(),
                 )
@@ -92,8 +92,8 @@ pub fn draw<B: ratatui::backend::Backend>(
                 .direction(ratatui::layout::Direction::Horizontal)
                 .constraints(
                     [
+                        ratatui::layout::Constraint::Min(31),
                         ratatui::layout::Constraint::Min(30),
-                        ratatui::layout::Constraint::Min(22),
                         ratatui::layout::Constraint::Min(30),
                     ]
                     .as_ref(),
@@ -256,64 +256,6 @@ pub fn draw<B: ratatui::backend::Backend>(
                 .wrap(ratatui::widgets::Wrap { trim: true });
             frame.render_widget(last_location_info, track_info_areas[0]);
 
-            if track.locations.len() > 1 {
-                let mut track_info = vec![];
-                if has_altitude {
-                    track_info.extend([
-                        ratatui::text::Spans::from(vec![
-                            ratatui::text::Span::styled(
-                                format!("{:<10}", "pos. ascent rate: "),
-                                bold_style,
-                            ),
-                            ratatui::text::Span::raw(format!(
-                                "{:.2} m/s",
-                                positive_ascent_rates.iter().sum::<f64>()
-                                    / positive_ascent_rates.len() as f64
-                            )),
-                        ]),
-                        ratatui::text::Spans::from(vec![
-                            ratatui::text::Span::styled(
-                                format!("{:<10}", "neg. ascent rate: "),
-                                bold_style,
-                            ),
-                            ratatui::text::Span::raw(format!(
-                                "{:.2} m/s",
-                                negative_ascent_rates.iter().sum::<f64>()
-                                    / negative_ascent_rates.len() as f64
-                            )),
-                        ]),
-                    ]);
-                }
-
-                track_info.extend([
-                    ratatui::text::Spans::from(vec![
-                        ratatui::text::Span::styled("ground speed: ", bold_style),
-                        ratatui::text::Span::raw(format!(
-                            "{:.2} m/s",
-                            ground_speeds.iter().sum::<f64>() / ground_speeds.len() as f64,
-                        )),
-                    ]),
-                    ratatui::text::Spans::from(vec![
-                        ratatui::text::Span::styled("time interval: ", bold_style),
-                        ratatui::text::Span::raw(crate::utilities::duration_string(
-                            &chrono::Duration::seconds(
-                                (total_interval.num_seconds() as f64 / intervals.len() as f64)
-                                    as i64,
-                            ),
-                        )),
-                    ]),
-                ]);
-
-                let track_info = ratatui::widgets::Paragraph::new(track_info)
-                    .block(
-                        ratatui::widgets::Block::default()
-                            .borders(ratatui::widgets::Borders::ALL)
-                            .title("Averages"),
-                    )
-                    .wrap(ratatui::widgets::Wrap { trim: true });
-                frame.render_widget(track_info, track_info_areas[1]);
-            }
-
             let mut descent_info = vec![];
             if track.descending() {
                 if has_altitude {
@@ -373,7 +315,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                             )),
                         ]),
                         ratatui::text::Spans::from(vec![
-                            ratatui::text::Span::styled("pred. landing loc.: ", bold_style),
+                            ratatui::text::Span::styled("pred. landing: ", bold_style),
                             ratatui::text::Span::raw(format!(
                                 "({:.2}, {:.2})",
                                 predicted_landing_location.location.coord.x,
@@ -392,7 +334,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                             .title("Descent"),
                     )
                     .wrap(ratatui::widgets::Wrap { trim: true });
-                frame.render_widget(descent_info, track_info_areas[2]);
+                frame.render_widget(descent_info, track_info_areas[1]);
             } else if track.ascending() {
                 if let Some(prediction) = &track.prediction {
                     let locations_with_altitudes =
@@ -416,7 +358,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                         );
                         let ascent_info = ratatui::widgets::Paragraph::new(vec![
                             ratatui::text::Spans::from(vec![
-                                ratatui::text::Span::styled("est. max alt. at: ", bold_style),
+                                ratatui::text::Span::styled("est. max alt.: ", bold_style),
                                 ratatui::text::Span::raw(format!(
                                     "{:} ({:})",
                                     (chrono::Local::now() + estimated_time_to_max_altitude)
@@ -427,7 +369,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                                 )),
                             ]),
                             ratatui::text::Spans::from(vec![
-                                ratatui::text::Span::styled("pred. max alt. at: ", bold_style),
+                                ratatui::text::Span::styled("pred. max alt.: ", bold_style),
                                 ratatui::text::Span::raw(format!(
                                     "{:} ({:})",
                                     predicted_max_altitude_location
@@ -446,9 +388,67 @@ pub fn draw<B: ratatui::backend::Backend>(
                                 .title("Ascent"),
                         )
                         .wrap(ratatui::widgets::Wrap { trim: true });
-                        frame.render_widget(ascent_info, track_info_areas[2]);
+                        frame.render_widget(ascent_info, track_info_areas[1]);
                     }
                 }
+            }
+
+            if track.locations.len() > 1 {
+                let mut track_info = vec![];
+                if has_altitude {
+                    track_info.extend([
+                        ratatui::text::Spans::from(vec![
+                            ratatui::text::Span::styled(
+                                format!("{:<10}", "pos. ascent rate: "),
+                                bold_style,
+                            ),
+                            ratatui::text::Span::raw(format!(
+                                "{:.2} m/s",
+                                positive_ascent_rates.iter().sum::<f64>()
+                                    / positive_ascent_rates.len() as f64
+                            )),
+                        ]),
+                        ratatui::text::Spans::from(vec![
+                            ratatui::text::Span::styled(
+                                format!("{:<10}", "neg. ascent rate: "),
+                                bold_style,
+                            ),
+                            ratatui::text::Span::raw(format!(
+                                "{:.2} m/s",
+                                negative_ascent_rates.iter().sum::<f64>()
+                                    / negative_ascent_rates.len() as f64
+                            )),
+                        ]),
+                    ]);
+                }
+
+                track_info.extend([
+                    ratatui::text::Spans::from(vec![
+                        ratatui::text::Span::styled("ground speed: ", bold_style),
+                        ratatui::text::Span::raw(format!(
+                            "{:.2} m/s",
+                            ground_speeds.iter().sum::<f64>() / ground_speeds.len() as f64,
+                        )),
+                    ]),
+                    ratatui::text::Spans::from(vec![
+                        ratatui::text::Span::styled("time interval: ", bold_style),
+                        ratatui::text::Span::raw(crate::utilities::duration_string(
+                            &chrono::Duration::seconds(
+                                (total_interval.num_seconds() as f64 / intervals.len() as f64)
+                                    as i64,
+                            ),
+                        )),
+                    ]),
+                ]);
+
+                let track_info = ratatui::widgets::Paragraph::new(track_info)
+                    .block(
+                        ratatui::widgets::Block::default()
+                            .borders(ratatui::widgets::Borders::ALL)
+                            .title("Averages"),
+                    )
+                    .wrap(ratatui::widgets::Wrap { trim: true });
+                frame.render_widget(track_info, track_info_areas[2]);
             }
 
             let mut datasets = vec![];
