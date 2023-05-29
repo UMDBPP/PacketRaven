@@ -1,13 +1,3 @@
-# this configuration tells PacketRaven to perform the following functions:
-#  1. read packet information from several sources once every 120 seconds, including
-#    - https://amateur.sondehub.org
-#    - a USB port at `/dev/ttyUSB0`
-#    - a text file at `~/packets.txt`
-#  2. filter by specific callsigns and constrain to a specific time range
-#  3. retrieve CUSF prediction information with the given parameters
-#  4. output packets to a GeoJSON file at `./example_3.geojson`
-#  3. output information to the console and to `./example_3.log`
-
 callsigns:
   - W3EAX-9
   - W3EAX-11
@@ -19,8 +9,6 @@ time:
   interval: 120
 
 output_file: example_3.geojson
-
-log_file: example_3.log
 
 connections:
   sondehub: {}
