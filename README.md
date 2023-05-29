@@ -31,14 +31,14 @@ For example, to run ``packetraven`` on ``examples/example_1.yaml``, run the foll
 packetraven examples/example_1.yaml
 ```
 
-![log messages tab](/docs/source/images/example1_log.png)
+![log messages tab](/docs/images/example1_log.png)
 
 Use the left and right arrow keys (or `Tab` and `Shift+Tab`) to switch between tabs:
-![track tab w/ plot of altitude over time](/docs/source/images/example1_altitude.png)
+![track tab w/ plot of altitude over time](/docs/images/example1_altitude.png)
 
 Use the up and down arrow keys to switch between plots:
-![track tab w/ plot of ascent rate over time](/docs/source/images/example1_ascent_rates.png)
-![track tab w/ plot of ground speed over altitude](/docs/source/images/example1_ground_speeds.png)
-![track tab w/ plot of unprojected coordinates](/docs/source/images/example1_coordinates.png)
+![track tab w/ plot of ascent rate over time](/docs/images/example1_ascent_rate.png)
+![track tab w/ plot of ground speed over altitude](/docs/images/example1_ground_speed.png)
+![track tab w/ plot of unprojected coordinates](/docs/images/example1_coordinates.png)
 
 To quit the program, press `q` or `Esc`.
