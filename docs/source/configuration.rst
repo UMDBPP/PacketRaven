@@ -3,6 +3,9 @@ Configuration File
 
 ``packetraven`` reads a YAML configuration file as input. All units are in SI.
 
+.. literalinclude:: ../../examples/example_3.yaml
+   :language: yaml
+
 Entries
 -------
 
