@@ -549,7 +549,10 @@ pub fn draw<B: ratatui::backend::Backend>(
                 .iter()
                 .map(|value| ratatui::text::Span::raw(format!("{:.1} m", value)))
                 .collect();
-            } else if chart_name == "ascent rate / time" && has_altitude {
+            } else if chart_name == "ascent rate / time"
+                && has_altitude
+                && track.locations.len() > 1
+            {
                 telemetry_data = seconds_since_start
                     .iter()
                     .zip(ascent_rates.iter())
@@ -644,7 +647,10 @@ pub fn draw<B: ratatui::backend::Backend>(
                 .iter()
                 .map(|value| ratatui::text::Span::raw(format!("{:.1} m/s", value)))
                 .collect();
-            } else if chart_name == "altitude / ground speed" && has_altitude {
+            } else if chart_name == "altitude / ground speed"
+                && has_altitude
+                && track.locations.len() > 1
+            {
                 telemetry_data = altitudes
                     .into_iter()
                     .zip(ground_speeds.clone().into_iter())
