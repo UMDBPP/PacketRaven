@@ -356,30 +356,32 @@ pub fn draw<B: ratatui::backend::Backend>(
             }
 
             if let Some(prediction) = &track.prediction {
-                let predicted_landing_location = prediction.last().unwrap();
-                descent_info.extend([
-                    ratatui::text::Spans::from(vec![
-                        ratatui::text::Span::styled("pred. landing: ", bold_style),
-                        ratatui::text::Span::raw(format!(
-                            "{:} ({:})",
-                            crate::utilities::duration_string(
-                                &(predicted_landing_location.location.time - chrono::Local::now()),
-                            ),
-                            predicted_landing_location
-                                .location
-                                .time
-                                .format(&crate::DATETIME_FORMAT)
-                        )),
-                    ]),
-                    ratatui::text::Spans::from(vec![
-                        ratatui::text::Span::styled("pred. landing loc.: ", bold_style),
-                        ratatui::text::Span::raw(format!(
-                            "({:.2}, {:.2})",
-                            predicted_landing_location.location.coord.x,
-                            predicted_landing_location.location.coord.y,
-                        )),
-                    ]),
-                ]);
+                if let Some(predicted_landing_location) = prediction.last() {
+                    descent_info.extend([
+                        ratatui::text::Spans::from(vec![
+                            ratatui::text::Span::styled("pred. landing: ", bold_style),
+                            ratatui::text::Span::raw(format!(
+                                "{:} ({:})",
+                                crate::utilities::duration_string(
+                                    &(predicted_landing_location.location.time
+                                        - chrono::Local::now()),
+                                ),
+                                predicted_landing_location
+                                    .location
+                                    .time
+                                    .format(&crate::DATETIME_FORMAT)
+                            )),
+                        ]),
+                        ratatui::text::Spans::from(vec![
+                            ratatui::text::Span::styled("pred. landing loc.: ", bold_style),
+                            ratatui::text::Span::raw(format!(
+                                "({:.2}, {:.2})",
+                                predicted_landing_location.location.coord.x,
+                                predicted_landing_location.location.coord.y,
+                            )),
+                        ]),
+                    ]);
+                }
             }
 
             if !descent_info.is_empty() {
@@ -590,14 +592,14 @@ pub fn draw<B: ratatui::backend::Backend>(
                 ];
 
                 if let Some(prediction) = &track.prediction {
-                    let locations_with_altitude = crate::location::track::with_altitude(prediction);
-                    let seconds_since_start: Vec<f64> = locations_with_altitude
+                    let with_altitude = crate::location::track::with_altitude(prediction);
+                    let seconds_since_start: Vec<f64> = with_altitude
                         .iter()
                         .map(|location| (location.location.time - start_time).num_seconds() as f64)
                         .collect();
 
                     let ascent_rates =
-                        crate::location::track::ascent_rates(locations_with_altitude.as_slice());
+                        crate::location::track::ascent_rates(with_altitude.as_slice());
 
                     let min_x = seconds_since_start
                         .iter()

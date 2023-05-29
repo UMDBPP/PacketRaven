@@ -393,7 +393,7 @@ impl PacketravenApp {
 
                     let profile = prediction_configuration.to_tawhiri_query().query.profile;
                     for track in tracks {
-                        track.prediction = match track.prediction(&profile) {
+                        let prediction = match track.prediction(&profile) {
                             Ok(retrieved_prediction) => Some(retrieved_prediction),
                             Err(error) => {
                                 messages.push((
@@ -404,6 +404,14 @@ impl PacketravenApp {
                                 existing_prediction.to_owned()
                             }
                         };
+
+                        if let Some(prediction) = &prediction {
+                            if prediction.is_empty() {
+                                continue;
+                            }
+                        }
+
+                        track.prediction = prediction;
                     }
 
                     if let Some(path) = &prediction_configuration.output_file {
