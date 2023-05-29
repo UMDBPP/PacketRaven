@@ -4,7 +4,7 @@
 [![docs](https://readthedocs.org/projects/packetraven/badge/?version=latest)](https://packetraven.readthedocs.io/en/latest/?badge=latest)
 [![license](https://img.shields.io/github/license/umdbpp/packetraven)](https://opensource.org/licenses/MIT)
 
-track high-altitude balloon telemetry with a TNC-equipped radio connected via USB, or from https://amateur.sondehub.org or https://aprs.fi
+track high-altitude balloon telemetry from a variety of sources
 
 ![demo](/docs/images/demo.png)
 

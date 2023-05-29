@@ -62,6 +62,65 @@ connections from which to retrieve packets
    To define a connection with no options (i.e. the ``sondehub`` entry, above), use YAML's empty flow mapping syntax ``sondehub: {}``.
    The empty block mapping syntax (``sondehub: ``) is equivalent to ``sondehub: null`` and will not initiate the connection.
 
+``text``
+""""""""
+
+text entries can be
+1. a text file containing one raw APRS frame per line, optionally prepended by the datetime (separated by a colon)
+2. a GeoJSON file of points with packet information in the `properties`
+3. a serial port, from which raw APRS frames can be retrieved as strings
+
+.. code-block:: yaml
+
+	text:
+		- path: http://bpp.umd.edu/archives/Launches/NS-100_2022_04_09/APRS/NS-100%20normal%20aprs.txt
+		  callsigns: ["W3EAX-8"]
+		- path: ~/packets.geojson
+		- port: /dev/ttyUSB0
+		  callsigns: ["KC3SKW-8"]
+		- port: COM3
+		  baud_rate: 9600
+
+.. note::
+   File entries use the `path:` entry, while serial port entries use the `port:` and `baud_rate:` entries instead
+
+``sondehub``
+""""""""""""
+
+.. code-block:: yaml
+
+	sondehub:
+		callsigns: ["KC3SKW-8"]
+
+``aprs_fi``
+"""""""""""
+
+.. code-block:: yaml
+
+	aprs_fi:
+	    api_key: 123456.abcdefhijklmnop
+
+``postgres``
+""""""""""""
+
+.. note::
+   Requires the ``postgres`` crate feature
+
+.. code-block:: yaml
+
+	postgres:
+		hostname: "database_hostname"
+		port: 5432
+		database: "nearspace"
+		table: "packets"
+		username: "user1"
+		password: "password1"
+		tunnel:
+			hostname: "ssh_tunnel_hostname"
+			port: 22
+			username: "ssh_user1"
+			password: "ssh_password1"
+
 ``prediction``
 ^^^^^^^^^^^^^^
 

@@ -12,16 +12,16 @@ lazy_static::lazy_static! {
 
 #[derive(Debug, Clone)]
 pub enum Connection {
-    #[cfg(feature = "aprsfi")]
-    AprsFi(aprs_fi::AprsFiQuery),
-    #[cfg(feature = "sondehub")]
-    SondeHub(sondehub::SondeHubQuery),
     AprsTextFile(text::file::AprsTextFile),
     GeoJsonFile(text::file::GeoJsonFile),
-    #[cfg(feature = "postgres")]
-    PacketDatabase(postgres::PacketDatabase),
     #[cfg(feature = "serial")]
     AprsSerial(text::serial::AprsSerial),
+    #[cfg(feature = "sondehub")]
+    SondeHub(sondehub::SondeHubQuery),
+    #[cfg(feature = "aprsfi")]
+    AprsFi(aprs_fi::AprsFiQuery),
+    #[cfg(feature = "postgres")]
+    PacketDatabase(postgres::DatabaseCredentials),
 }
 
 impl Connection {
