@@ -131,7 +131,7 @@ pub fn draw<B: ratatui::backend::Backend>(
             let mut ascent_rates = Vec::<f64>::new();
             let mut positive_ascent_rates = Vec::<f64>::new();
             let mut negative_ascent_rates = Vec::<f64>::new();
-            let mut altitude_range = [0.0, 0.0];
+            let mut altitude_range = [0.0, 1.0];
             if has_altitude {
                 ascents = crate::location::track::ascents(&track.locations);
                 ascent_rates = crate::location::track::ascent_rates(&track.locations);
@@ -442,10 +442,10 @@ pub fn draw<B: ratatui::backend::Backend>(
             }
 
             let mut datasets = vec![];
-            let mut x_range;
-            let mut y_range;
-            let x_labels;
-            let y_labels;
+            let mut x_range = [0.0, 1.0];
+            let mut y_range = [0.0, 1.0];
+            let mut x_labels = vec![];
+            let mut y_labels = vec![];
 
             let time_format = if end_time - start_time < chrono::Duration::days(1) {
                 "%H:%M:%S"
@@ -464,7 +464,9 @@ pub fn draw<B: ratatui::backend::Backend>(
             let chart_name = CHARTS.get(app.chart_index).unwrap();
             let telemetry_data: Vec<(f64, f64)>;
             let predicted_data: Vec<(f64, f64)>;
-            if chart_name == "altitude / time" {
+
+            let mut draw_chart = true;
+            if chart_name == "altitude / time" && has_altitude {
                 telemetry_data = seconds_since_start
                     .iter()
                     .zip(altitudes.iter())
@@ -547,7 +549,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                 .iter()
                 .map(|value| ratatui::text::Span::raw(format!("{:.1} m", value)))
                 .collect();
-            } else if chart_name == "ascent rate / time" {
+            } else if chart_name == "ascent rate / time" && has_altitude {
                 telemetry_data = seconds_since_start
                     .iter()
                     .zip(ascent_rates.iter())
@@ -642,7 +644,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                 .iter()
                 .map(|value| ratatui::text::Span::raw(format!("{:.1} m/s", value)))
                 .collect();
-            } else if chart_name == "altitude / ground speed" {
+            } else if chart_name == "altitude / ground speed" && has_altitude {
                 telemetry_data = altitudes
                     .into_iter()
                     .zip(ground_speeds.clone().into_iter())
@@ -852,35 +854,43 @@ pub fn draw<B: ratatui::backend::Backend>(
                 .map(|value| ratatui::text::Span::raw(format!("{:.1}", value)))
                 .collect();
             } else {
-                panic!("unknown chart name {:}", chart_name);
+                draw_chart = false;
             }
 
-            let chart = ratatui::widgets::Chart::new(datasets)
-                .block(
-                    ratatui::widgets::Block::default()
-                        .title(ratatui::text::Span::styled(
-                            chart_name,
-                            ratatui::style::Style::default()
-                                .fg(ratatui::style::Color::Cyan)
-                                .add_modifier(ratatui::style::Modifier::BOLD),
-                        ))
-                        .borders(ratatui::widgets::Borders::ALL),
-                )
-                .x_axis(
-                    ratatui::widgets::Axis::default()
-                        .style(ratatui::style::Style::default().fg(ratatui::style::Color::DarkGray))
-                        .labels(x_labels)
-                        .labels_alignment(ratatui::layout::Alignment::Right)
-                        .bounds(x_range),
-                )
-                .y_axis(
-                    ratatui::widgets::Axis::default()
-                        .style(ratatui::style::Style::default().fg(ratatui::style::Color::DarkGray))
-                        .labels(y_labels)
-                        .labels_alignment(ratatui::layout::Alignment::Right)
-                        .bounds(y_range),
-                );
-            frame.render_widget(chart, track_areas[1]);
+            if draw_chart {
+                let chart = ratatui::widgets::Chart::new(datasets)
+                    .block(
+                        ratatui::widgets::Block::default()
+                            .title(ratatui::text::Span::styled(
+                                chart_name,
+                                ratatui::style::Style::default()
+                                    .fg(ratatui::style::Color::Cyan)
+                                    .add_modifier(ratatui::style::Modifier::BOLD),
+                            ))
+                            .borders(ratatui::widgets::Borders::ALL),
+                    )
+                    .x_axis(
+                        ratatui::widgets::Axis::default()
+                            .style(
+                                ratatui::style::Style::default()
+                                    .fg(ratatui::style::Color::DarkGray),
+                            )
+                            .labels(x_labels)
+                            .labels_alignment(ratatui::layout::Alignment::Right)
+                            .bounds(x_range),
+                    )
+                    .y_axis(
+                        ratatui::widgets::Axis::default()
+                            .style(
+                                ratatui::style::Style::default()
+                                    .fg(ratatui::style::Color::DarkGray),
+                            )
+                            .labels(y_labels)
+                            .labels_alignment(ratatui::layout::Alignment::Right)
+                            .bounds(y_range),
+                    );
+                frame.render_widget(chart, track_areas[1]);
+            }
 
             frame.render_widget(block, areas[1]);
         }
