@@ -6,6 +6,8 @@
 
 track high-altitude balloon telemetry with a TNC-equipped radio connected via USB, or from https://amateur.sondehub.org or https://aprs.fi
 
+![demo](/docs/images/demo.png)
+
 ## Installation
 
 download the latest compiled executable from the [Releases page](https://github.com/UMDBPP/PacketRaven/releases)
