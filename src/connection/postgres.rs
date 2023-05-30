@@ -273,6 +273,8 @@ mod tests {
                     input_packets.get(index).unwrap()
                 )
             }
+        } else {
+            panic!("database credentials not set in environment variables");
         }
     }
 }

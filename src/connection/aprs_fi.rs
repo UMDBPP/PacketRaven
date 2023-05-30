@@ -320,6 +320,8 @@ mod tests {
             let packets = connection.retrieve_aprs_from_aprsfi().unwrap();
 
             assert!(!packets.is_empty());
+        } else {
+            panic!("APRS.fi credentials not set in environment variable");
         }
     }
 
