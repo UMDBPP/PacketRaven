@@ -2,7 +2,6 @@ name: rtd311
 channels:
   - conda-forge
 dependencies:
-  - m2r2
   - python
   - sphinx
-  - sphinx_rtd_theme
+  - sphinx-mdinclude

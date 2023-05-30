@@ -1,15 +1,10 @@
-.. toctree::
-
-Configuration File
-==================
+configuration
+=============
 
 The configuration file is in YAML format. All units are metric (``m``, ``m/s``, ``C``, etc.).
 
-Entries
--------
-
 ``callsigns``
-^^^^^^^^^^^^^
+-------------
 
 a list of callsigns as strings, including SSIDs if present
 
@@ -19,37 +14,8 @@ a list of callsigns as strings, including SSIDs if present
      - KC3SKW-8
      - KC3SKW-9
 
-``time``
-^^^^^^^^
-
-.. code-block:: yaml
-
-   time:
-     start: 2022-03-05 00:00:00
-     end: 2022-03-06 00:00:00
-     interval: 120
-   
-``start`` and ``end``
-"""""""""""""""""""""
-
-start and end times by which to filter received telemetry
-
-``interval``
-""""""""""""
-
-interval in seconds after which to fetch new telemetry
-
-``output_file``
-^^^^^^^^^^^^^^^
-
-GeoJSON file to output telemetry to
-
-.. code-block:: yaml
-
-   output_file: example_3.geojson
-
 ``connections``
-^^^^^^^^^^^^^^^
+---------------
 
 connections from which to retrieve packets
 
@@ -69,7 +35,7 @@ connections from which to retrieve packets
    The empty block mapping syntax (``sondehub: ``) is equivalent to ``sondehub: null`` and will not initiate the connection.
 
 ``text``
-""""""""
+^^^^^^^^
 
 text entries can be
 
@@ -81,10 +47,12 @@ text entries can be
 
   text:
     - path: http://bpp.umd.edu/archives/Launches/NS-100_2022_04_09/APRS/NS-100%20normal%20aprs.txt
-      callsigns: ["W3EAX-8"]
+      callsigns:
+        - W3EAX-8
     - path: ~/packets.geojson
     - port: /dev/ttyUSB0
-      callsigns: ["KC3SKW-8"]
+      callsigns: 
+        - KC3SKW-8
     - port: COM3
       baud_rate: 9600
 
@@ -93,15 +61,16 @@ text entries can be
   serial port connections use the ``port:`` and ``baud_rate:`` entries instead.
 
 ``sondehub``
-""""""""""""
+^^^^^^^^^^^^
 
 .. code-block:: yaml
 
   sondehub:
-    callsigns: ["KC3SKW-8"]
+    callsigns: 
+      - KC3SKW-8
 
 ``aprs_fi``
-"""""""""""
+^^^^^^^^^^^
 
 .. code-block:: yaml
 
@@ -109,10 +78,10 @@ text entries can be
     api_key: 123456.abcdefhijklmnop
 
 ``postgres``
-""""""""""""
+^^^^^^^^^^^^
 
-.. note::
-   Requires the ``postgres`` crate feature
+.. warning::
+   requires the ``postgres`` feature
 
 .. code-block:: yaml
 
@@ -129,8 +98,37 @@ text entries can be
     username: "ssh_user1"
     password: "ssh_password1"
 
+``time``
+--------
+
+.. code-block:: yaml
+
+   time:
+     start: 2022-03-05 00:00:00
+     end: 2022-03-06 00:00:00
+     interval: 120
+   
+``start`` and ``end``
+^^^^^^^^^^^^^^^^^^^^^
+
+start and end times by which to filter received telemetry
+
+``interval``
+^^^^^^^^^^^^
+
+interval in seconds after which to fetch new telemetry
+
+``output_file``
+---------------
+
+GeoJSON file to output telemetry to
+
+.. code-block:: yaml
+
+   output_file: example_3.geojson
+
 ``prediction``
-^^^^^^^^^^^^^^
+--------------
 
 default prediction profile that will be applied to all callsigns
 
@@ -156,35 +154,4 @@ default prediction profile that will be applied to all callsigns
    During a flight, the prediction profile for each track will differ from this default configuration; 
    for instance, on ascent the profile will use the actual ascent rate from telemetry, 
    and during descent the prediction will only include the descent stage.
-
-Examples
---------
-
-``examples/example_1.yaml``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-watch text file(s) for new lines containing raw APRS frames
-
-.. literalinclude:: ../../examples/example_1.yaml
-   :language: yaml
-
-``examples/example_2.yaml``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-listen to a TNC-equipped radio connected to port ``COM3`` and poll https://amateur.sondehub.org and https://aprs.fi
-
-.. literalinclude:: ../../examples/example_2.yaml
-   :language: yaml
-
-``examples/example_3.yaml``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-retrieve telemetry from https://amateur.sondehub.org, 
-a TNC-equipped radio connected to port ``/dev/ttyUSB0``, and a text file
-every 120 seconds, filtering by specific callsigns and a specific time range;
-additionally, retrieve CUSF predictions following the given profile and output telemetry data to a GeoJSON
- file
-
-.. literalinclude:: ../../examples/example_3.yaml
-   :language: yaml
 

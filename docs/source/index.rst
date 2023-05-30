@@ -1,5 +1,8 @@
 .. toctree::
-	:max-depth: 2
-	configuration
+  :hidden:
+
+  self
+  configuration
+  examples
 
 .. mdinclude:: ../../README.md
