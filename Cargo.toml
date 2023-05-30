@@ -2,11 +2,10 @@
 name = "packetraven"
 authors = ["Zach Burnett <zachary.r.burnett@gmail.com>"]
 description = "track high-altitude balloon telemetry from a variety of sources"
-version = "3.0.5"
+version = "3.0.6"
 edition = "2021"
 readme = "README.md"
 license = "GPL-3.0-or-later"
-license-file = "LICENSE"
 repository = "https://github.com/UMDBPP/PacketRaven.git"
 homepage = "https://github.com/UMDBPP/PacketRaven"
 documentation = "https://packetraven.readthedocs.io"
@@ -21,23 +20,23 @@ serial = ["dep:serialport"]
 postgres = ["dep:postgres"]
 
 [dependencies]
-aprs-parser = "0.4.0"
-chrono = { version = "0.4.24", features = ["clock"] }
-clap = { version = "4.2.7", features = ["derive"] }
-custom_error = "1.9.2"
-geo = { version = "0.24.1", features = ["serde"] }
-geojson = "0.24.0"
-lazy_static = "1.4.0"
-log = "0.4.17"
+aprs-parser = ">=0.4.0"
+chrono = { version = ">=0.4.24", features = ["clock"] }
+clap = { version = ">=4.2.7", features = ["derive"] }
+custom_error = ">=1.9.2"
+geo = { version = ">=0.24.1", features = ["serde"] }
+geojson = ">=0.24.0"
+lazy_static = ">=1.4.0"
+log = ">=0.4.17"
 postgres = { version="0.19.5", optional=true }
-ratatui = "0.20.1"
-crossterm = "*"
-regex = "1.8.1"
-reqwest = { version = "0.11.17", features = ["json", "blocking", "gzip"] }
-serde = "1.0.160"
-serde_json = "1.0.96"
-serde_with = { version = "3.0.0", features = ["chrono"] }
-serde_yaml = "0.9.21"
-serialport = { version= "4.2.0", optional=true }
-url = "2.3.1"
-geo-types = "0.7.9"
+ratatui = ">=0.21.0"
+crossterm = ">=0.26.1"
+regex = ">=1.8.1"
+reqwest = { version = ">=0.11.17", features = ["json", "blocking", "gzip"] }
+serde = ">=1.0.160"
+serde_json = ">=1.0.96"
+serde_with = { version = ">=3.0.0", features = ["chrono"] }
+serde_yaml = ">=0.9.21"
+serialport = { version= ">=4.2.0", optional=true }
+url = ">=2.3.1"
+geo-types = ">=0.7.9"

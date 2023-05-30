@@ -19,11 +19,11 @@ pub fn draw<B: ratatui::backend::Backend>(
         )
         .split(size);
 
-    let mut titles: Vec<ratatui::text::Spans> = app
+    let mut titles: Vec<ratatui::text::Line> = app
         .tracks
         .iter()
         .map(|track| {
-            ratatui::text::Spans::from(vec![ratatui::text::Span::styled(
+            ratatui::text::Line::from(vec![ratatui::text::Span::styled(
                 track.name.to_owned(),
                 ratatui::style::Style::default().fg(ratatui::style::Color::Green),
             )])
@@ -31,7 +31,7 @@ pub fn draw<B: ratatui::backend::Backend>(
         .collect();
     titles.insert(
         0,
-        ratatui::text::Spans::from(vec![ratatui::text::Span::raw("Log")]),
+        ratatui::text::Line::from(vec![ratatui::text::Span::raw("Log")]),
     );
     let tabs = ratatui::widgets::Tabs::new(titles)
         .block(ratatui::widgets::Block::default().borders(ratatui::widgets::Borders::ALL))
@@ -58,7 +58,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                         _ => bold_style,
                     };
 
-                    ratatui::text::Spans::from(vec![
+                    ratatui::text::Line::from(vec![
                         ratatui::text::Span::styled(
                             format!("{:} ", time.format(&crate::DATETIME_FORMAT)),
                             bold_style,
@@ -67,7 +67,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                         ratatui::text::Span::raw(message),
                     ])
                 })
-                .collect::<Vec<ratatui::text::Spans>>(),
+                .collect::<Vec<ratatui::text::Line>>(),
         )
         .scroll((app.log_messages_scroll_offset, 0))
         .wrap(ratatui::widgets::Wrap { trim: true })
@@ -177,7 +177,7 @@ pub fn draw<B: ratatui::backend::Backend>(
 
             let last_location = track.locations.last().unwrap();
 
-            let mut last_location_info = vec![ratatui::text::Spans::from(vec![
+            let mut last_location_info = vec![ratatui::text::Line::from(vec![
                 ratatui::text::Span::styled("time: ", bold_style),
                 ratatui::text::Span::raw(format!(
                     "{:} ({:})",
@@ -189,7 +189,7 @@ pub fn draw<B: ratatui::backend::Backend>(
             ])];
 
             if track.locations.len() > 1 {
-                last_location_info.push(ratatui::text::Spans::from(vec![
+                last_location_info.push(ratatui::text::Line::from(vec![
                     ratatui::text::Span::styled("since prev.: ", bold_style),
                     ratatui::text::Span::raw(crate::utilities::duration_string(
                         intervals.last().unwrap(),
@@ -197,7 +197,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                 ]));
             }
 
-            last_location_info.push(ratatui::text::Spans::from(vec![
+            last_location_info.push(ratatui::text::Line::from(vec![
                 ratatui::text::Span::styled("coordinates: ", bold_style),
                 ratatui::text::Span::raw(format!(
                     "({:.2}, {:.2})",
@@ -206,7 +206,7 @@ pub fn draw<B: ratatui::backend::Backend>(
             ]));
 
             if let Some(altitude) = last_location.location.altitude {
-                last_location_info.push(ratatui::text::Spans::from(vec![
+                last_location_info.push(ratatui::text::Line::from(vec![
                     ratatui::text::Span::styled("altitude: ", bold_style),
                     ratatui::text::Span::raw(format!("{:.2} m", altitude)),
                 ]));
@@ -214,14 +214,14 @@ pub fn draw<B: ratatui::backend::Backend>(
 
             if track.locations.len() > 1 {
                 last_location_info.extend([
-                    ratatui::text::Spans::from(vec![
+                    ratatui::text::Line::from(vec![
                         ratatui::text::Span::styled("over ground: ", bold_style),
                         ratatui::text::Span::raw(format!(
                             "{:.2} m",
                             overground_distances.last().unwrap(),
                         )),
                     ]),
-                    ratatui::text::Spans::from(vec![
+                    ratatui::text::Line::from(vec![
                         ratatui::text::Span::styled("ground speed: ", bold_style),
                         ratatui::text::Span::raw(format!(
                             "{:.2} m/s",
@@ -232,11 +232,11 @@ pub fn draw<B: ratatui::backend::Backend>(
 
                 if has_altitude {
                     last_location_info.extend([
-                        ratatui::text::Spans::from(vec![
+                        ratatui::text::Line::from(vec![
                             ratatui::text::Span::styled("ascent: ", bold_style),
                             ratatui::text::Span::raw(format!("{:.2} m", ascents.last().unwrap(),)),
                         ]),
-                        ratatui::text::Spans::from(vec![
+                        ratatui::text::Line::from(vec![
                             ratatui::text::Span::styled("ascent rate: ", bold_style),
                             ratatui::text::Span::raw(format!(
                                 "{:.2} m/s",
@@ -259,7 +259,7 @@ pub fn draw<B: ratatui::backend::Backend>(
             let mut descent_info = vec![];
             if track.descending() {
                 if has_altitude {
-                    descent_info.push(ratatui::text::Spans::from(vec![
+                    descent_info.push(ratatui::text::Line::from(vec![
                         ratatui::text::Span::styled("max altitude: ", bold_style),
                         ratatui::text::Span::raw(format!("{:.2} m", altitude_range[1])),
                     ]));
@@ -268,7 +268,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                 if let Some(estimated_time_to_ground) = track.estimated_time_to_ground() {
                     let landing_time = last_location.location.time + estimated_time_to_ground;
 
-                    descent_info.push(ratatui::text::Spans::from(vec![
+                    descent_info.push(ratatui::text::Line::from(vec![
                         ratatui::text::Span::styled("est. landing: ", bold_style),
                         ratatui::text::Span::raw(format!(
                             "{:} ({:})",
@@ -284,7 +284,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                     let landing_time =
                         last_location.location.time + freefall_estimate.time_to_ground;
 
-                    descent_info.push(ratatui::text::Spans::from(vec![
+                    descent_info.push(ratatui::text::Line::from(vec![
                         ratatui::text::Span::styled("@ term. vel.: ", bold_style),
                         ratatui::text::Span::raw(format!(
                             "{:} ({:})",
@@ -300,7 +300,7 @@ pub fn draw<B: ratatui::backend::Backend>(
             if let Some(prediction) = &track.prediction {
                 if let Some(predicted_landing_location) = prediction.last() {
                     descent_info.extend([
-                        ratatui::text::Spans::from(vec![
+                        ratatui::text::Line::from(vec![
                             ratatui::text::Span::styled("pred. landing: ", bold_style),
                             ratatui::text::Span::raw(format!(
                                 "{:} ({:})",
@@ -314,7 +314,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                                     .format(&crate::DATETIME_FORMAT)
                             )),
                         ]),
-                        ratatui::text::Spans::from(vec![
+                        ratatui::text::Line::from(vec![
                             ratatui::text::Span::styled("pred. landing: ", bold_style),
                             ratatui::text::Span::raw(format!(
                                 "({:.2}, {:.2})",
@@ -357,7 +357,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                                 as i64,
                         );
                         let ascent_info = ratatui::widgets::Paragraph::new(vec![
-                            ratatui::text::Spans::from(vec![
+                            ratatui::text::Line::from(vec![
                                 ratatui::text::Span::styled("est. max alt.: ", bold_style),
                                 ratatui::text::Span::raw(format!(
                                     "{:} ({:})",
@@ -368,7 +368,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                                     )
                                 )),
                             ]),
-                            ratatui::text::Spans::from(vec![
+                            ratatui::text::Line::from(vec![
                                 ratatui::text::Span::styled("pred. max alt.: ", bold_style),
                                 ratatui::text::Span::raw(format!(
                                     "{:} ({:})",
@@ -397,7 +397,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                 let mut track_info = vec![];
                 if has_altitude {
                     track_info.extend([
-                        ratatui::text::Spans::from(vec![
+                        ratatui::text::Line::from(vec![
                             ratatui::text::Span::styled(
                                 format!("{:<10}", "pos. ascent rate: "),
                                 bold_style,
@@ -408,7 +408,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                                     / positive_ascent_rates.len() as f64
                             )),
                         ]),
-                        ratatui::text::Spans::from(vec![
+                        ratatui::text::Line::from(vec![
                             ratatui::text::Span::styled(
                                 format!("{:<10}", "neg. ascent rate: "),
                                 bold_style,
@@ -423,14 +423,14 @@ pub fn draw<B: ratatui::backend::Backend>(
                 }
 
                 track_info.extend([
-                    ratatui::text::Spans::from(vec![
+                    ratatui::text::Line::from(vec![
                         ratatui::text::Span::styled("ground speed: ", bold_style),
                         ratatui::text::Span::raw(format!(
                             "{:.2} m/s",
                             ground_speeds.iter().sum::<f64>() / ground_speeds.len() as f64,
                         )),
                     ]),
-                    ratatui::text::Spans::from(vec![
+                    ratatui::text::Line::from(vec![
                         ratatui::text::Span::styled("time interval: ", bold_style),
                         ratatui::text::Span::raw(crate::utilities::duration_string(
                             &chrono::Duration::seconds(
