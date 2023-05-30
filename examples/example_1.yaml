@@ -1,5 +1,6 @@
 connections:
   text:
-    - path: ~/aprs_frames.txt
+    - path: ~/raw_aprs_frames.txt
+      callsigns: 
+        - W3EAX-8
     - path: http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-8%20raw.txt
-      callsigns: ["W3EAX-8"]
