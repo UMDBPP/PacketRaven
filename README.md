@@ -6,7 +6,7 @@
 
 track high-altitude balloon telemetry from a variety of sources
 
-![demo](/docs/images/demo.gif)
+![demo](https://media.githubusercontent.com/media/UMDBPP/PacketRaven/main/docs/images/demo.gif)
 
 ## Installation
 
@@ -33,8 +33,8 @@ For example, to run ``packetraven`` on ``examples/example_1.yaml``, run the foll
 packetraven examples/example_1.yaml
 ```
 
-![log message screen](/docs/images/example1_log.png)
-![altitude telemetry plotted over time](/docs/images/example1_altitude.png)
+![log message screen](https://media.githubusercontent.com/media/UMDBPP/PacketRaven/main/docs/images/example1_log.png)
+![altitude telemetry plotted over time](https://media.githubusercontent.com/media/UMDBPP/PacketRaven/main/docs/images/example1_altitude.png)
 
 Use the left and right arrow keys (or `Tab` and `Shift+Tab`) to switch between tabs. 
 Similarly, use the up and down arrow keys to switch between plots.
