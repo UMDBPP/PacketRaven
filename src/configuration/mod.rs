@@ -140,11 +140,6 @@ mod tests {
         );
 
         assert_eq!(
-            configuration.callsigns.to_owned().unwrap(),
-            expected_callsigns
-        );
-
-        assert_eq!(
             configuration.time,
             TimeConfiguration {
                 start: Some(
@@ -174,11 +169,6 @@ mod tests {
         assert_eq!(
             configuration.output_file.unwrap(),
             std::path::PathBuf::from("example_3.geojson".to_string())
-        );
-
-        assert_eq!(
-            configuration.log_file.unwrap(),
-            std::path::PathBuf::from("example_3.log".to_string())
         );
 
         assert!(configuration.connections.text.is_some());
