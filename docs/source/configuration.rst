@@ -79,14 +79,14 @@ text entries can be
 
 .. code-block:: yaml
 
-	text:
-		- path: http://bpp.umd.edu/archives/Launches/NS-100_2022_04_09/APRS/NS-100%20normal%20aprs.txt
-		  callsigns: ["W3EAX-8"]
-		- path: ~/packets.geojson
-		- port: /dev/ttyUSB0
-		  callsigns: ["KC3SKW-8"]
-		- port: COM3
-		  baud_rate: 9600
+  text:
+    - path: http://bpp.umd.edu/archives/Launches/NS-100_2022_04_09/APRS/NS-100%20normal%20aprs.txt
+      callsigns: ["W3EAX-8"]
+    - path: ~/packets.geojson
+    - port: /dev/ttyUSB0
+      callsigns: ["KC3SKW-8"]
+    - port: COM3
+      baud_rate: 9600
 
 .. note::
    File entries use the `path:` entry, while serial port entries use the `port:` and `baud_rate:` entries instead
@@ -96,16 +96,16 @@ text entries can be
 
 .. code-block:: yaml
 
-	sondehub:
-		callsigns: ["KC3SKW-8"]
+  sondehub:
+    callsigns: ["KC3SKW-8"]
 
 ``aprs_fi``
 """""""""""
 
 .. code-block:: yaml
 
-	aprs_fi:
-	    api_key: 123456.abcdefhijklmnop
+  aprs_fi:
+    api_key: 123456.abcdefhijklmnop
 
 ``postgres``
 """"""""""""
@@ -115,18 +115,18 @@ text entries can be
 
 .. code-block:: yaml
 
-	postgres:
-		hostname: "database_hostname"
-		port: 5432
-		database: "nearspace"
-		table: "packets"
-		username: "user1"
-		password: "password1"
-		tunnel:
-			hostname: "ssh_tunnel_hostname"
-			port: 22
-			username: "ssh_user1"
-			password: "ssh_password1"
+  postgres:
+    hostname: "database_hostname"
+    port: 5432
+    database: "nearspace"
+    table: "packets"
+    username: "user1"
+    password: "password1"
+    tunnel:
+    hostname: "ssh_tunnel_hostname"
+    port: 22
+    username: "ssh_user1"
+    password: "ssh_password1"
 
 ``prediction``
 ^^^^^^^^^^^^^^
@@ -135,21 +135,21 @@ default prediction profile that will be applied to all callsigns
 
 .. code-block:: yaml
 
-   prediction:
-     start:
-       coord:
-         x: -78.4987
-         y: 40.0157
-       time: 2022-03-05 10:36:00
-     profile:
-       ascent_rate: 6.5
-       burst_altitude: 25000
-       sea_level_descent_rate: 9
-     float:
-       duration: 3600
-       float_altitude: 25000
-       uncertainty: 500
-     output_file: example_3_prediction.geojson
+  prediction:
+    start:
+      coord:
+        x: -78.4987
+        y: 40.0157
+      time: 2022-03-05 10:36:00
+    profile:
+      ascent_rate: 6.5
+      burst_altitude: 25000
+      sea_level_descent_rate: 9
+    float:
+      duration: 3600
+      float_altitude: 25000
+      uncertainty: 500
+    output_file: example_3_prediction.geojson
 
 .. note::
    During a flight, the prediction profile for each track will differ from this default configuration; 
