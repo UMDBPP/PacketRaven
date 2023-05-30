@@ -2,10 +2,12 @@
 name = "packetraven"
 authors = ["Zach Burnett <zachary.r.burnett@gmail.com>"]
 description = "track high-altitude balloon telemetry from a variety of sources"
-version = "3.0.2"
+version = "3.0.3"
 edition = "2021"
 readme = "README.md"
-repository = "https://github.com/UMDBPP/PacketRaven"
+repository = "https://github.com/UMDBPP/PacketRaven.git"
+homepage = "https://github.com/UMDBPP/PacketRaven"
+documentation = "https://packetraven.readthedocs.io"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

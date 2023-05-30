@@ -10,7 +10,7 @@ Set Theme "Catppuccin Macchiato"
 Type "./packetraven examples/example_1.yaml"
 Sleep 500ms
 Enter
-Sleep 2s
+Sleep 2.5s
 Right
 Sleep 2s
 Up
@@ -22,7 +22,7 @@ Sleep 500ms
 Type "./packetraven examples/example_3.yaml"
 Sleep 500ms
 Enter
-Sleep 2s
+Sleep 2.5s
 Right
 Sleep 2s
 Right
@@ -32,7 +32,7 @@ Sleep 500ms
 Type "./packetraven demo.yaml"
 Sleep 500ms
 Enter
-Sleep 4s
+Sleep 4.5s
 Right
 Sleep 2s
 Down
