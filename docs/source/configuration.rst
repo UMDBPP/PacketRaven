@@ -1,11 +1,12 @@
+.. tocktree::
+
 Configuration File
 ==================
 
-The configuration file is in YAML format. Units are metric.
+The configuration file is in YAML format. All units are metric (``m``, ``m/s``, ``C``, etc.).
 
-
-Configuration Entries
----------------------
+Entries
+-------
 
 ``callsigns``
 ^^^^^^^^^^^^^
@@ -15,9 +16,8 @@ a list of callsigns as strings, including SSIDs if present
 .. code-block:: yaml
 
    callsigns:
-     - W3EAX-9
-     - W3EAX-11
-     - W3EAX-12
+     - KC3SKW-8
+     - KC3SKW-9
 
 ``time``
 ^^^^^^^^
@@ -37,7 +37,7 @@ start and end times by which to filter received telemetry
 ``interval``
 """"""""""""
 
-the interval that ``packetraven`` fetches new telemetry
+interval in seconds after which to fetch new telemetry
 
 ``output_file``
 ^^^^^^^^^^^^^^^
@@ -89,7 +89,8 @@ text entries can be
       baud_rate: 9600
 
 .. note::
-   File entries use the `path:` entry, while serial port entries use the `port:` and `baud_rate:` entries instead
+  File connections use the ``path:`` entry, while 
+  serial port connections use the ``port:`` and ``baud_rate:`` entries instead.
 
 ``sondehub``
 """"""""""""
@@ -154,10 +155,10 @@ default prediction profile that will be applied to all callsigns
 .. note::
    During a flight, the prediction profile for each track will differ from this default configuration; 
    for instance, on ascent the profile will use the actual ascent rate from telemetry, 
-   and upon descent the prediction will only include the descent stage.
+   and during descent the prediction will only include the descent stage.
 
-Example Configurations
-----------------------
+Examples
+--------
 
 ``examples/example_1.yaml``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -178,13 +179,11 @@ listen to a TNC-equipped radio connected to port ``COM3`` and poll https://amate
 ``examples/example_3.yaml``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1. retrieve telemetry from the following connections once every 120 seconds
-  - https://amateur.sondehub.org
-  - a TNC-equipped radio connected to port ``/dev/ttyUSB0``
-  - a text file
-2. filter by specific callsigns and constrain to a specific time range
-3. retrieve CUSF predictions following the given profile
-4. output locations and data to GeoJSON
+retrieve telemetry from https://amateur.sondehub.org, 
+a TNC-equipped radio connected to port ``/dev/ttyUSB0``, and a text file
+every 120 seconds, filtering by specific callsigns and a specific time range;
+additionally, retrieve CUSF predictions following the given profile and output telemetry data to a GeoJSON
+ file
 
 .. literalinclude:: ../../examples/example_3.yaml
    :language: yaml
