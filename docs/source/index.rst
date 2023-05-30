@@ -1,6 +1,4 @@
-.. toctree::
-	index
-	configuration
-
 .. mdinclude:: ../../README.md
 
+.. toctree::
+	configuration
