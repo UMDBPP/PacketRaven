@@ -12,7 +12,7 @@ Installation and Usage
 
 Download an executable from the [latest release](https://github.com/UMDBPP/PacketRaven/releases)
 and run it from the terminal, passing the path to a 
-[configuration file](https://packetraven.readthedocs.io/configuration).
+[configuration file](https://packetraven.readthedocs.io/en/latest/configuration.html).
 
 ```shell
 ./packetraven_Windows.exe examples/example_1.yaml
