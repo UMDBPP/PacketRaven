@@ -10,10 +10,10 @@ track high-altitude balloon telemetry from a variety of sources
 
 ## Installation
 
-download the latest compiled executable from the [Releases page](https://github.com/UMDBPP/PacketRaven/releases)
+To run `packetraven`, download the latest executable for your system from the [Releases page](https://github.com/UMDBPP/PacketRaven/releases)
 
 > **Note**
-> Alternatively, you can download the source code and compile the program yourself:
+> Alternatively, you may build the executable yourself from the source code:
 > ```shell
 > git clone https://github.com/UMDBPP/PacketRaven.git
 > cd packetraven
@@ -24,7 +24,7 @@ download the latest compiled executable from the [Releases page](https://github.
 ## Usage
 
 To run ``packetraven``, open a terminal window and type the path to the executable file. 
-The program accepts a single argument; the configuration filename.
+The program accepts a single argument, which is the path to the YAML configuration file.
 For more information on creating configuration files, [read the documentation](https://packetraven.readthedocs.io).
 
 For example, to run ``packetraven`` on ``examples/example_1.yaml``, run the following:
@@ -33,14 +33,9 @@ For example, to run ``packetraven`` on ``examples/example_1.yaml``, run the foll
 packetraven examples/example_1.yaml
 ```
 
-![log messages tab](/docs/images/example1_log.png)
+![log message screen](/docs/images/example1_log.png)
+![altitude telemetry plotted over time](/docs/images/example1_altitude.png)
 
-Use the left and right arrow keys (or `Tab` and `Shift+Tab`) to switch between tabs:
-![track tab w/ plot of altitude over time](/docs/images/example1_altitude.png)
-
-Use the up and down arrow keys to switch between plots:
-![track tab w/ plot of ascent rate over time](/docs/images/example1_ascent_rate.png)
-![track tab w/ plot of ground speed over altitude](/docs/images/example1_ground_speed.png)
-![track tab w/ plot of unprojected coordinates](/docs/images/example1_coordinates.png)
-
+Use the left and right arrow keys (or `Tab` and `Shift+Tab`) to switch between tabs. 
+Similarly, use the up and down arrow keys to switch between plots.
 To quit the program, press `q` or `Esc`.
