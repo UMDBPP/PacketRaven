@@ -1120,7 +1120,7 @@ dependencies = [
 
 [[package]]
 name = "packetraven"
-version = "3.0.2"
+version = "3.0.5"
 dependencies = [
  "aprs-parser",
  "chrono",

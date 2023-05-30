@@ -21,7 +21,7 @@ pub enum Connection {
     #[cfg(feature = "aprsfi")]
     AprsFi(aprs_fi::AprsFiQuery),
     #[cfg(feature = "postgres")]
-    PacketDatabase(postgres::DatabaseCredentials),
+    PacketDatabase(postgres::PacketDatabase),
 }
 
 impl Connection {
