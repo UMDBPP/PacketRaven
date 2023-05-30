@@ -1,4 +1,4 @@
-.. tocktree::
+.. toctree::
 
 Configuration File
 ==================
