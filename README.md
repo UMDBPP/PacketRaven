@@ -6,7 +6,7 @@
 
 track high-altitude balloon telemetry from a variety of sources
 
-![demo](/docs/images/demo.png)
+![demo](/docs/images/demo.gif)
 
 ## Installation
 
