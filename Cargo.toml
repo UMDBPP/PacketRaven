@@ -2,7 +2,7 @@
 name = "packetraven"
 authors = ["Zach Burnett <zachary.r.burnett@gmail.com>"]
 description = "track high-altitude balloon telemetry from a variety of sources"
-version = "3.0.6"
+version = "3.0.7"
 edition = "2021"
 readme = "README.md"
 license = "GPL-3.0-or-later"
