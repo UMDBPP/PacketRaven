@@ -36,7 +36,6 @@ jobs:
           paths: "results.xml"
         if: always()
   test_slow:
-    needs: [ test ]
     name: test slow (${{ matrix.runs-on }})
     runs-on: ${{ matrix.runs-on }}
     strategy:
@@ -57,7 +56,6 @@ jobs:
           paths: "results.xml"
         if: always()
   # test_all_features:
-  #   needs: [ test ]
   #   name: test all features (${{ matrix.runs-on }})
   #   runs-on: ${{ matrix.runs-on }}
   #   strategy:
