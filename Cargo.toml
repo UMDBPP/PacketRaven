@@ -22,7 +22,7 @@ postgres = ["dep:postgres"]
 [dependencies]
 aprs-parser = ">=0.4.0"
 chrono = { version = ">=0.4.24", features = ["clock"] }
-clap = { version = ">=4.2.7", features = ["derive"] }
+clap = { version = ">=4.3.1", features = ["derive"] }
 custom_error = ">=1.9.2"
 geo = { version = ">=0.24.1", features = ["serde"] }
 geojson = ">=0.24.0"

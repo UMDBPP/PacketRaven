@@ -29,12 +29,7 @@ jobs:
         run: sudo apt install -y pkg-config libusb-1.0-0-dev libftdi1-dev libudev-dev
       - uses: actions/checkout@v3
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: cargo install cargo2junit
-      - run: cargo test -- -Z unstable-options --format json | cargo2junit > results.xml
-      - uses: test-summary/action@v2
-        with:
-          paths: "results.xml"
-        if: always()
+      - run: cargo test
   test_slow:
     name: test slow (${{ matrix.runs-on }})
     runs-on: ${{ matrix.runs-on }}
@@ -49,12 +44,7 @@ jobs:
         run: sudo apt install -y pkg-config libusb-1.0-0-dev libftdi1-dev libudev-dev
       - uses: actions/checkout@v3
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: cargo install cargo2junit
-      - run: cargo test -- --ignored -Z unstable-options --format json | cargo2junit > results.xml
-      - uses: test-summary/action@v2
-        with:
-          paths: "results.xml"
-        if: always()
+      - run: cargo test
   # test_all_features:
   #   name: test all features (${{ matrix.runs-on }})
   #   runs-on: ${{ matrix.runs-on }}
@@ -84,12 +74,7 @@ jobs:
   #       run: sudo apt install -y pkg-config libusb-1.0-0-dev libftdi1-dev libudev-dev
   #     - uses: actions/checkout@v3
   #     - uses: actions-rust-lang/setup-rust-toolchain@v1
-  #     - run: cargo install cargo2junit
-  #     - run: cargo test --all-features -- --include-ignored -Z unstable-options --format json | cargo2junit > results.xml
-  #     - uses: test-summary/action@v2
-  #       with:
-  #         paths: "results.xml"
-  #       if: always()
+  #     - run: cargo test
   build:
     runs-on: ${{ matrix.runs-on }}
     strategy:

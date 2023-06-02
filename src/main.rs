@@ -20,15 +20,15 @@ lazy_static::lazy_static! {
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
-struct Cli {
+struct PacketravenCommand {
     // configuration file to read
-    configuration_filename: std::path::PathBuf,
+    config_file: std::path::PathBuf,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let arguments = Cli::parse();
+    let arguments = PacketravenCommand::parse();
 
-    let configuration_file = std::fs::File::open(arguments.configuration_filename).unwrap();
+    let configuration_file = std::fs::File::open(arguments.config_file).unwrap();
     let configuration: crate::configuration::RunConfiguration =
         serde_yaml::from_reader(configuration_file).expect("error reading configuration");
 
