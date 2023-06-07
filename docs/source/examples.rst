@@ -1,5 +1,7 @@
-examples
-========
+Configuration Examples
+======================
+
+To run these examples, see `the Usage section <https://packetraven.readthedocs.io/en/latest/index.html#usage>`_.
 
 ``examples/example_1.yaml``
 ---------------------------

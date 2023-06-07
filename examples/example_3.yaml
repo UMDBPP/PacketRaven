@@ -8,8 +8,6 @@ time:
   end: 2022-03-06 00:00:00
   interval: 120
 
-output_file: example_3.geojson
-
 connections:
   sondehub: {}
   text:
@@ -28,3 +26,5 @@ prediction:
     burst_altitude: 25000
     sea_level_descent_rate: 9
   output_file: example_3_prediction.geojson
+
+output_file: example_3.geojson
