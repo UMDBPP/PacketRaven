@@ -3,8 +3,8 @@ callsigns:
   - KC3SKW-9
 
 time:
-  start: 2022-03-05 00:00:00
-  end: 2022-03-06 00:00:00
+  start: 2023-03-05 00:00:00
+  end: 2023-03-06 00:00:00
 
 connections:
   text:
