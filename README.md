@@ -15,34 +15,44 @@ The program is designed to be run during a flight and display information in a t
   - https://aprs.fi
   - a TNC-equipped radio connected via USB
   - a text file containing raw APRS frames
-  - a GeoJSON file with telemetry attached to coordinates
+  - a GeoJSON file with point geometries and telemetry
 - retrieve balloon flight predictions from https://predict.sondehub.org
 - plot variables such as altitude and ascent rate over time
 - estimate landing time and location
 
 ## Installation
 
-[Download an executable file from the latest release.](https://github.com/UMDBPP/PacketRaven/releases)
+[Download an executable (`packetraven_Windows.exe`, `packetraven_macOS`, or `packetraven_Linux`) from the latest release.](https://github.com/UMDBPP/PacketRaven/releases)
 
-> **Note**
+> **Note**\
 > Alternatively, you may compile the program yourself:
 > ```shell
 > git clone https://github.com/UMDBPP/PacketRaven.git
 > cd packetraven
 > cargo build --release
-> ls target/release
+> ls target/release/packetraven*
 > ```
 
 ## Usage
 
-First, you need a configuration file. You may use one from the `examples/` directory in this repository, or [write one yourself](https://packetraven.readthedocs.io/en/latest/configuration.html).
-
-Then, run your executable from the terminal with the path to your configuration as the first argument:
+Run your executable from the terminal with the path to your configuration file:
 ```shell
 ./packetraven_Windows.exe examples/example_1.yaml
 ```
 
-You should then see the following in your terminal window:
+[Instructions for creating a configuration file can be found in the documentation](https://packetraven.readthedocs.io/en/latest/configuration.html).
+Example configurations can be found in the `examples/` folder:
+
+```yaml
+connections:
+  text:
+    - path: ~/raw_aprs_frames.txt
+      callsigns: 
+        - W3EAX-8
+    - path: http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-8%20raw.txt
+```
+
+You should then see the user interface. Resize your terminal window, or decrease the font size, as needed.
 ![starting screen](https://github.com/UMDBPP/PacketRaven/blob/main/docs/images/example1_log.png)
 
 The left and right arrow keys (or `Tab` and `Shift+Tab`) cycle through active tabs, 
