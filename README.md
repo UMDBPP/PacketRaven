@@ -6,7 +6,7 @@
 
 PacketRaven is a command-line dashboard that retrieves location telemetry sent by high-altitude balloon payloads.
 The program is designed to be run during a flight and display information in a terminal user interface (TUI):
-![demo](https://media.githubusercontent.com/media/UMDBPP/PacketRaven/main/docs/images/demo.gif)
+![demo](https://github.com/UMDBPP/PacketRaven/blob/main/docs/images/demo.gif)
 
 ## Features
 
@@ -43,11 +43,11 @@ Then, run your executable from the terminal with the path to your configuration 
 ```
 
 You should then see the following in your terminal window:
-![starting screen](https://media.githubusercontent.com/media/UMDBPP/PacketRaven/main/docs/images/example1_log.png)
+![starting screen](https://github.com/UMDBPP/PacketRaven/blob/main/docs/images/example1_log.png)
 
 The left and right arrow keys (or `Tab` and `Shift+Tab`) cycle through active tabs, 
 and the up and down arrow keys change the current plot (or scroll through log messages).
-![altitude telemetry plotted over time](https://media.githubusercontent.com/media/UMDBPP/PacketRaven/main/docs/images/example1_altitude.png)
+![altitude telemetry plotted over time](https://github.com/UMDBPP/PacketRaven/blob/main/docs/images/example1_altitude.png)
 
 To quit, press `q` or `Esc`.
 
