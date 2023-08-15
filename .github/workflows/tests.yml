@@ -76,6 +76,7 @@ jobs:
   #     - uses: actions-rust-lang/setup-rust-toolchain@v1
   #     - run: cargo test
   build:
+    if: (github.event_name == 'release' && github.event.action == 'published')
     runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
@@ -91,8 +92,7 @@ jobs:
         with:
           name: packetraven-${{ runner.os }}
           path: target/release/packetraven*
-      - if: (github.event_name == 'release' && github.event.action == 'published')
-        uses: svenstaro/upload-release-action@v2
+      - uses: svenstaro/upload-release-action@v2
         with:
           asset_name: packetraven_${{ runner.os }}${{ runner.os == 'Windows' && '.exe' || '' }}
           file: target/release/packetraven${{ runner.os == 'Windows' && '.exe' || '' }}
