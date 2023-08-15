@@ -4,7 +4,7 @@ fn default_name() -> String {
     String::from("unnamed_flight")
 }
 
-#[derive(serde::Deserialize, Clone)]
+#[derive(serde::Deserialize, Clone, Default, serde::Serialize)]
 pub struct RunConfiguration {
     #[serde(default = "default_name")]
     pub name: String,
@@ -23,7 +23,7 @@ fn default_interval() -> chrono::Duration {
 }
 
 #[serde_with::serde_as]
-#[derive(PartialEq, Debug, serde::Deserialize, Clone)]
+#[derive(PartialEq, Debug, serde::Deserialize, Clone, serde::Serialize)]
 pub struct TimeConfiguration {
     #[serde(default)]
     #[serde(with = "crate::utilities::optional_local_datetime_string")]
@@ -46,7 +46,7 @@ impl Default for TimeConfiguration {
     }
 }
 
-#[derive(Default, serde::Deserialize, PartialEq, Debug, Clone)]
+#[derive(Default, serde::Deserialize, PartialEq, Debug, Clone, serde::Serialize)]
 pub struct ConnectionConfiguration {
     pub text: Option<Vec<crate::connection::text::TextStream>>,
     #[cfg(feature = "sondehub")]

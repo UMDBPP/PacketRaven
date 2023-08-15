@@ -37,7 +37,7 @@ The program is designed to be run during a flight and display information in a t
 
 Run your executable from the terminal with the path to your configuration file:
 ```shell
-./packetraven_Windows.exe examples/example_1.yaml
+./packetraven_Windows.exe run examples/example_1.yaml
 ```
 
 [Instructions for creating a configuration file can be found in the documentation](https://packetraven.readthedocs.io/en/latest/configuration.html).
@@ -61,3 +61,13 @@ and the up and down arrow keys change the current plot (or scroll through log me
 
 To quit, press `q` or `Esc`.
 
+### Prediction
+
+You can run the `predict` subcommand to retrieve a prediction:
+
+```shell
+./packetraven_Windows.exe predict "2023-08-16T10:00:00" -- -79 39 5 30000 9
+```
+
+> **Note**\
+> Negative values must be prepended with `-- `, e.g. `-- -79`.

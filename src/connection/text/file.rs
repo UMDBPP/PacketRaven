@@ -2,7 +2,7 @@ use std::io::prelude::BufRead;
 
 use chrono::{TimeZone, Timelike};
 
-#[derive(serde::Deserialize, Debug, PartialEq, Clone)]
+#[derive(serde::Deserialize, Debug, PartialEq, Clone, serde::Serialize)]
 pub struct AprsTextFile {
     pub path: String,
     pub callsigns: Option<Vec<String>>,
@@ -134,7 +134,7 @@ impl AprsTextFile {
     }
 }
 
-#[derive(serde::Deserialize, Debug, PartialEq, Clone)]
+#[derive(serde::Deserialize, Debug, PartialEq, Clone, serde::Serialize)]
 pub struct GeoJsonFile {
     pub path: String,
 }

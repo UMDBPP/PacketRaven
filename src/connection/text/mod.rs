@@ -2,7 +2,7 @@ pub mod file;
 #[cfg(feature = "serial")]
 pub mod serial;
 
-#[derive(serde::Deserialize, Debug, PartialEq, Clone)]
+#[derive(serde::Deserialize, Debug, PartialEq, Clone, serde::Serialize)]
 #[serde(untagged)]
 pub enum TextStream {
     AprsTextFile(file::AprsTextFile),

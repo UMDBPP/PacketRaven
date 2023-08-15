@@ -2,7 +2,7 @@ lazy_static::lazy_static! {
     static ref MINIMUM_ACCESS_INTERVAL: chrono::Duration = chrono::Duration::seconds(10);
 }
 
-#[derive(serde::Deserialize, Debug, PartialEq, Clone, Default)]
+#[derive(serde::Deserialize, Debug, PartialEq, Clone, Default, serde::Serialize)]
 pub struct SondeHubQuery {
     pub start: Option<chrono::DateTime<chrono::Local>>,
     pub end: Option<chrono::DateTime<chrono::Local>>,

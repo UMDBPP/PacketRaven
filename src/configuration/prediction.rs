@@ -1,6 +1,6 @@
 use serde_with::serde_as;
 
-#[derive(serde::Deserialize, Clone)]
+#[derive(serde::Deserialize, Clone, serde::Serialize)]
 #[serde(untagged)]
 pub enum PredictionConfiguration {
     Single(Prediction),
@@ -14,7 +14,7 @@ fn default_name() -> String {
     String::from("prediction")
 }
 
-#[derive(serde::Deserialize, PartialEq, Debug, Clone)]
+#[derive(serde::Deserialize, PartialEq, Debug, Clone, serde::Serialize)]
 pub struct Prediction {
     pub start: crate::location::Location,
     pub profile: StandardProfile,
@@ -63,7 +63,7 @@ fn default_descent_only() -> bool {
     false
 }
 
-#[derive(serde::Deserialize, PartialEq, Debug, Clone)]
+#[derive(serde::Deserialize, PartialEq, Debug, Clone, serde::Serialize)]
 pub struct StandardProfile {
     pub ascent_rate: f64,
     pub burst_altitude: f64,
@@ -74,7 +74,7 @@ pub struct StandardProfile {
 }
 
 #[serde_as]
-#[derive(serde::Deserialize, PartialEq, Debug, Clone)]
+#[derive(serde::Deserialize, PartialEq, Debug, Clone, serde::Serialize)]
 pub struct FloatProfile {
     pub altitude: f64,
     pub uncertainty: Option<f64>,
