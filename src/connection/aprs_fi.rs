@@ -4,7 +4,7 @@ lazy_static::lazy_static! {
     static ref MINIMUM_ACCESS_INTERVAL: chrono::Duration = chrono::Duration::seconds(10);
 }
 
-#[derive(serde::Deserialize, Debug, PartialEq, Clone)]
+#[derive(serde::Deserialize, Debug, PartialEq, Clone, serde::Serialize)]
 pub struct AprsFiQuery {
     pub api_key: String,
     pub callsigns: Option<Vec<String>>,

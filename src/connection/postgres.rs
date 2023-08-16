@@ -1,6 +1,6 @@
 use chrono::TimeZone;
 
-#[derive(serde::Deserialize, Debug, PartialEq, Clone)]
+#[derive(serde::Deserialize, Debug, PartialEq, Clone, serde::Serialize)]
 pub struct DatabaseCredentials {
     pub hostname: String,
     pub port: u32,

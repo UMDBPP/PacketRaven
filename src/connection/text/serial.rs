@@ -2,7 +2,7 @@ lazy_static::lazy_static! {
     static ref DEFAULT_BAUD_RATE: u32 = 9600;
 }
 
-#[derive(serde::Deserialize, Debug, PartialEq, Clone)]
+#[derive(serde::Deserialize, Debug, PartialEq, Clone, serde::Serialize)]
 pub struct AprsSerial {
     #[serde(default = "first_available_port")]
     pub port: String,
