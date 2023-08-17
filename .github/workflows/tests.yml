@@ -76,6 +76,7 @@ jobs:
   #     - uses: actions-rust-lang/setup-rust-toolchain@v1
   #     - run: cargo test
   build:
+    needs: [ test, test_slow ]
     if: (github.event_name == 'release' && github.event.action == 'published')
     runs-on: ${{ matrix.runs-on }}
     strategy:
