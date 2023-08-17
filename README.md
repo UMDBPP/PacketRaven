@@ -35,7 +35,9 @@ The program is designed to be run during a flight and display information in a t
 
 ## Usage
 
-Run your executable from the terminal with the path to your configuration file:
+### `run`
+
+Run your executable from the terminal with the `run` subcommand and the path to your configuration file:
 ```shell
 ./packetraven_Windows.exe run examples/example_1.yaml
 ```
@@ -61,13 +63,13 @@ and the up and down arrow keys change the current plot (or scroll through log me
 
 To quit, press `q` or `Esc`.
 
-### Prediction
+### `predict`
 
-You can run the `predict` subcommand to retrieve a prediction:
+You can run the `predict` subcommand to retrieve a balloon flight prediction from a Tawhiri API:
 
 ```shell
 ./packetraven_Windows.exe predict "2023-08-16T10:00:00" -- -79 39 5 30000 9
 ```
 
 > **Note**\
-> Negative values must be prepended with `-- `, e.g. `-- -79`.
+> Negative values must be prepended with `-- `, e.g. `-- -79`.:w
