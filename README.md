@@ -6,7 +6,7 @@
 
 PacketRaven is a command-line dashboard that retrieves location telemetry sent by high-altitude balloon payloads.
 The program is designed to be run during a flight and display information in a terminal user interface (TUI):
-![demo](https://github.com/UMDBPP/PacketRaven/blob/main/docs/images/demo.gif)
+![demo](https://github.com/UMDBPP/PacketRaven/blob/main/docs/demo/demo.gif)
 
 ## Features
 
@@ -35,11 +35,11 @@ The program is designed to be run during a flight and display information in a t
 
 ## Usage
 
-### `run`
+### `start`
 
-Run your executable from the terminal with the `run` subcommand and the path to your configuration file:
+Run your executable from the terminal with the `start` subcommand and the path to your configuration file:
 ```shell
-./packetraven_Windows.exe run examples/example_1.yaml
+./packetraven_Windows.exe start examples/example_1.yaml
 ```
 
 [Instructions for creating a configuration file can be found in the documentation](https://packetraven.readthedocs.io/en/latest/configuration.html).

@@ -28,7 +28,7 @@ struct PacketravenCommand {
 #[derive(clap::Subcommand)]
 enum Command {
     /// run program from configuration
-    Run {
+    Start {
         /// file path to configuration
         config_file: std::path::PathBuf,
     },
@@ -67,7 +67,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let arguments = PacketravenCommand::parse();
 
     match arguments.command {
-        Command::Run { config_file } => {
+        Command::Start { config_file } => {
             let file = std::fs::File::open(config_file).unwrap();
             let configuration: crate::configuration::RunConfiguration =
                 serde_yaml::from_reader(file).expect("error reading configuration");

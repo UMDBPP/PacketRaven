@@ -1,13 +1,13 @@
 Output docs/images/demo.gif
 
-Set Shell nu
+Set Shell bash
 Set FontSize 20
 Set Width 1200
 Set Height 700
 Set Padding 0
 Set Theme "Catppuccin Macchiato"
 
-Type "./packetraven examples/example_1.yaml"
+Type "./packetraven start examples/example_1.yaml"
 Sleep 500ms
 Enter
 Sleep 2.5s
@@ -19,7 +19,7 @@ Up
 Sleep 3s
 Escape
 Sleep 500ms
-Type "./packetraven examples/example_3.yaml"
+Type "./packetraven start examples/example_3.yaml"
 Sleep 500ms
 Enter
 Sleep 2.5s
@@ -29,7 +29,7 @@ Right
 Sleep 3s
 Escape
 Sleep 500ms
-Type "./packetraven demo.yaml"
+Type "./packetraven start docs/demo/demo.yaml"
 Sleep 500ms
 Enter
 Sleep 4.5s
