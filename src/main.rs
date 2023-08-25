@@ -32,9 +32,9 @@ enum Command {
         /// file path to configuration
         config_file: std::path::PathBuf,
     },
-    /// retrieve a balloon prediction from the given API
+    /// retrieve a balloon prediction from the given API - negative values must be preceded with a `-- `, i.e. `-- -79`
     Predict {
-        /// start time
+        /// start time i.e. `2023-08-16T10:00:00`
         time: chrono::NaiveDateTime,
         /// start longitude
         longitude: f64,
