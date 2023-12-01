@@ -28,7 +28,7 @@ geo = { version = ">=0.24.1", features = ["serde"] }
 geojson = ">=0.24.0"
 lazy_static = ">=1.4.0"
 log = ">=0.4.17"
-postgres = { version="0.19.5", optional=true }
+postgres = { version="0.19.7", optional=true }
 ratatui = ">=0.21.0"
 crossterm = ">=0.26.1"
 regex = ">=1.8.1"
