@@ -183,9 +183,13 @@ mod tests {
                     start: crate::location::Location {
                         coord: geo::coord! { x: -78.4987, y: 40.0157 },
                         altitude: None,
-                        time: chrono::Local
-                            .datetime_from_str("2022-03-05 10:36:00", &crate::DATETIME_FORMAT)
-                            .unwrap()
+                        time: chrono::NaiveDateTime::parse_from_str(
+                            "2022-03-05 10:36:00",
+                            &crate::DATETIME_FORMAT
+                        )
+                        .unwrap()
+                        .and_local_timezone(chrono::Local)
+                        .unwrap()
                     },
                     profile: crate::configuration::prediction::StandardProfile {
                         ascent_rate: 6.5,
