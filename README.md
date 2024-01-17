@@ -47,6 +47,12 @@ The program is designed to be run during a flight and display information in a t
 > [!TIP]
 > Add `--help` to any command to show usage instructions.
 
+> [!NOTE]
+> On MacOS or Linux, you may need to give the file executable permissions to run it:
+> ```shell
+> chmod +x packetraven
+> ```
+
 5. You should now see the user interface. Resize your terminal window or decrease the font size as needed.
     ![starting screen](https://github.com/UMDBPP/PacketRaven/blob/main/docs/images/example1_log.png)
 
