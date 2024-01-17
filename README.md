@@ -20,56 +20,46 @@ The program is designed to be run during a flight and display information in a t
 - plot variables such as altitude and ascent rate over time
 - estimate landing time and location
 
-## Installation
+## Instructions
 
-[Download an executable (`packetraven_Windows.exe`, `packetraven_macOS`, or `packetraven_Linux`) from the latest release.](https://github.com/UMDBPP/PacketRaven/releases)
+1. Follow [these instructions](https://packetraven.readthedocs.io/en/latest/configuration.html) to create a new configuration file in a text editor, or use the following example:
+   ```yaml
+   # example.yaml
+   connections:
+     text:
+       - path: ~/raw_aprs_frames.txt
+         callsigns: 
+           - W3EAX-8
+       - path: http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-8%20raw.txt
+   ```
 
-> **Note**\
-> Alternatively, you may compile the program yourself:
-> ```shell
-> git clone https://github.com/UMDBPP/PacketRaven.git
-> cd packetraven
-> cargo build --release
-> ls target/release/packetraven*
-> ```
+2. Download an executable from the [Releases page](https://github.com/UMDBPP/PacketRaven/releases).
 
-## Usage
+3. Open a terminal window.
 
-### `start`
+4. Run the executable you downloaded with the `start` subcommand, and give it the path to your configuration file:
+   ```shell
+   packetraven_Windows.exe start example.yaml
+   ```
 
-Run your executable from the terminal with the `start` subcommand and the path to your configuration file:
-```shell
-./packetraven_Windows.exe start examples/example_1.yaml
-```
+> [!TIP]
+> Add `--help` to any command to show usage instructions.
 
-[Instructions for creating a configuration file can be found in the documentation](https://packetraven.readthedocs.io/en/latest/configuration.html).
-Example configurations can be found in the `examples/` folder:
+5. You should now see the user interface. Resize your terminal window or decrease the font size as needed.
+   ![starting screen](https://github.com/UMDBPP/PacketRaven/blob/main/docs/images/example1_log.png)
 
-```yaml
-connections:
-  text:
-    - path: ~/raw_aprs_frames.txt
-      callsigns: 
-        - W3EAX-8
-    - path: http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-8%20raw.txt
-```
+6. The left and right arrow keys (or `Tab` and `Shift+Tab`) cycle through active tabs, and the up and down arrow keys change the current plot (or scroll through log messages).
+   ![altitude telemetry plotted over time](https://github.com/UMDBPP/PacketRaven/blob/main/docs/images/example1_altitude.png)
 
-You should then see the user interface. Resize your terminal window, or decrease the font size, as needed.
-![starting screen](https://github.com/UMDBPP/PacketRaven/blob/main/docs/images/example1_log.png)
+7. To quit, press `q` or `Esc`.
 
-The left and right arrow keys (or `Tab` and `Shift+Tab`) cycle through active tabs, 
-and the up and down arrow keys change the current plot (or scroll through log messages).
-![altitude telemetry plotted over time](https://github.com/UMDBPP/PacketRaven/blob/main/docs/images/example1_altitude.png)
+## retrieve predictions
 
-To quit, press `q` or `Esc`.
-
-### `predict`
-
-You can run the `predict` subcommand to retrieve a balloon flight prediction from a Tawhiri API:
+Use `predict` to retrieve a balloon flight prediction:
 
 ```shell
-./packetraven_Windows.exe predict "2023-08-16T10:00:00" -- -79 39 5 30000 9
+packetraven_Windows.exe predict "2023-08-16T10:00:00" -- -79 39 5 30000 9
 ```
 
-> **Note**\
-> Negative values must be prepended with `-- `, e.g. `-- -79`.:w
+> [!WARNING]
+> due to a limitation in the argument parser, you must prepend all negative values with `-- `; for instance, `-79` should be `-- -79`
