@@ -4,7 +4,6 @@ pub fn approx_equal(a: f64, b: f64, decimal_precision: u8) -> bool {
 }
 
 pub mod optional_local_datetime_string {
-    use chrono::TimeZone;
     use serde::Deserialize;
 
     const FORMAT: &str = "%Y-%m-%d %H:%M:%S";
@@ -32,8 +31,8 @@ pub mod optional_local_datetime_string {
         if let Some(value) = value {
             return Ok(Some(match chrono::DateTime::parse_from_rfc3339(&value) {
                 Ok(datetime) => datetime.with_timezone(&chrono::Local),
-                Err(_) => match chrono::Local.datetime_from_str(&value, FORMAT) {
-                    Ok(datetime) => datetime,
+                Err(_) => match chrono::NaiveDateTime::parse_from_str(&value, FORMAT) {
+                    Ok(datetime) => datetime.and_local_timezone(chrono::Local).unwrap(),
                     Err(_) => chrono::NaiveDate::parse_from_str(&value, "%Y-%m-%d")
                         .map_err(serde::de::Error::custom)?
                         .and_hms_opt(0, 0, 0)
@@ -49,7 +48,6 @@ pub mod optional_local_datetime_string {
 }
 
 pub mod local_datetime_string {
-    use chrono::TimeZone;
     use serde::Deserialize;
 
     const FORMAT: &str = "%Y-%m-%d %H:%M:%S";
@@ -72,10 +70,10 @@ pub mod local_datetime_string {
         let value: String = String::deserialize(deserializer)?;
         Ok(match chrono::DateTime::parse_from_rfc3339(&value) {
             Ok(datetime) => datetime.with_timezone(&chrono::Local),
-            Err(_) => match chrono::DateTime::parse_from_str(&value, "%Y-%m-%d %H:%M:%S %Z") {
-                Ok(datetime) => datetime.with_timezone(&chrono::Local),
-                Err(_) => match chrono::Local.datetime_from_str(&value, FORMAT) {
-                    Ok(datetime) => datetime,
+            Err(_) => match chrono::NaiveDateTime::parse_from_str(&value, "%Y-%m-%d %H:%M:%S %Z") {
+                Ok(datetime) => datetime.and_local_timezone(chrono::Local).unwrap(),
+                Err(_) => match chrono::NaiveDateTime::parse_from_str(&value, FORMAT) {
+                    Ok(datetime) => datetime.and_local_timezone(chrono::Local).unwrap(),
                     Err(_) => chrono::NaiveDate::parse_from_str(&value, "%Y-%m-%d")
                         .map_err(serde::de::Error::custom)?
                         .and_hms_opt(0, 0, 0)

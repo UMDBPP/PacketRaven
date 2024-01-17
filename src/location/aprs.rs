@@ -99,7 +99,7 @@ impl crate::location::BalloonLocation {
                                 naive_packet_time = now.naive_utc();
                             }
                         }
-                        packet_time = chrono::DateTime::<chrono::Utc>::from_utc(
+                        packet_time = chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(
                             naive_packet_time,
                             chrono::Utc,
                         )
@@ -289,7 +289,7 @@ mod tests {
 
         assert_eq!(
             packet.location.time,
-            chrono::DateTime::<chrono::Local>::from_utc(
+            chrono::DateTime::<chrono::Local>::from_naive_utc_and_offset(
                 chrono::Utc::now()
                     .date_naive()
                     .and_hms_opt(7, 48, 49)
