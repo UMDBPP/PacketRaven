@@ -35,11 +35,11 @@ The program is designed to be run during a flight and display information in a t
           baud_rate: 9600
     ```
 
-2. Download an executable from the [Releases page](https://github.com/UMDBPP/PacketRaven/releases).
+2. Download an executable from [the Releases page](https://github.com/UMDBPP/PacketRaven/releases).
 
 3. Open a terminal window.
 
-4. Run the executable you downloaded with the `start` subcommand, and give it the path to your configuration file:
+4. Run the executable you downloaded with `start` and a path to your configuration file:
     ```shell
     packetraven.exe start example.yaml
     ```
@@ -59,17 +59,16 @@ The program is designed to be run during a flight and display information in a t
 > [!NOTE]
 > Resize your terminal window, or zoom out / decrease the font size, as needed.
 
-6. Upon receiving new packet(s) from a callsign, a new tab will be created (shown in the top bar) to display info for that callsign. Use the **left right arrow keys** to switch between tabs. 
+6. Upon receiving new packet(s) from a callsign, a new tab will be created (shown in the top bar) for that callsign. Use the **left and right arrow keys** to switch between tabs. 
 
-7. When viewing info for a callsign, use the **up and down arrow keys** to switch between plots.
+7. While on a callsign tab, use the **up and down arrow keys** to switch between plots.
     ![altitude telemetry plotted over time](https://github.com/UMDBPP/PacketRaven/blob/main/docs/images/example1_altitude.png)
 
 8. To quit, press `q` or `Esc`.
 
 ## retrieve predictions
 
-Use `predict` to retrieve a balloon flight prediction:
-
+Run the executable with `predict` to retrieve a balloon flight prediction:
 ```shell
 packetraven.exe predict "2023-08-16T10:00:00" -- -79 39 5 30000 9
 ```
