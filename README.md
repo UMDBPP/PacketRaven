@@ -56,10 +56,10 @@ The program is designed to be run during a flight and display information in a t
 5. You should now see the user interface. The program starts on the `Log` tab, which displays log messages. Use the **up and down arrow keys** to scroll.
     ![log messages tab](https://github.com/UMDBPP/PacketRaven/blob/main/docs/images/example1_log.png)
 
-> [!NOTE]
+> [!TIP]
 > Resize your terminal window, or zoom out / decrease the font size, as needed.
 
-6. Upon receiving new packet(s) from a callsign, a new tab will be created (shown in the top bar) for that callsign. Use the **left and right arrow keys** to switch between tabs. 
+6. Upon first receiving new packet(s) from a callsign, a new tab will be created (shown in the top bar) for that callsign. Use the **left and right arrow keys** to switch between tabs. 
 
 7. While on a callsign tab, use the **up and down arrow keys** to switch between plots.
     ![altitude telemetry plotted over time](https://github.com/UMDBPP/PacketRaven/blob/main/docs/images/example1_altitude.png)
