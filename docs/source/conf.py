@@ -9,6 +9,7 @@ try:
 except ImportError:
     import tomli as tomllib
 
+
 def repository_root(path: PathLike = None) -> Path:
     if path is None:
         path = __file__
@@ -20,6 +21,7 @@ def repository_root(path: PathLike = None) -> Path:
         return path
     else:
         return repository_root(path.parent)
+
 
 # -- Path setup --------------------------------------------------------------
 ROOT = repository_root()
@@ -33,15 +35,14 @@ with open(ROOT / "Cargo.toml", "rb") as configuration_file:
 
 project = metadata["name"]
 author = ", ".join(metadata["authors"])
-copyright = ", ".join(f"{datetime.now():%Y-%m-%d}, {author}" for author in metadata["authors"])
+copyright = ", ".join(
+    f"{datetime.now():%Y-%m-%d}, {author}" for author in metadata["authors"]
+)
 version = metadata["version"]
 release = version
 
 # -- General configuration ---------------------------------------------------
-extensions = [
-    "sphinx_mdinclude",
-    "sphinx_rtd_theme"
-]
+extensions = ["sphinx_mdinclude", "sphinx_rtd_theme"]
 
 # -- Options for HTML output -------------------------------------------------
 html_theme = "sphinx_rtd_theme"

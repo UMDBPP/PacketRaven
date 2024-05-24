@@ -63,8 +63,8 @@ connections from which to retrieve telemetry
      - path: ~/packets.txt
 
 .. note::
-   To define a connection with no options (i.e. the ``sondehub`` entry, above), use YAML's empty flow mapping syntax ``sondehub: {}``.
-   The empty block mapping syntax (``sondehub: ``) is equivalent to ``sondehub: null`` and will not initiate the connection.
+   To define a connection without specifying options (or to use the default options), use empty curly braces: ``sondehub: {}``.
+   An empty string, i.e. ``sondehub:``, will not start the connection (it's equivalent to ``sondehub: null`` ).
 
 Text connection (``text``)
 --------------------------
