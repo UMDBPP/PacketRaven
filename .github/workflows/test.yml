@@ -23,7 +23,7 @@ jobs:
     steps:
       - if: runner.os == 'Linux'
         run: sudo apt install -y pkg-config libusb-1.0-0-dev libftdi1-dev libudev-dev
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo test
   test_slow:
@@ -38,37 +38,6 @@ jobs:
     steps:
       - if: runner.os == 'Linux'
         run: sudo apt install -y pkg-config libusb-1.0-0-dev libftdi1-dev libudev-dev
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo test
-  # test_all_features:
-  #   name: test all features (${{ matrix.runs-on }})
-  #   runs-on: ${{ matrix.runs-on }}
-  #   strategy:
-  #     matrix:
-  #       runs-on: 
-  #         - ubuntu-latest
-  #     fail-fast: false
-  #   services:
-  #     postgres:
-  #       image: postgis/postgis:latest
-  #       env:
-  #         POSTGRES_PASSWORD: test_password
-  #         POSTGRES_DB: test_database
-  #       ports:
-  #         - 5432:5432
-  #       options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-  #   env:
-  #     POSTGRES_HOSTNAME: localhost
-  #     POSTGRES_PORT: 5432
-  #     POSTGRES_DATABASE: test_database
-  #     POSTGRES_USERNAME: postgres
-  #     POSTGRES_PASSWORD: test_password
-  #     APRS_FI_API_KEY: ${{ secrets.APRS_FI_API_KEY }}
-  #     APRS_IS_PASSWORD: ${{ secrets.APRS_IS_PASSWORD }}
-  #   steps:
-  #     - if: runner.os == 'Linux'
-  #       run: sudo apt install -y pkg-config libusb-1.0-0-dev libftdi1-dev libudev-dev
-  #     - uses: actions/checkout@v3
-  #     - uses: actions-rust-lang/setup-rust-toolchain@v1
-  #     - run: cargo test
