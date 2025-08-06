@@ -193,23 +193,23 @@ pub fn duration_string(duration: &chrono::Duration) -> String {
     let seconds = duration.num_seconds().abs() % 60;
 
     if weeks > 0 {
-        parts.push(format!("{:}w", weeks));
+        parts.push(format!("{weeks:}w"));
     }
 
     if days > 0 {
-        parts.push(format!("{:}d", days));
+        parts.push(format!("{days:}d"));
     }
 
     if hours > 0 {
-        parts.push(format!("{:}h", hours));
+        parts.push(format!("{hours:}h"));
     }
 
     if minutes > 0 {
-        parts.push(format!("{:}m", minutes));
+        parts.push(format!("{minutes:}m"));
     }
 
     if seconds > 0 {
-        parts.push(format!("{:}s", seconds));
+        parts.push(format!("{seconds:}s"));
     }
 
     if duration < &chrono::Duration::zero() {

@@ -128,7 +128,7 @@ impl PacketravenApp {
                 }
                 log_messages.push((
                     chrono::Local::now(),
-                    format!("tracking: {:}", aprs_fi_url),
+                    format!("tracking: {aprs_fi_url}"),
                     log::Level::Info,
                 ));
 
@@ -145,7 +145,7 @@ impl PacketravenApp {
 
                 log_messages.push((
                     chrono::Local::now(),
-                    format!("tracking: {:}", sondehub_url),
+                    format!("tracking: {sondehub_url}"),
                     log::Level::Info,
                 ));
             }
@@ -257,7 +257,7 @@ impl PacketravenApp {
             for connection in &connections {
                 log_messages.push((
                     chrono::Local::now(),
-                    format!("{:?}", connection),
+                    format!("{connection:?}"),
                     log::Level::Debug,
                 ));
             }
@@ -380,10 +380,7 @@ impl PacketravenApp {
                                     ),
                                     log::Level::Debug,
                                 ));
-                                match existing_prediction_file.retrieve_locations() {
-                                    Ok(locations) => Some(locations),
-                                    Err(_) => None,
-                                }
+                                existing_prediction_file.retrieve_locations().ok()
                             } else {
                                 None
                             }

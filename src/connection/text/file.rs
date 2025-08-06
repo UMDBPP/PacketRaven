@@ -192,7 +192,7 @@ impl GeoJsonFile {
                                             Err(error) => return Err(
                                                 crate::connection::ConnectionError::ReadFailure {
                                                     connection: self.path.to_owned(),
-                                                    message: format!("{:} - {:}", time, error),
+                                                    message: format!("{time} - {error}"),
                                                 },
                                             ),
                                         }
@@ -283,39 +283,6 @@ impl GeoJsonFile {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    #[ignore]
-    fn test_aprs_from_url() {
-        let url = "http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-11%20raw.txt"
-            .to_string();
-
-        let connection = AprsTextFile::new(url, None).unwrap();
-
-        let packets = connection.read_aprs_from_file().unwrap();
-
-        assert!(!packets.is_empty());
-    }
-
-    #[test]
-    fn test_aprs_from_file() {
-        let path = format!(
-            "{:}/{:}",
-            env!("CARGO_MANIFEST_DIR"),
-            "data/aprs/W3EAX-8_raw_NS-111.txt"
-        );
-
-        let connection = AprsTextFile::new(path, None).unwrap();
-
-        let packets = connection.read_aprs_from_file().unwrap();
-
-        assert!(!packets.is_empty());
-    }
-}
-
 pub fn locations_geojson_featurecollection(
     locations: Vec<&crate::location::BalloonLocation>,
 ) -> geojson::FeatureCollection {
@@ -358,4 +325,37 @@ pub fn locations_geojson_featurecollection(
         .collect();
 
     geojson::FeatureCollection::from_iter(features)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[ignore]
+    fn test_aprs_from_url() {
+        let url = "http://bpp.umd.edu/archives/Launches/NS-111_2022_07_31/APRS/W3EAX-11%20raw.txt"
+            .to_string();
+
+        let connection = AprsTextFile::new(url, None).unwrap();
+
+        let packets = connection.read_aprs_from_file().unwrap();
+
+        assert!(!packets.is_empty());
+    }
+
+    #[test]
+    fn test_aprs_from_file() {
+        let path = format!(
+            "{:}/{:}",
+            env!("CARGO_MANIFEST_DIR"),
+            "data/aprs/W3EAX-8_raw_NS-111.txt"
+        );
+
+        let connection = AprsTextFile::new(path, None).unwrap();
+
+        let packets = connection.read_aprs_from_file().unwrap();
+
+        assert!(!packets.is_empty());
+    }
 }

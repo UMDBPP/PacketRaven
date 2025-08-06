@@ -64,7 +64,7 @@ impl AprsFiQuery {
             .get("https://api.aprs.fi/api/get")
             .query(&parameters)
             .send()
-            .expect(&format!("{:?}", parameters));
+            .unwrap_or_else(|_| panic!("{parameters:?}"));
         let url = response.url().to_string();
 
         self.last_access = Some(now);

@@ -94,10 +94,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let profile = prediction::FlightProfile::new(
                 ascent_rate,
                 float_altitude,
-                match float_duration {
-                    Some(seconds) => Some(chrono::Duration::seconds(seconds as i64)),
-                    None => None,
-                },
+                float_duration.map(|seconds| chrono::Duration::seconds(seconds as i64)),
                 None,
                 burst_altitude,
                 sea_level_descent_rate,

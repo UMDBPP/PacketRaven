@@ -19,7 +19,7 @@ pub fn retrieve_locations(
     let num_new_packets = new_packets.len();
     messages.push((
         chrono::Local::now(),
-        format!("received {:} packets", num_new_packets),
+        format!("received {num_new_packets} packets"),
         log::Level::Debug,
     ));
 
@@ -72,7 +72,7 @@ pub fn retrieve_locations(
                 _ => {
                     messages.push((
                         chrono::Local::now(),
-                        format!("started track {:}", &name),
+                        format!("started track {name}"),
                         log::Level::Debug,
                     ));
                     packet_track_lengths.insert(name.to_owned(), 0);
@@ -107,7 +107,7 @@ pub fn retrieve_locations(
         if num_duplicates > 0 {
             messages.push((
                 chrono::Local::now(),
-                format!("skipped {:} duplicate packet(s)", num_duplicates),
+                format!("skipped {num_duplicates} duplicate packet(s)"),
                 log::Level::Debug,
             ));
         }
@@ -115,10 +115,7 @@ pub fn retrieve_locations(
         if num_time_lagged_duplicates > 0 {
             messages.push((
                 chrono::Local::now(),
-                format!(
-                    "skipped {:} time-lagged duplicate packet(s)",
-                    num_time_lagged_duplicates
-                ),
+                format!("skipped {num_time_lagged_duplicates} time-lagged duplicate packet(s)"),
                 log::Level::Debug,
             ));
         }
@@ -161,7 +158,7 @@ fn location_update(track: &crate::location::track::BalloonTrack) -> String {
         &last_location.location.coord.x, &last_location.location.coord.y,
     );
     if let Some(altitude) = last_location.location.altitude {
-        message += &format!(", {:.2} m", altitude,)
+        message += &format!(", {altitude:.2} m",)
     };
     message += &String::from(")");
 

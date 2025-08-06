@@ -2,11 +2,8 @@ lazy_static::lazy_static! {
     pub static ref CHARTS: Vec<String> = vec!["altitude / time".to_string(), "ascent rate / time".to_string(), "ground speed / altitude".to_string(), "coordinates (unprojected)".to_string()];
 }
 
-pub fn draw<B: ratatui::backend::Backend>(
-    frame: &mut ratatui::Frame<B>,
-    app: &super::app::PacketravenApp,
-) {
-    let size = frame.size();
+pub fn draw(frame: &mut ratatui::Frame, app: &super::app::PacketravenApp) {
+    let area = frame.area();
 
     let areas = ratatui::layout::Layout::default()
         .direction(ratatui::layout::Direction::Vertical)
@@ -17,7 +14,7 @@ pub fn draw<B: ratatui::backend::Backend>(
             ]
             .as_ref(),
         )
-        .split(size);
+        .split(area);
 
     let mut titles: Vec<ratatui::text::Line> = app
         .tracks
@@ -63,7 +60,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                             format!("{:} ", time.format(&crate::DATETIME_FORMAT)),
                             bold_style,
                         ),
-                        ratatui::text::Span::styled(format!("{:<5} ", level), level_style),
+                        ratatui::text::Span::styled(format!("{level:<5} "), level_style),
                         ratatui::text::Span::raw(message),
                     ])
                 })
@@ -105,10 +102,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                 crate::location::track::overground_distances(&track.locations);
             let ground_speeds = crate::location::track::ground_speeds(&track.locations);
 
-            let mut total_interval = chrono::Duration::seconds(0);
-            for interval in &intervals {
-                total_interval = total_interval + interval.to_owned();
-            }
+            let total_interval = intervals.iter().sum::<chrono::TimeDelta>();
 
             let start_time = track.locations.first().unwrap().location.time;
             let end_time = track.locations.last().unwrap().location.time;
@@ -208,7 +202,7 @@ pub fn draw<B: ratatui::backend::Backend>(
             if let Some(altitude) = last_location.location.altitude {
                 last_location_info.push(ratatui::text::Line::from(vec![
                     ratatui::text::Span::styled("altitude: ", bold_style),
-                    ratatui::text::Span::raw(format!("{:.2} m", altitude)),
+                    ratatui::text::Span::raw(format!("{altitude:.2} m")),
                 ]));
             }
 
@@ -557,7 +551,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                     y_range[1],
                 ]
                 .iter()
-                .map(|value| ratatui::text::Span::raw(format!("{:.1} m", value)))
+                .map(|value| ratatui::text::Span::raw(format!("{value:.1} m")))
                 .collect();
             } else if chart_name == "ascent rate / time"
                 && has_altitude
@@ -634,10 +628,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                         y_range[1] = max_y;
                     }
 
-                    predicted_data = seconds_since_start
-                        .into_iter()
-                        .zip(ascent_rates.into_iter())
-                        .collect();
+                    predicted_data = seconds_since_start.into_iter().zip(ascent_rates).collect();
                     datasets.push(
                         ratatui::widgets::Dataset::default()
                             .marker(ratatui::symbols::Marker::Braille)
@@ -655,7 +646,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                     y_range[1],
                 ]
                 .iter()
-                .map(|value| ratatui::text::Span::raw(format!("{:.1} m/s", value)))
+                .map(|value| ratatui::text::Span::raw(format!("{value:.1} m/s")))
                 .collect();
             } else if chart_name == "ground speed / altitude"
                 && has_altitude
@@ -663,7 +654,8 @@ pub fn draw<B: ratatui::backend::Backend>(
             {
                 telemetry_data = altitudes
                     .into_iter()
-                    .zip(ground_speeds.clone().into_iter())
+                    .zip(ground_speeds.iter())
+                    .map(|(alt, gnd)| (alt, *gnd))
                     .collect();
                 datasets.push(
                     ratatui::widgets::Dataset::default()
@@ -726,10 +718,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                         y_range[1] = max_y;
                     }
 
-                    predicted_data = altitudes
-                        .into_iter()
-                        .zip(ground_speeds.into_iter())
-                        .collect();
+                    predicted_data = altitudes.into_iter().zip(ground_speeds).collect();
                     datasets.push(
                         ratatui::widgets::Dataset::default()
                             .marker(ratatui::symbols::Marker::Braille)
@@ -746,7 +735,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                     x_range[1],
                 ]
                 .iter()
-                .map(|value| ratatui::text::Span::raw(format!("{:.1} m", value)))
+                .map(|value| ratatui::text::Span::raw(format!("{value:.1} m")))
                 .collect();
                 y_labels = [
                     y_range[0],
@@ -754,7 +743,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                     y_range[1],
                 ]
                 .iter()
-                .map(|value| ratatui::text::Span::raw(format!("{:.1} m/s", value)))
+                .map(|value| ratatui::text::Span::raw(format!("{value:.1} m/s")))
                 .collect();
             } else if chart_name == "coordinates (unprojected)" {
                 telemetry_data = track
@@ -839,10 +828,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                         y_range[1] = max_y;
                     }
 
-                    predicted_data = predicted_x
-                        .into_iter()
-                        .zip(predicted_y.into_iter())
-                        .collect();
+                    predicted_data = predicted_x.into_iter().zip(predicted_y).collect();
                     datasets.push(
                         ratatui::widgets::Dataset::default()
                             .marker(ratatui::symbols::Marker::Braille)
@@ -859,7 +845,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                     x_range[1],
                 ]
                 .iter()
-                .map(|value| ratatui::text::Span::raw(format!("{:.1}", value)))
+                .map(|value| ratatui::text::Span::raw(format!("{value:.1}")))
                 .collect();
                 y_labels = [
                     y_range[0],
@@ -867,7 +853,7 @@ pub fn draw<B: ratatui::backend::Backend>(
                     y_range[1],
                 ]
                 .iter()
-                .map(|value| ratatui::text::Span::raw(format!("{:.1}", value)))
+                .map(|value| ratatui::text::Span::raw(format!("{value:.1}")))
                 .collect();
             } else {
                 draw_chart = false;

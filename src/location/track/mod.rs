@@ -1,4 +1,4 @@
-use geo::GeodesicDistance;
+use geo::{Distance, Geodesic};
 
 pub type LocationTrack = Vec<crate::location::BalloonLocation>;
 
@@ -201,7 +201,7 @@ pub fn overground_distances(locations: &[super::BalloonLocation]) -> Vec<f64> {
         let current_point: geo::Point = current.location.coord.into();
         let next_point: geo::Point = next.location.coord.into();
 
-        values.push(current_point.geodesic_distance(&next_point));
+        values.push(Geodesic.distance(current_point, next_point));
 
         current = next;
         index += 1;

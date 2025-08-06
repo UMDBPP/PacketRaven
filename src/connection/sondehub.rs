@@ -74,12 +74,11 @@ impl SondeHubQuery {
             for callsign in callsigns {
                 let response = client
                     .get(format!(
-                        "https://api.v2.sondehub.org/amateur/telemetry/{:}",
-                        callsign
+                        "https://api.v2.sondehub.org/amateur/telemetry/{callsign:}"
                     ))
                     .query(&parameters)
                     .send()
-                    .unwrap_or_else(|error| panic!("{:} - {:?}", error, parameters));
+                    .unwrap_or_else(|error| panic!("{error} - {parameters:?}"));
 
                 let url = response.url().to_string().to_owned();
 
@@ -90,7 +89,7 @@ impl SondeHubQuery {
                             Ok(object) => object,
                             Err(error) => {
                                 return Err(crate::connection::ConnectionError::ApiError {
-                                    message: format!("{:?}", error),
+                                    message: format!("{error:?}"),
                                     url,
                                 });
                             }
@@ -155,10 +154,7 @@ struct SondeHubLocation {
 impl SondeHubLocation {
     pub fn to_balloon_location(&self) -> crate::location::BalloonLocation {
         let aprs_packet = match self.raw.as_ref() {
-            Some(frame) => match aprs_parser::AprsPacket::decode_textual(frame.as_bytes()) {
-                Ok(packet) => Some(packet),
-                Err(_) => None,
-            },
+            Some(frame) => aprs_parser::AprsPacket::decode_textual(frame.as_bytes()).ok(),
             None => None,
         };
         let time = self.datetime.to_owned();

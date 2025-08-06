@@ -36,7 +36,7 @@ pub fn run(
     terminal.show_cursor()?;
 
     if let Err(err) = result {
-        eprintln!("{:?}", err)
+        eprintln!("{err:?}")
     }
 
     Ok(())

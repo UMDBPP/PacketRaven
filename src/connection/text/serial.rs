@@ -124,33 +124,25 @@ impl Default for AprsSerial {
     fn default() -> Self {
         match Self::new(None, None, None) {
             Ok(connection) => connection,
-            Err(error) => panic!("{:}", error),
+            Err(error) => panic!("{error}"),
         }
     }
 }
 
 fn first_available_port() -> String {
     // TODO iterate over baud rates
-    match serialport::available_ports() {
-        Ok(available_ports) => {
-            for available_port in available_ports {
-                let connection_attempt =
-                    serialport::new(available_port.port_name, *DEFAULT_BAUD_RATE).open();
-                match connection_attempt {
-                    Ok(successful) => {
-                        return successful.name().unwrap();
-                    }
-                    Err(error) => {
-                        panic!("{:}", error);
-                    }
-                }
+    let available_ports = serialport::available_ports().expect("error reading serial ports");
+    for available_port in available_ports.into_iter() {
+        match serialport::new(available_port.port_name, *DEFAULT_BAUD_RATE).open() {
+            Ok(successful) => {
+                return successful.name().unwrap();
             }
-            panic!("{:}", "no open ports");
-        }
-        Err(error) => {
-            panic!("{:}", error);
+            Err(_) => {
+                continue;
+            }
         }
     }
+    panic!("no open ports");
 }
 
 fn default_baud_rate() -> u32 {

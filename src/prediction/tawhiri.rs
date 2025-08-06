@@ -66,7 +66,7 @@ impl TawhiriQuery {
                 "ascent_rate",
                 format!("{:.2}", self.query.profile.ascent_rate),
             ),
-            ("burst_altitude", format!("{:.2}", burst_altitude)),
+            ("burst_altitude", format!("{burst_altitude:.2}")),
             (
                 "descent_rate",
                 format!("{:.2}", self.query.profile.sea_level_descent_rate,),
@@ -75,13 +75,13 @@ impl TawhiriQuery {
 
         let launch_altitude = self.query.start.altitude;
         if let Some(altitude) = launch_altitude {
-            parameters.push(("launch_altitude", format!("{:.2}", altitude)));
+            parameters.push(("launch_altitude", format!("{altitude:.2}")));
         }
         if let Some(dataset_time) = self.dataset_time {
             parameters.push(("dataset", dataset_time.to_rfc3339()));
         }
         if let Some(version) = self.version {
-            parameters.push(("version", format!("{:}", version)));
+            parameters.push(("version", format!("{version}")));
         }
 
         if let Some(float_duration) = self.query.profile.float_duration {
@@ -98,7 +98,7 @@ impl TawhiriQuery {
                     }
                 }
 
-                parameters.push(("float_altitude", format!("{:.2}", float_altitude)));
+                parameters.push(("float_altitude", format!("{float_altitude:.2}")));
 
                 let float_start_time = self.query.float_start.unwrap_or({
                     self.query.start.time
